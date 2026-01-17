@@ -1,0 +1,18 @@
+@import "tailwindcss";
+@import "@fontsource-variable/noto-kufi-arabic";
+
+/* Configure class-based dark mode for Tailwind CSS v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  font-family: "Noto Kufi Arabic Variable", sans-serif;
+}
+
+code {
+  font-family:
+    source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
