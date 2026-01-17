@@ -50,7 +50,7 @@ const Navbar: React.FC = () => {
           <span className="text-2xl font-bold text-sky-950 dark:text-white">
             قلم
           </span> */}
-          <img src="/qalam-logo.svg" alt="Qalam Logo" className="w-16 h-16" />
+          {isDark ? <img src="/qalam-logo-dark.svg" alt="Qalam Logo" className="w-16 h-16" /> : <img src="/qalam-logo.svg" alt="Qalam Logo" className="w-16 h-16" />}
         </div>
 
         {/* Desktop Links */}
