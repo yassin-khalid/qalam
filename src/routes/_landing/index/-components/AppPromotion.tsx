@@ -123,11 +123,71 @@ const AppPromotion = () => {
         </div>
       </div> */}
       <div className="relative max-w-[1440px] w-full h-64 lg:h-96 mx-auto bg-[url('/qalam-app-promotion.svg')] bg-cover bg-center">
-        <div className="absolute bottom-0 right-0 w-fit h-fit rounded-3xl">
-          <img src="/qalam-app-mockup.svg" alt="Qalam App Promotion" />
+        <div className="grid grid-cols-1 md:grid-cols-2">
+          <div className="relative">
+            <div className="absolute bottom-14 right-0 w-fit h-fit rounded-3xl z-10">
+              <img src="/qalam-app-mockup.svg" alt="Qalam App Promotion" />
+            </div>
+          </div>
+          <div className="flex flex-col items-center lg:items-end text-center lg:text-right gap-12 p-12">
+            {/* Main Text Content */}
+            <div className="space-y-6 max-w-3xl">
+              <p className="text-lg md:text-xl text-[#F2F8FC] leading-relaxed">
+                استثمر في مستقبلك، وابدأ رحلتك التعليمية الآن! حمّل تطبيق "قلم" الآن، فهو بوابتك الذكية نحو التعلّم الممتع والفعّال.
+              </p>
+            </div>
+
+            {/* Action Area (QR and Stores) */}
+            <div className="flex flex-col md:flex-row items-center gap-10">
+
+              {/* QR Code Container */}
+              <div className="bg-transparent hover:bg-white/10 p-4 rounded-2xl shadow-xl hover:scale-105 transition-transform cursor-pointer">
+                <img
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://example.com/download"
+                  alt="Download QR Code"
+                  className="w-28 h-28 md:w-36 md:h-36"
+                />
+              </div>
+
+              {/* Download Buttons */}
+              <div className="flex flex-col gap-4 w-full md:w-56">
+                {/* App Store */}
+                <a
+                  href="#"
+                  className="flex items-center gap-3 bg-black hover:bg-[#00B2B2] text-white px-6 py-3 rounded-xl transition-all border border-zinc-800 group"
+                >
+                  <div className="text-3xl">
+                    <svg className="w-8 h-8 fill-current" viewBox="0 0 384 512">
+                      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 21.8-88.5 21.8-11.4 0-51.1-20.8-82.3-20.8-40.2 0-77.5 21.5-92.6 48.3-30.9 54.8-7.9 135.9 22.3 180.7 14.8 21.5 32.7 45.4 55.4 44.6 21.7-.8 29.8-14.2 56.1-14.2 26.2 0 33.7 14.2 56.6 13.8 23.4-.4 38.9-21.5 53.5-42.9 16.9-24.8 23.9-48.8 24.1-50.1-.6-.3-46.6-17.9-46.9-71.3zm-39.7-183c15.8-19.1 26.4-45.6 23.5-72.1-22.9 1-50.7 15.4-67.1 34.6-14.7 17.1-27.5 44.2-24.1 69.8 25.5 2 51.9-13.3 67.7-32.3z" />
+                    </svg>
+                  </div>
+                  <div className="flex flex-col items-start leading-none text-right">
+                    <span className="text-[10px] opacity-70 mb-1">حمل من علي</span>
+                    <span className="text-xl font-bold font-sans">App Store</span>
+                  </div>
+                </a>
+
+                {/* Google Play */}
+                <a
+                  href="#"
+                  className="flex items-center gap-3 bg-black hover:bg-[#00B2B2] text-white px-6 py-3 rounded-xl transition-all border border-zinc-800 group"
+                >
+                  <div className="text-3xl">
+                    <svg className="w-8 h-8 fill-current" viewBox="0 0 512 512">
+                      <path d="M325.3 234.3L104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6l-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l220.7-121.3-60.7-60.7L47 512l57.6-13z" />
+                    </svg>
+                  </div>
+                  <div className="flex flex-col items-start leading-none text-right">
+                    <span className="text-[10px] opacity-70 mb-1">حمل من علي</span>
+                    <span className="text-xl font-bold font-sans">Google Play</span>
+                  </div>
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </section>
+    </section >
   );
 };
 

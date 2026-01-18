@@ -1,24 +1,24 @@
-'use client';  // ← if your framework supports this directive (TanStack Start / Vite SSR may need equivalent)
+'use client';
 
-import { useLiveQuery } from '@tanstack/react-db';
 import { useEffect } from 'react';
 import { localStorageCollection } from '../db/localStorageCollection';
+// import { useTheme } from '../hooks/useTheme';
 
 export function ClientRoot({ children }: { children: React.ReactNode }) {
-    const { data: authSession = [] } = useLiveQuery(q => q.from({ session: localStorageCollection }));
-    const currentSession = authSession[0];
+    // const theme = useTheme()
 
     useEffect(() => {
         // Check existence synchronously if possible, or use try-catch
         try {
-            const exists = localStorageCollection.get('current'); // or .findSync, .getOne, etc.
+            const exists = localStorageCollection.get('current');
             if (!exists) {
-                localStorageCollection.insert({
+                const newSession = localStorageCollection.insert({
                     id: 'current',
                     teacher: { id: 'guest', name: 'Guest' },
                     token: '',
                     theme: 'light', // default theme is light
                 });
+                console.log("error", newSession.error)
             }
         } catch (err) {
             // If get throws or collection method is async → ignore or log
@@ -27,13 +27,14 @@ export function ClientRoot({ children }: { children: React.ReactNode }) {
     }, []);
 
 
-    useEffect(() => {
-        if (currentSession?.theme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    }, [currentSession?.theme]);
+    // useEffect(() => {
+    //     if (theme === 'dark') {
+    //         document.documentElement.classList.add('dark');
+    //     } else {
+    //         document.documentElement.classList.remove('dark');
+    //     }
+    // }, [theme]);
 
     return <>{children}</>;
 }
+

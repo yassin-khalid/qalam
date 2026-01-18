@@ -7,5 +7,13 @@ export const localStorageCollection = createCollection(
         storageKey: 'app_auth_session',
         schema: authSessionSchema,
         getKey: (item) => item.id,
+        onUpdate: async ({transaction}) => {
+            const {modified} = transaction.mutations[0]
+            if (modified.theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        },
     })
 )
