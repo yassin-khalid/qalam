@@ -1,290 +1,207 @@
-Welcome to your new TanStack app! 
+# قلم (Qalam) - Teacher Platform
 
-# Getting Started
+A modern teacher registration and authentication platform built with TanStack technologies. This application provides a multi-step registration process with phone verification (OTP) and supports Arabic language with RTL layout.
 
-To run this application:
+> **Note:** This README is updated periodically to reflect the current state of the project.
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js (v18 or higher)
+- npm or yarn
+
+### Installation
 
 ```bash
 npm install
+```
+
+### Development
+
+Start the development server:
+
+```bash
 npm run dev
 ```
 
-# Building For Production
+The application will be available at `http://localhost:3000`
 
-To build this application for production:
+### Building for Production
 
 ```bash
 npm run build
 ```
 
-## Testing
+### Preview Production Build
 
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
+```bash
+npm run preview
+```
+
+## 🧪 Testing
+
+This project uses [Vitest](https://vitest.dev/) for testing. Run tests with:
 
 ```bash
 npm run test
 ```
 
-## Styling
+## 🛠️ Tech Stack
 
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
+### Core Technologies
+- **React 19** - UI library
+- **TypeScript** - Type safety
+- **Vite** - Build tool and dev server
+- **TanStack Start** - Full-stack React framework
 
+### TanStack Ecosystem
+- **TanStack Router** - File-based routing with type safety
+- **TanStack DB** - Local database with collections
+- **TanStack Query** - Server state management
+- **TanStack Form** - Form state management
+- **TanStack Devtools** - Development tools
 
+### Styling & UI
+- **Tailwind CSS 4** - Utility-first CSS framework
+- **Lucide React** - Icon library
+- **react-hot-toast** - Toast notifications
 
+### Additional Libraries
+- **Zod** - Schema validation
+- **nuqs** - URL state management for search params
+- **Arabic Fonts** - Noto Kufi Arabic & IBM Plex Sans Arabic
 
-## Routing
-This project uses [TanStack Router](https://tanstack.com/router). The initial setup is a file based router. Which means that the routes are managed as files in `src/routes`.
+## 📁 Project Structure
 
-### Adding A Route
-
-To add a new route to your application just add another a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
+```
+src/
+├── lib/                    # Shared utilities and components
+│   ├── components/        # Reusable components (ThemeToggle, Logo, etc.)
+│   ├── contexts/          # React contexts (auth, etc.)
+│   ├── db/                # Database collections and utilities
+│   ├── hooks/             # Custom React hooks
+│   └── types/             # TypeScript type definitions
+├── routes/                 # File-based routes (TanStack Router)
+│   ├── __root.tsx         # Root layout
+│   ├── _landing/          # Landing page routes
+│   │   ├── index/         # Home page
+│   │   └── contact/       # Contact page
+│   └── teacher/           # Teacher-specific routes
+│       ├── login/         # Login page
+│       ├── register/      # Multi-step registration
+│       │   ├── -api/      # API functions
+│       │   ├── -components/ # Registration components
+│       │   ├── -db/       # Database collections
+│       │   └── -types/    # Type definitions
+│       └── _authenticated/ # Protected routes
+└── styles.css             # Global styles
 ```
 
-Then anywhere in your JSX you can use it like so:
+## 🎯 Key Features
 
-```tsx
-<Link to="/about">About</Link>
+### Authentication Flow
+- **Phone Registration**: Enter phone number with country code selection
+- **OTP Verification**: 4-digit code verification with timer
+- **Multi-step Registration**: 
+  - Step 1: Personal information (name, email, etc.)
+  - Step 2: Additional details (certificates, identity documents, etc.)
+
+### User Experience
+- **RTL Support**: Full Arabic language support with right-to-left layout
+- **Dark Mode**: Theme toggle with persistent preference
+- **Responsive Design**: Mobile-first responsive layout
+- **Form Validation**: Client-side validation with Zod schemas
+- **Toast Notifications**: User feedback for actions
+
+### Developer Experience
+- **Type Safety**: Full TypeScript coverage
+- **File-based Routing**: Automatic route generation
+- **Devtools**: TanStack Devtools for debugging
+- **Hot Module Replacement**: Fast development experience
+
+## 🗺️ Routes
+
+### Public Routes
+- `/` - Landing page (home)
+- `/contact` - Contact page
+- `/teacher/login` - Teacher login
+- `/teacher/register` - Teacher registration (multi-step)
+
+### Protected Routes
+- `/teacher/*` - Authenticated teacher routes (under `_authenticated`)
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Create a `.env` file in the root directory:
+
+```env
+VITE_API_URL=your_api_url_here
 ```
 
-This will create a link that will navigate to the `/about` route.
+### TypeScript Path Aliases
 
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
+The project uses path aliases configured in `tsconfig.json`:
+- `@/` - Points to `src/`
 
-### Using A Layout
+## 📝 Development Guidelines
 
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you use the `<Outlet />` component.
+### Adding Routes
 
-Here is an example layout that includes a header:
+Routes are file-based. Create a new file in `src/routes/` directory:
+- `route.tsx` - Route component and configuration
+- `-components/` - Route-specific components (prefixed with `-`)
+- `-api/` - Route-specific API functions
+- `-types/` - Route-specific types
 
-```tsx
-import { Outlet, createRootRoute } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+### Styling
 
-import { Link } from "@tanstack/react-router";
+- Use Tailwind CSS utility classes
+- Follow the existing color scheme:
+  - Primary: `#003049` (dark blue)
+  - Accent: `#00B5B5` (cyan)
+  - Dark mode: Slate color palette
 
-export const Route = createRootRoute({
-  component: () => (
-    <>
-      <header>
-        <nav>
-          <Link to="/">Home</Link>
-          <Link to="/about">About</Link>
-        </nav>
-      </header>
-      <Outlet />
-      <TanStackRouterDevtools />
-    </>
-  ),
-})
-```
+### Form Handling
 
-The `<TanStackRouterDevtools />` component is not required so you can remove it if you don't want it in your layout.
+- Use TanStack Form for complex forms
+- Validate with Zod schemas
+- Use `react-hot-toast` for user feedback
 
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
+### Database Collections
 
+Collections are defined using TanStack DB:
+- Located in route-specific `-db/collections/` folders
+- Use `queryCollectionOptions` for query integration
+- Handle mutations with `onInsert`, `onUpdate`, `onDelete` callbacks
 
-## Data Fetching
+## 🎨 Design System
 
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
+### Colors
+- **Primary Dark**: `#003049`
+- **Primary Light**: `#00B5B5`
+- **Background**: White (light) / Slate 950 (dark)
+- **Text**: Slate 900 (light) / Slate 100 (dark)
 
-For example:
+### Typography
+- **Arabic Fonts**: Noto Kufi Arabic (variable), IBM Plex Sans Arabic
+- **Direction**: RTL for Arabic content
 
-```tsx
-const peopleRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/people",
-  loader: async () => {
-    const response = await fetch("https://swapi.dev/api/people");
-    return response.json() as Promise<{
-      results: {
-        name: string;
-      }[];
-    }>;
-  },
-  component: () => {
-    const data = peopleRoute.useLoaderData();
-    return (
-      <ul>
-        {data.results.map((person) => (
-          <li key={person.name}>{person.name}</li>
-        ))}
-      </ul>
-    );
-  },
-});
-```
+## 📚 Learn More
 
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
+- [TanStack Router Documentation](https://tanstack.com/router)
+- [TanStack Query Documentation](https://tanstack.com/query)
+- [TanStack DB Documentation](https://tanstack.com/db)
+- [TanStack Form Documentation](https://tanstack.com/form)
+- [Tailwind CSS Documentation](https://tailwindcss.com)
+- [Vite Documentation](https://vitejs.dev)
 
-### React-Query
+## 📄 License
 
-React-Query is an excellent addition or alternative to route loading and integrating it into you application is a breeze.
+[Add your license here]
 
-First add your dependencies:
+---
 
-```bash
-npm install @tanstack/react-query @tanstack/react-query-devtools
-```
-
-Next we'll need to create a query client and provider. We recommend putting those in `main.tsx`.
-
-```tsx
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-// ...
-
-const queryClient = new QueryClient();
-
-// ...
-
-if (!rootElement.innerHTML) {
-  const root = ReactDOM.createRoot(rootElement);
-
-  root.render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  );
-}
-```
-
-You can also add TanStack Query Devtools to the root route (optional).
-
-```tsx
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-
-const rootRoute = createRootRoute({
-  component: () => (
-    <>
-      <Outlet />
-      <ReactQueryDevtools buttonPosition="top-right" />
-      <TanStackRouterDevtools />
-    </>
-  ),
-});
-```
-
-Now you can use `useQuery` to fetch your data.
-
-```tsx
-import { useQuery } from "@tanstack/react-query";
-
-import "./App.css";
-
-function App() {
-  const { data } = useQuery({
-    queryKey: ["people"],
-    queryFn: () =>
-      fetch("https://swapi.dev/api/people")
-        .then((res) => res.json())
-        .then((data) => data.results as { name: string }[]),
-    initialData: [],
-  });
-
-  return (
-    <div>
-      <ul>
-        {data.map((person) => (
-          <li key={person.name}>{person.name}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-export default App;
-```
-
-You can find out everything you need to know on how to use React-Query in the [React-Query documentation](https://tanstack.com/query/latest/docs/framework/react/overview).
-
-## State Management
-
-Another common requirement for React applications is state management. There are many options for state management in React. TanStack Store provides a great starting point for your project.
-
-First you need to add TanStack Store as a dependency:
-
-```bash
-npm install @tanstack/store
-```
-
-Now let's create a simple counter in the `src/App.tsx` file as a demonstration.
-
-```tsx
-import { useStore } from "@tanstack/react-store";
-import { Store } from "@tanstack/store";
-import "./App.css";
-
-const countStore = new Store(0);
-
-function App() {
-  const count = useStore(countStore);
-  return (
-    <div>
-      <button onClick={() => countStore.setState((n) => n + 1)}>
-        Increment - {count}
-      </button>
-    </div>
-  );
-}
-
-export default App;
-```
-
-One of the many nice features of TanStack Store is the ability to derive state from other state. That derived state will update when the base state updates.
-
-Let's check this out by doubling the count using derived state.
-
-```tsx
-import { useStore } from "@tanstack/react-store";
-import { Store, Derived } from "@tanstack/store";
-import "./App.css";
-
-const countStore = new Store(0);
-
-const doubledStore = new Derived({
-  fn: () => countStore.state * 2,
-  deps: [countStore],
-});
-doubledStore.mount();
-
-function App() {
-  const count = useStore(countStore);
-  const doubledCount = useStore(doubledStore);
-
-  return (
-    <div>
-      <button onClick={() => countStore.setState((n) => n + 1)}>
-        Increment - {count}
-      </button>
-      <div>Doubled - {doubledCount}</div>
-    </div>
-  );
-}
-
-export default App;
-```
-
-We use the `Derived` class to create a new store that is derived from another store. The `Derived` class has a `mount` method that will start the derived store updating.
-
-Once we've created the derived store we can use it in the `App` component just like we would any other store using the `useStore` hook.
-
-You can find out everything you need to know on how to use TanStack Store in the [TanStack Store documentation](https://tanstack.com/store/latest).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
+**Last Updated**: This README is maintained and updated periodically to reflect the current project state.
