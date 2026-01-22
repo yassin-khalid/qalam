@@ -1,6 +1,8 @@
 import React from "react";
+import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { Toaster } from "react-hot-toast";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 
 import appCss from "../styles.css?url";
@@ -70,7 +72,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body className="bg-white dark:bg-slate-950 transition-colors duration-500">
-        {isServer ? children : <ClientRoot>{children}</ClientRoot>}
+        <NuqsAdapter>
+          {isServer ? children : <ClientRoot>{children}</ClientRoot>}
+        </NuqsAdapter>
+        <Toaster position="bottom-right" />
         <TanStackDevtools
           config={{
             position: "bottom-right",
