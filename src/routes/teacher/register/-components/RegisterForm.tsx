@@ -5,7 +5,7 @@ import StepPhone from '../-components/StepPhone'
 import StepOTP from '../-components/StepOTP'
 import StepTwo from '../-components/StepTwo'
 import Stepper from "./Stepper";
-import { StepOneData } from "../-types/StepOneData";
+import { StepOneDataOmitPassword } from "../-types/StepOneData";
 
 interface RegisterFormProps {
     step: number;
@@ -15,8 +15,8 @@ interface RegisterFormProps {
     onBackToPhoneStep: () => void;
     onOtpSuccess: (token: string) => void;
     onPhoneChanges: (phone: string) => void;
-    onStepOneDataChanges: (stepOneData: StepOneData) => void;
-    stepOneData: Omit<StepOneData, 'password' | 'confirmPassword'>;
+    onStepOneDataChanges: (stepOneData: StepOneDataOmitPassword) => void;
+    stepOneData: StepOneDataOmitPassword;
 }
 
 const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneRegistered, phoneNumber, onBackToPhoneStep, onOtpSuccess, onPhoneChanges, onStepOneDataChanges, stepOneData }) => {
