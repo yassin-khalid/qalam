@@ -6,6 +6,8 @@ import StepOTP from '../-components/StepOTP'
 import StepTwo from '../-components/StepTwo'
 import Stepper from "./Stepper";
 import { StepOneDataOmitPassword } from "../-types/StepOneData";
+import { VerifyOtpSuccessResponseData } from "../-types/VerifyOtpSuccessResponseData";
+import { PersonalInfoSuccessResponseData } from "../-api/personalInfo";
 
 interface RegisterFormProps {
     step: number;
@@ -13,13 +15,15 @@ interface RegisterFormProps {
     onPhoneRegistered: (phone: string) => void;
     phoneNumber?: string;
     onBackToPhoneStep: () => void;
-    onOtpSuccess: (token: string) => void;
+    onOtpSuccess: (data: VerifyOtpSuccessResponseData) => void;
     onPhoneChanges: (phone: string) => void;
     onStepOneDataChanges: (stepOneData: StepOneDataOmitPassword) => void;
     stepOneData: StepOneDataOmitPassword;
+    onNoTokenFound: () => void;
+    onPersonalInfoSuccess: (data: PersonalInfoSuccessResponseData) => void;
 }
 
-const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneRegistered, phoneNumber, onBackToPhoneStep, onOtpSuccess, onPhoneChanges, onStepOneDataChanges, stepOneData }) => {
+const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneRegistered, phoneNumber, onBackToPhoneStep, onOtpSuccess, onPhoneChanges, onStepOneDataChanges, stepOneData, onNoTokenFound, onPersonalInfoSuccess }) => {
     // const [step, setStep] = useState(0);
     // const [authSubStep, setAuthSubStep] = useState<'phone' | 'otp'>('phone');
     // const [phoneNumber, setPhoneNumber] = useState('');
@@ -34,15 +38,16 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneR
         onPhoneRegistered(phone)
     };
 
-    const handleOTPSuccess = (token: string) => {
+    const handleOTPSuccess = (data: VerifyOtpSuccessResponseData) => {
         // setStep(1);
-        onOtpSuccess(token);
+        onOtpSuccess(data);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const handleStepOneSuccess = (newUserId: number) => {
-        setUserId(newUserId);
+    const handleStepOneSuccess = (data: PersonalInfoSuccessResponseData) => {
+        // setUserId(newUserId);
         // setStep(2);
+        onPersonalInfoSuccess(data)
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -60,22 +65,25 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneR
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    console.log({ step, authSubStep })
+    const handleNoTokenFound = () => {
+        onNoTokenFound()
+    }
+
     return (
         <div className="w-full max-w-[640px] bg-white dark:bg-slate-900 rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)] transition-all duration-500 relative">
             {/* Header Section */}
             <div className={`pt-8 flex flex-col items-center transition-all ${step === 0 ? 'pb-8' : 'pb-4'}`}>
                 <div className="transform scale-110 mb-2">
-                    <QalamLogo className="w-32" />
+                    <QalamLogo className="w-24" />
                 </div>
-                <h1 className="text-4xl font-bold text-[#003049] dark:text-slate-100 mb-6">إنشاء حساب مُعلم</h1>
+                <h1 className="text-3xl font-bold text-[#003049] dark:text-slate-100 mb-4">إنشاء حساب مُعلم</h1>
                 {/* Show stepper only for step 1 and 2 */}
                 {step > 0 && <div className="w-full p-2"><Stepper currentStep={step} /></div>}
             </div>
 
             {/* Form Body */}
             <div className="px-4 md:px-10 pb-8">
-                {step === 0 && (
+                {step === 0 && authSubStep !== 'none' && (
                     authSubStep === 'phone' ? (
                         <StepPhone onSuccess={handlePhoneSuccess} onPhoneChanges={onPhoneChanges} phoneNumber={phoneNumber} />
                     ) : (
@@ -83,7 +91,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneR
                     )
                 )}
                 {step === 1 && (
-                    <StepOne onSuccess={handleStepOneSuccess} stepOneData={stepOneData} onDataChanges={onStepOneDataChanges} />
+                    <StepOne onSuccess={handleStepOneSuccess} stepOneData={stepOneData} onDataChanges={onStepOneDataChanges} onNoTokenFound={handleNoTokenFound} />
                 )}
                 {step === 2 && (
                     <StepTwo

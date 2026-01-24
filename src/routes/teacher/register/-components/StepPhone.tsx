@@ -3,8 +3,8 @@ import React, { useState, useMemo } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { PhoneIcon } from 'lucide-react';
 import z from 'zod';
-import { authCollection } from '../-db/collections/authCollection';
-import { SendOtpError } from '../-api/sendOtp';
+import { sendOtp, SendOtpError } from '../-api/sendOtp';
+import { showToast } from '@/lib/utils/toast';
 
 interface CountryCode {
     code: string;
@@ -59,8 +59,6 @@ const StepPhone: React.FC<StepPhoneProps> = ({ onSuccess, onPhoneChanges, phoneN
         );
     }, [searchTerm]);
 
-
-
     const form = useForm({
         defaultValues: {
             phoneNumber: phoneNumber ?? '',
@@ -70,25 +68,17 @@ const StepPhone: React.FC<StepPhoneProps> = ({ onSuccess, onPhoneChanges, phoneN
         },
         onSubmit: async ({ value: { phoneNumber } }) => {
             try {
-                const transaction = authCollection.insert({ phoneNumber, countryCode: selectedCountry.code });
-                await transaction.isPersisted.promise;
-                // If successful, proceed to next step
-                onSuccess(`${phoneNumber}`);
-            } catch (err: any) {
-                console.log(err)
-                if (err instanceof SendOtpError) {
-                    setErrors({ phoneNumber: err.message });
+
+            const response = await sendOtp({ phoneNumber, countryCode: selectedCountry.code });
+            onSuccess(phoneNumber)
+            showToast({ type: 'success', message: response.message ?? 'تم إرسال رمز التحقق بنجاح' })
+            } catch (error) {
+                if (error instanceof SendOtpError) {
+                    // setErrors({ phoneNumber: error.message });
+                    showToast({ type: 'validation', message: error.message })
+                    return
                 }
-
-                // Set error and mark field as touched so it displays
-                // Use setTimeout to ensure state update happens before throw
-
-                // Use setTimeout to ensure the error state is set before throwing
-                // This allows React to re-render with the error
-                await new Promise(resolve => setTimeout(resolve, 0));
-
-                // Throw to prevent form submission success
-                throw err;
+                showToast({ type: 'server', message: error instanceof Error ? error.message : 'حدث خطأ ما' })
             }
         },
     })

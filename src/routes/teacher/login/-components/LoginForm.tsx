@@ -80,6 +80,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit }) => {
         <span className="text-gray-600 dark:text-slate-400 font-medium">ليس لديك حساب؟ </span>
         <Link
           to="/teacher/register"
+          search={{
+            authSubStep: 'phone',
+            step: 0,
+            phoneNumber
+          }}
           className="text-[#14b8a6] dark:text-teal-400 font-bold hover:underline decoration-2 underline-offset-4"
         >
           إنشاء حساب

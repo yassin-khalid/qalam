@@ -1,13 +1,15 @@
+import { VerifyOtpSuccessResponseData } from "../-types/VerifyOtpSuccessResponseData";
+
 interface VerifyOtpParams {
     phoneNumber: string;
     otpCode: string;
 }
 
 type VerifyOtpSuccessResponse = {
-  statusCode: 200,
-  succeeded: true,
+    statusCode: number,
+    succeeded: boolean,
   message: string,
-  data: string,
+  data: VerifyOtpSuccessResponseData,
   errors: null,
   meta: null
 }

@@ -12,7 +12,7 @@ const Stepper: React.FC<StepperProps> = ({ currentStep }) => {
     const isStep2Active = currentStep === 2;
 
     return (
-        <div className="w-full mb-4 sm:mb-8" dir="rtl">
+        <div className="w-full mb-2 sm:mb-4" dir="rtl">
             <div className="flex items-stretch sm:h-20 border border-gray-200 dark:border-slate-700 rounded-2xl overflow-hidden bg-white dark:bg-slate-800 relative shadow-sm">
 
                 {/* Step 1 (Right - Personal Info) */}

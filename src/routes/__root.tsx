@@ -74,6 +74,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body className="bg-white dark:bg-slate-950 transition-colors duration-500">
         <NuqsAdapter>
           {isServer ? children : <ClientRoot>{children}</ClientRoot>}
+          {/* {children} */}
         </NuqsAdapter>
         <Toaster position="bottom-right" />
         <TanStackDevtools
