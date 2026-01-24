@@ -52,23 +52,21 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, onTitleChange }) => {
     return (
         <aside className={`sidebar-transition h-screen p-4 flex flex-col sticky top-0 shrink-0 z-40 ${isCollapsed ? 'w-24' : 'w-80'}`}>
-            <div className="bg-secondary dark:bg-primary h-full rounded-[2.5rem] flex flex-col text-white shadow-2xl relative transition-colors duration-300">
+            <div className="bg-primary dark:bg-secondary h-full rounded-[2.5rem] flex flex-col text-white shadow-2xl relative transition-colors duration-300">
 
                 {/* Toggle Button */}
                 <button
                     onClick={onToggle}
-                    className="absolute -left-3 top-10 w-8 h-8 bg-qalam-teal dark:bg-primary border border-white/20 rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform z-50 shadow-md"
+                    className="absolute -left-3 top-10 w-8 h-8 bg-primary dark:bg-white border border-white/20 rounded-full flex items-center justify-center text-white dark:text-secondary hover:scale-110 transition-transform z-50 shadow-md"
                 >
                     {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
                 </button>
 
                 {/* Logo Section */}
                 <div className={`p-4 transition-all duration-300 mb-4 ${isCollapsed ? 'px-2' : 'px-4'}`}>
-                    <div className="rounded-4xl p-4 flex items-center justify-center aspect-16/10 overflow-hidden shadow-sm">
+                    <div className={`flex items-center justify-center aspect-16/10 overflow-hidden ${isCollapsed ? 'p-2 shadow-none rounded-2xl' : 'p-4 shadow-sm rounded-4xl'}`}>
                         <div className="flex flex-col items-center">
-                            <QalamLogo
-                                className={`w-32 h-32`}
-                            />
+                            <img src="/qalam-logo-dark.svg" alt="Qalam Dark Logo" className={`w-32 h-32`} />
                             {/* {!isCollapsed && <span className="text-qalam-teal text-3xl font-bold -mt-2">قلم</span>} */}
                         </div>
                     </div>

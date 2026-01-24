@@ -23,7 +23,7 @@ export const stepTwoFormSchema = z.object({
         z.null()
     ]),
     certificates: z.array(z.object({
-        certificateFile: z.union([
+        file: z.union([
             z.instanceof(File).refine((file) => file.size <= 5 * 1024 * 1024, { 
                 message: 'الملف يجب أن يكون أصغر من 5MB' 
             }),
@@ -36,9 +36,10 @@ export const stepTwoFormSchema = z.object({
 }).refine((data) => data.identityDocumentFile !== null, {
     message: 'يجب إدخال ملف',
     path: ['identityDocumentFile']
-}).refine((data) => data.certificates.every(cert => cert.certificateFile !== null), {
+}).refine((data) => data.certificates.every(cert => cert.file !== null), {
     message: 'يجب إدخال ملف',
     path: ['certificates']
 });
 
 export type StepTwoData = z.infer<typeof stepTwoFormSchema>;
+export type StepTwoDataOmitIssuingCountryCodeAndIdentityDocumentFileAndCertificates = Omit<StepTwoData, 'issuingCountryCode' | 'identityDocumentFile' | 'certificates'>;

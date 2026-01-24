@@ -1,8 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
-import { StepTwoData, stepTwoFormSchema } from "../-types/StepTwoData";
+import { StepTwoData, StepTwoDataOmitIssuingCountryCodeAndIdentityDocumentFileAndCertificates, stepTwoFormSchema } from "../-types/StepTwoData";
 import { IdentityType } from "../-types/IdentityData";
-import { PlusIcon, UploadIcon, XIcon, FileIcon, ChevronDownIcon } from "lucide-react";
-import { useForm } from "@tanstack/react-form";
+import {
+    PlusIcon,
+    UploadIcon,
+    XIcon,
+    FileIcon,
+    ChevronDownIcon,
+} from "lucide-react";
+import { useForm, useStore } from "@tanstack/react-form";
 import { showToast } from "@/lib/utils/toast";
 import DatePicker from "@/lib/components/calendar/DatePicker";
 import { useLiveQuery } from "@tanstack/react-db";
@@ -11,11 +17,11 @@ import { uploadDocuments } from "../-api/uploadDocuments";
 
 interface StepTwoProps {
     onSuccess: (data: StepTwoData) => void;
-    stepTwoData: StepTwoData;
+    stepTwoData: StepTwoDataOmitIssuingCountryCodeAndIdentityDocumentFileAndCertificates;
+    onDataChanges: (data: StepTwoDataOmitIssuingCountryCodeAndIdentityDocumentFileAndCertificates) => void;
 }
 
-
-const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData }) => {
+const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges }) => {
     const [loading, setLoading] = useState(false);
     const idFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -23,63 +29,84 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData }) => {
     //     q.from({ session: localStorageCollection }),
     // );
 
-    const { data: currentSession } = useLiveQuery(q => q.from({ session: localStorageCollection }))
+    const { data: currentSession } = useLiveQuery((q) =>
+        q.from({ session: localStorageCollection }),
+    );
 
     const token = currentSession?.[0]?.token ?? "";
 
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        // if (data.certificates.length === 0) return;
-
-        setLoading(true);
-    };
-
     const form = useForm({
-        defaultValues: stepTwoData || {
-            isInSaudiArabia: true,
-            identityType: 1,
-            documentNumber: "",
+        defaultValues: {
+            isInSaudiArabia: stepTwoData.isInSaudiArabia ?? true,
+            identityType: stepTwoData.identityType ?? 1,
+            documentNumber: stepTwoData.documentNumber ?? "",
             issuingCountryCode: "SA",
-            identityDocumentFile: null,
-            certificates: [],
+            identityDocumentFile: null as File | null,
+            certificates: [] as { file: File | null; title: string; issuer: string; issueDate: string; }[],
         },
         validators: {
             onChange: stepTwoFormSchema,
         },
         onSubmit: async ({ value }) => {
             try {
-
                 console.log(value);
                 if (value.isInSaudiArabia) {
                     const { issuingCountryCode, ...rest } = value;
-                    const response = await uploadDocuments({ type: 'saudi', ...rest, token });
+                    const response = await uploadDocuments({
+                        type: "saudi",
+                        ...rest,
+                        token,
+                    });
                     console.log(response);
-                    onSuccess(response.data)
-                    showToast({ type: 'success', message: response.message ?? 'تم تحميل المستندات بنجاح' })
+                    onSuccess(response.data);
+                    showToast({
+                        type: "success",
+                        message: response.message ?? "تم تحميل المستندات بنجاح",
+                    });
                 } else {
-                    const response = await uploadDocuments({ type: 'foreign', ...value, token });
+                    const response = await uploadDocuments({
+                        type: "foreign",
+                        ...value,
+                        token,
+                    });
                     console.log(response);
-                    onSuccess(response.data)
-                    showToast({ type: 'success', message: response.message ?? 'تم تحميل المستندات بنجاح' })
+                    onSuccess(response.data);
+                    showToast({
+                        type: "success",
+                        message: response.message ?? "تم تحميل المستندات بنجاح",
+                    });
                 }
-
-
-
             } catch (error) {
-                showToast({ type: 'server', message: error instanceof Error ? error.message : 'حدث خطأ ما' })
+                showToast({
+                    type: "server",
+                    message: error instanceof Error ? error.message : "حدث خطأ ما",
+                });
             } finally {
                 setLoading(false);
             }
         },
     });
 
+    const values = useStore(form.store, (state) => state.values);
+
+    useEffect(() => {
+        // remove issuingCountryCode from values
+        // and send the rest to onDataChanges
+        // so that it doesn't appear in url
+        const { issuingCountryCode, certificates, identityDocumentFile, ...rest } = values;
+        onDataChanges(rest);
+    }, [values]);
+
     return (
-        <form onSubmit={e => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit();
-        }} className="flex flex-col h-full" dir="rtl">
+        <form
+            onSubmit={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                form.handleSubmit();
+            }}
+            className="flex flex-col h-full"
+            dir="rtl"
+        >
             {/* Scrollable Container with elegant max-height and custom scrollbar */}
             <div className="flex-1 overflow-y-auto custom-scrollbar max-h-[450px] pl-2 -ml-2 mb-6 rtl-scroll">
                 <div className="space-y-8 pb-4">
@@ -303,14 +330,13 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData }) => {
                             children={(field) => {
                                 return (
                                     <>
-
                                         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                                             <button
                                                 type="button"
                                                 // onClick={addCertificate}
                                                 onClick={() => {
                                                     field.pushValue({
-                                                        certificateFile: null,
+                                                        file: null,
                                                         title: "",
                                                         issuer: "",
                                                         issueDate: "",
@@ -322,7 +348,7 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData }) => {
                                                 <PlusIcon />
                                                 إضافة شهادة أخرى
                                             </button>
-                                            <div className="flex flex-col items-end gap-1 w-full md:w-auto">
+                                            <div className="flex flex-col items-start gap-1 w-full md:w-auto">
                                                 <h3 className="text-[#003049] dark:text-slate-100 font-bold text-lg leading-none">
                                                     الشهادات والدورات
                                                 </h3>
@@ -415,39 +441,22 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData }) => {
                                                                     field.state.meta.isTouched &&
                                                                     !field.state.meta.isValid;
                                                                 return (
-                                                                    // <>
-                                                                    //     <DateSelector
-                                                                    //         value={field.state.value}
-                                                                    //         type={"gregorian"}
-                                                                    //         onChange={(val) =>
-                                                                    //             field.handleChange(val)
-                                                                    //         }
-                                                                    //         // onTypeToggle={() =>
-                                                                    //         //     updateCertificate(cert.id, {
-                                                                    //         //         dateType:
-                                                                    //         //             cert.dateType === "hijri"
-                                                                    //         //                 ? "gregorian"
-                                                                    //         //                 : "hijri",
-                                                                    //         //     })
-                                                                    //         // }
-                                                                    //         onTypeToggle={() => { }}
-                                                                    //     />
-                                                                    //     {invalid && (
-                                                                    //         <p className="text-red-500 text-sm mt-1 text-right">
-                                                                    //             {field.state.meta.errors?.[0]
-                                                                    //                 ?.message ?? ""}
-                                                                    //         </p>
-                                                                    //     )}
-                                                                    // </>
                                                                     <>
                                                                         <DatePicker
                                                                             label="تاريخ الإصدار"
                                                                             placeholder="اختر تاريخ الإصدار..."
                                                                             initialType="hijri"
-                                                                            onChange={(date) =>
-                                                                                field.handleChange(date.toDateString())
-                                                                            }
+                                                                            onChange={(date) => {
+                                                                                console.log({ date: date.toISOString().split('T')[0] })
+                                                                                field.handleChange(date.toISOString().split('T')[0])
+                                                                            }}
                                                                         />
+                                                                        {invalid && (
+                                                                            <p className="text-red-500 text-sm mt-1 text-right">
+                                                                                {field.state.meta.errors?.[0]
+                                                                                    ?.message ?? ""}
+                                                                            </p>
+                                                                        )}
                                                                     </>
                                                                 );
                                                             }}
@@ -455,12 +464,11 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData }) => {
                                                     </div>
 
                                                     <form.Field
-                                                        name={`certificates[${index}].certificateFile`}
+                                                        name={`certificates[${index}].file`}
                                                         children={(field) => {
                                                             const invalid =
                                                                 field.state.meta.isTouched &&
                                                                 !field.state.meta.isValid;
-                                                            console.log(field.state.value);
                                                             return (
                                                                 <div className="relative pt-2">
                                                                     <input
@@ -476,13 +484,11 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData }) => {
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => {
-
                                                                             field.handleChange(null);
                                                                             document
                                                                                 .getElementById(`file-${index}`)
-                                                                                ?.click()
-                                                                        }
-                                                                        }
+                                                                                ?.click();
+                                                                        }}
                                                                         className={`w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all border-2 ${field.state.value?.name ? "border-[#00B5B5] bg-white dark:bg-slate-900 text-[#00B5B5]" : "border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 text-gray-500"}`}
                                                                     >
                                                                         {field.state.value?.name ? (
@@ -506,8 +512,8 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData }) => {
                                                                     )}
                                                                     {invalid && (
                                                                         <p className="text-red-500 text-sm mt-1 text-right">
-                                                                            {field.state.meta.errors?.[0]
-                                                                                ?.message ?? ""}
+                                                                            {field.state.meta.errors?.[0]?.message ??
+                                                                                ""}
                                                                         </p>
                                                                     )}
                                                                 </div>
@@ -526,24 +532,27 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData }) => {
             </div>
 
             <div className="pt-6 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-800">
-                <form.Subscribe selector={state => [state.canSubmit, state.isSubmitting]} children={([canSubmit, isSubmitting]) => (
-                    <button
-                        type="submit"
-                        disabled={!canSubmit || isSubmitting}
-                        className="w-full bg-[#003049] dark:bg-[#00B5B5] text-white py-3 rounded-2xl font-bold hover:opacity-90 transition-all shadow-xl shadow-[#003049]/10 dark:shadow-[#00B5B5]/20 disabled:opacity-50 flex items-center justify-center gap-2 active:scale-[0.98]"
-                    >
-                        {loading ? (
-                            <>
-                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                Jاري الإرسال...
-                            </>
-                        ) : (
-                            "إرسال الطلب النهائي"
-                        )}
-                    </button>
-                )} />
+                <form.Subscribe
+                    selector={(state) => [state.canSubmit, state.isSubmitting]}
+                    children={([canSubmit, isSubmitting]) => (
+                        <button
+                            type="submit"
+                            disabled={!canSubmit || isSubmitting}
+                            className="w-full bg-[#003049] dark:bg-[#00B5B5] text-white py-3 rounded-2xl font-bold hover:opacity-90 transition-all shadow-xl shadow-[#003049]/10 dark:shadow-[#00B5B5]/20 disabled:opacity-50 flex items-center justify-center gap-2 active:scale-[0.98]"
+                        >
+                            {loading ? (
+                                <>
+                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    Jاري الإرسال...
+                                </>
+                            ) : (
+                                "إرسال الطلب النهائي"
+                            )}
+                        </button>
+                    )}
+                />
             </div>
-        </form >
+        </form>
     );
 };
 

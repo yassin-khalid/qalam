@@ -1,3 +1,7 @@
+function toPascalCase(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 export function objectToFormData(
   obj: Record<string, any>,
   formData: FormData = new FormData(),
@@ -6,35 +10,43 @@ export function objectToFormData(
   for (const key in obj) {
     if (obj.hasOwnProperty(key)) {
       const value = obj[key];
-      const formKey = parentKey ? `${parentKey}[${key}]` : key;
+      const pascalKey = toPascalCase(key);
+      const formKey = parentKey ? `${parentKey}.${pascalKey}` : pascalKey; // Use dot notation
 
       if (value === null || value === undefined) {
-        // Skip null/undefined values
         continue;
       } else if (value instanceof File || value instanceof Blob) {
-        // Handle File and Blob objects
-        formData.append(formKey, value);
+        formData.append(formKey, value, value instanceof File ? value.name : undefined);
+      } else if (value instanceof Date) {
+        // Handle Date objects
+        const year = value.getFullYear();
+        const month = String(value.getMonth() + 1).padStart(2, '0');
+        const day = String(value.getDate()).padStart(2, '0');
+        formData.append(formKey, `${year}-${month}-${day}`);
       } else if (Array.isArray(value)) {
-        // Handle arrays
         value.forEach((item: any, index: number) => {
-          if (
+          if (item instanceof File || item instanceof Blob) {
+            formData.append(`${formKey}[${index}]`, item, item instanceof File ? item.name : undefined);
+          } else if (
             typeof item === 'object' &&
+            item !== null &&
             !(item instanceof File) &&
-            !(item instanceof Blob)
+            !(item instanceof Blob) &&
+            !(item instanceof Date)
           ) {
-            objectToFormData({ [index]: item }, formData, formKey);
+            // For objects in arrays, use array[index].property notation
+            objectToFormData(item, formData, `${formKey}[${index}]`);
           } else {
-            formData.append(`${formKey}[]`, item);
+            formData.append(`${formKey}[${index}]`, String(item));
           }
         });
       } else if (typeof value === 'object') {
-        // Recursively handle nested objects
         objectToFormData(value, formData, formKey);
       } else {
-        // Handle primitive values
         formData.append(formKey, String(value));
       }
     }
   }
+
   return formData;
 }

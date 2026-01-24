@@ -8,6 +8,7 @@ import Stepper from "./Stepper";
 import { StepOneDataOmitPassword } from "../-types/StepOneData";
 import { VerifyOtpSuccessResponseData } from "../-types/VerifyOtpSuccessResponseData";
 import { PersonalInfoSuccessResponseData } from "../-api/personalInfo";
+import { StepTwoData } from "../-types/StepTwoData";
 
 interface RegisterFormProps {
     step: number;
@@ -19,16 +20,18 @@ interface RegisterFormProps {
     onPhoneChanges: (phone: string) => void;
     onStepOneDataChanges: (stepOneData: StepOneDataOmitPassword) => void;
     stepOneData: StepOneDataOmitPassword;
+    stepTwoData: Omit<StepTwoData, 'issuingCountryCode' | 'identityDocumentFile' | 'certificates'>;
+    onStepTwoDataChanges: (stepTwoData: Omit<StepTwoData, 'issuingCountryCode' | 'identityDocumentFile' | 'certificates'>) => void;
     onNoTokenFound: () => void;
     onPersonalInfoSuccess: (data: PersonalInfoSuccessResponseData) => void;
 }
 
-const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneRegistered, phoneNumber, onBackToPhoneStep, onOtpSuccess, onPhoneChanges, onStepOneDataChanges, stepOneData, onNoTokenFound, onPersonalInfoSuccess }) => {
+const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneRegistered, phoneNumber, onBackToPhoneStep, onOtpSuccess, onPhoneChanges, onStepOneDataChanges, stepOneData, onNoTokenFound, onPersonalInfoSuccess, stepTwoData, onStepTwoDataChanges }) => {
     // const [step, setStep] = useState(0);
     // const [authSubStep, setAuthSubStep] = useState<'phone' | 'otp'>('phone');
     // const [phoneNumber, setPhoneNumber] = useState('');
-    const [userId, setUserId] = useState<number | null>(null);
-    const [submitted, setSubmitted] = useState(false);
+    // const [userId, setUserId] = useState<number | null>(null);
+    // const [submitted, setSubmitted] = useState(false);
 
 
 
@@ -52,7 +55,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneR
     };
 
     const handleStepTwoSuccess = () => {
-        setSubmitted(true);
+        // setSubmitted(true);
+        console.log("stepTwoSuccess");
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -70,7 +74,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneR
     }
 
     return (
-        <div className="w-full max-w-[640px] bg-white dark:bg-slate-900 rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)] transition-all duration-500 relative">
+        <div className="w-full max-w-[1036px] bg-white dark:bg-slate-900 rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)] transition-all duration-500 relative">
             {/* Header Section */}
             <div className={`pt-8 flex flex-col items-center transition-all ${step === 0 ? 'pb-8' : 'pb-4'}`}>
                 <div className="transform scale-110 mb-2">
@@ -95,7 +99,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneR
                 )}
                 {step === 2 && (
                     <StepTwo
-                        userId={userId ?? 0}
+                        stepTwoData={stepTwoData}
+                        onDataChanges={onStepTwoDataChanges}
                         onSuccess={handleStepTwoSuccess}
                     />
                 )}
