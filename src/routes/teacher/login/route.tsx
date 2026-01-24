@@ -1,12 +1,19 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { LoginForm } from './-components/LoginForm'
 import ThemeToggleButton from '@/lib/components/ThemeToggleButton'
+import { createStandardSchemaV1, parseAsString, useQueryStates } from 'nuqs'
 
+
+const searchParams = {
+  phoneNumber: parseAsString.withDefault('')
+}
 export const Route = createFileRoute('/teacher/login')({
   component: RouteComponent,
+  validateSearch: createStandardSchemaV1(searchParams, { partialOutput: true })
 })
 
 function RouteComponent() {
+  const [{ phoneNumber }, setSearchParams] = useQueryStates(searchParams)
   const navigate = useNavigate()
 
   return <>
@@ -17,7 +24,7 @@ function RouteComponent() {
       <div className='relative flex items-center justify-center'>
         <img src="/login/qalam-login-shadow.svg" alt="Qalam Login Shadow" className='absolute top-0 right-0 w-full h-full z-0' />
         <div className="relative z-10 mx-4 md:mx-0">
-          <LoginForm onSubmit={(phone) => { navigate({ to: '/teacher/otp', search: { phone } }) }} />
+          <LoginForm onSubmit={(phone) => { navigate({ to: '/teacher/otp', search: { phone } }) }} phoneNumber={phoneNumber} onPhoneNumberChange={(phoneNumber) => setSearchParams({ phoneNumber })} />
         </div>
       </div>
       <div className='w-full h-screen hidden md:block'>
