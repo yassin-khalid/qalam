@@ -171,7 +171,7 @@ const StepOne: React.FC<StepOneProps> = ({
                 e.stopPropagation();
                 form.handleSubmit();
             }}
-            className="space-y-6  max-h-[500px] overflow-y-auto custom-scrollbar"
+            className="space-y-6  max-h-[500px] overflow-y-auto custom-scrollbar px-4"
         >
             {/* {error && (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 p-4 rounded-xl text-right text-sm font-bold animate-in fade-in slide-in-from-top-2">

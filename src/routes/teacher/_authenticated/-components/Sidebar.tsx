@@ -31,12 +31,12 @@ const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, linkProps, isColla
         className={`relative group w-full flex items-center transition-all duration-200 py-3 ${isCollapsed ? 'justify-center px-0' : 'px-8 gap-4'
             } `}
     >
-        <Icon className='text-white/70 hover:text-white group-hover:scale-110 transition-transform' />
-
+        <Icon className='' />
+        {/* text-white/70 hover:text-white group-hover:scale-110 transition-transform */}
         {!isCollapsed && <span className="text-lg font-medium whitespace-nowrap">{label}</span>}
 
         {hasDot && (
-            <span className={`absolute ${isCollapsed ? 'top-3 right-5' : 'left-6'} w-2 h-2 bg-rose-500 rounded-full border-2 border-qalam-teal dark:border-qalam-navy-dark`}></span>
+            <span className={`absolute ${isCollapsed ? 'top-3 right-5' : 'left-6'} w-2 h-2 bg-rose-500 rounded-full border-2 border-primary dark:border-secondary`}></span>
         )}
     </Link>
 );
@@ -74,17 +74,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, onTitle
 
                 {/* Navigation */}
                 <nav className="flex-1 px-3 py-2 sidebar-scroll overflow-y-auto space-y-1">
-                    <NavItem isCollapsed={isCollapsed} icon={Grid} label="لوحة التحكم" linkProps={{ to: '/teacher', activeProps: { className: 'bg-white/20 dark:bg-white/10 rounded-2xl text-white' } }} onClick={() => onTitleChange('لوحة التحكم')} />
-                    <NavItem isCollapsed={isCollapsed} icon={Box} label="المنتجات" linkProps={{ to: '/teacher/products', activeProps: { className: 'bg-white/20 dark:bg-white/10 rounded-2xl text-white' } }} onClick={() => onTitleChange('المنتجات')} />
-                    <NavItem isCollapsed={isCollapsed} icon={Calendar} label="التقويم" linkProps={{ to: '/teacher/calendar', activeProps: { className: 'bg-white/20 dark:bg-white/10 rounded-2xl text-white' } }} onClick={() => onTitleChange('التقويم')} />
-                    <NavItem isCollapsed={isCollapsed} icon={Truck} label="الموردون" linkProps={{ to: '/teacher/suppliers', activeProps: { className: 'bg-white/20 dark:bg-white/10 rounded-2xl text-white' } }} onClick={() => onTitleChange('الموردون')} />
-                    <NavItem isCollapsed={isCollapsed} icon={BarChart} label="التقارير" linkProps={{ to: '/teacher/reports', activeProps: { className: 'bg-white/20 dark:bg-white/10 rounded-2xl text-white' } }} onClick={() => onTitleChange('التقارير')} />
+                    <NavItem isCollapsed={isCollapsed} icon={Grid} label="لوحة التحكم" linkProps={{ to: '/teacher', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('لوحة التحكم')} />
+                    <NavItem isCollapsed={isCollapsed} icon={Box} label="المنتجات" linkProps={{ to: '/teacher/products', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('المنتجات')} />
+                    <NavItem isCollapsed={isCollapsed} icon={Calendar} label="التقويم" linkProps={{ to: '/teacher/calendar', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('التقويم')} />
+                    <NavItem isCollapsed={isCollapsed} icon={Truck} label="الموردون" linkProps={{ to: '/teacher/suppliers', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('الموردون')} />
+                    <NavItem isCollapsed={isCollapsed} icon={BarChart} label="التقارير" linkProps={{ to: '/teacher/reports', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('التقارير')} />
 
                     <div className="my-6 border-t border-white/10 mx-6"></div>
 
-                    <NavItem isCollapsed={isCollapsed} icon={Bell} label="الإشعارات" linkProps={{ to: '/teacher/notifications', activeProps: { className: 'bg-white/20 dark:bg-white/10 rounded-2xl text-white' } }} hasDot onClick={() => onTitleChange('الإشعارات')} />
-                    <NavItem isCollapsed={isCollapsed} icon={Settings} label="الإعدادات" linkProps={{ to: '/teacher/settings', activeProps: { className: 'bg-white/20 dark:bg-white/10 rounded-2xl text-white' } }} onClick={() => onTitleChange('الإعدادات')} />
-                    <NavItem isCollapsed={isCollapsed} icon={HelpCircle} label="الدعم" linkProps={{ to: '/teacher/support', activeProps: { className: 'bg-white/20 dark:bg-white/10 rounded-2xl text-white' } }} onClick={() => onTitleChange('الدعم')} />
+                    <NavItem isCollapsed={isCollapsed} icon={Bell} label="الإشعارات" linkProps={{ to: '/teacher/notifications', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} hasDot onClick={() => onTitleChange('الإشعارات')} />
+                    <NavItem isCollapsed={isCollapsed} icon={Settings} label="الإعدادات" linkProps={{ to: '/teacher/settings', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('الإعدادات')} />
+                    <NavItem isCollapsed={isCollapsed} icon={HelpCircle} label="الدعم" linkProps={{ to: '/teacher/support', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('الدعم')} />
                 </nav>
 
                 {/* User Profile */}
