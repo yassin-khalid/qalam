@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { StepTwoData, StepTwoDataOmitIssuingCountryCodeAndIdentityDocumentFileAndCertificates, stepTwoFormSchema } from "../-types/StepTwoData";
 import { IdentityType } from "../-types/IdentityData";
 import {
@@ -11,9 +11,10 @@ import {
 import { useForm, useStore } from "@tanstack/react-form";
 import { showToast } from "@/lib/utils/toast";
 import DatePicker from "@/lib/components/calendar/DatePicker";
-import { useLiveQuery } from "@tanstack/react-db";
+import { eq, useLiveQuery } from "@tanstack/react-db";
 import { localStorageCollection } from "@/lib/db/localStorageCollection";
 import { uploadDocuments } from "../-api/uploadDocuments";
+import { NonSaudiIdentityTypesCollection, SaudiIdentityTypesCollection } from "../-db/collections/identityTypesCollection";
 
 interface StepTwoProps {
     onSuccess: (data: StepTwoData) => void;
@@ -25,13 +26,22 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
     const [loading, setLoading] = useState(false);
     const idFileInputRef = useRef<HTMLInputElement>(null);
 
-    // const { data: currentSession } = useLiveQuery((q) =>
-    //     q.from({ session: localStorageCollection }),
-    // );
 
     const { data: currentSession } = useLiveQuery((q) =>
         q.from({ session: localStorageCollection }),
     );
+
+
+
+    const identityTypesCollection = useMemo(() => stepTwoData.isInSaudiArabia ? SaudiIdentityTypesCollection : NonSaudiIdentityTypesCollection,
+        [stepTwoData.isInSaudiArabia]);
+
+    const { data: identityTypes } = useLiveQuery((q) =>
+        q.from({ identityTypes: identityTypesCollection }),
+        [stepTwoData.isInSaudiArabia]
+    );
+
+    console.log({ identityTypes });
 
     const token = currentSession?.[0]?.token ?? "";
 
@@ -165,7 +175,7 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                                                     className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-right text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#00B5B5] appearance-none cursor-pointer"
                                                 >
                                                     <option value="">اختر نوع الهوية</option>
-                                                    {form.state.values.isInSaudiArabia ? (
+                                                    {/* {form.state.values.isInSaudiArabia ? (
                                                         <>
                                                             <option value={IdentityType.NATIONAL_ID}>
                                                                 هوية وطنية
@@ -179,7 +189,12 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                                                             </option>
                                                             <option value={IdentityType.OTHER}>أخرى</option>
                                                         </>
-                                                    )}
+                                                    )} */}
+                                                    {identityTypes?.map((identityType) => (
+                                                        <option key={identityType.value} value={identityType.value}>
+                                                            {identityType.displayName}
+                                                        </option>
+                                                    ))}
                                                 </select>
                                                 {invalid && (
                                                     <p className="text-red-500 text-sm mt-1 text-right">
