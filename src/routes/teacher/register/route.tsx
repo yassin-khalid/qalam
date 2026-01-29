@@ -11,10 +11,10 @@ import {
 import RegisterForm from "./-components/RegisterForm";
 import z from "zod";
 import { StepOneDataOmitPassword } from "./-types/StepOneData";
-// import { authCollection } from "./-db/collections/authCollection";
-// import { localStorageCollection } from "@/lib/db/localStorageCollection";
 import { upsertSession } from "@/lib/utils/sessionHelpers";
 import { StepTwoData, StepTwoDataOmitIssuingCountryCodeAndIdentityDocumentFileAndCertificates } from "./-types/StepTwoData";
+import { VerifyOtpSuccessResponseData } from "./-types/VerifyOtpSuccessResponseData";
+import { PersonalInfoSuccessResponseData } from "./-api/personalInfo";
 
 const stepOneDataSchema = z.object({
   userId: z.number(),
@@ -27,7 +27,6 @@ const stepTwoDataSchema = z.object({
   isInSaudiArabia: z.boolean(),
   identityType: z.number(),
   documentNumber: z.string(),
-  // issuingCountryCode: z.string(),
 });
 
 const searchParams = {
@@ -72,10 +71,49 @@ function RouteComponent() {
   const handleStepTwoDataChanges = (stepTwoData: StepTwoDataOmitIssuingCountryCodeAndIdentityDocumentFileAndCertificates) => {
     setSearchParams((prev) => ({ ...prev, stepTwoData }));
   };
+  const handleStepTwoSuccess = (stepTwoData: StepTwoData) => {
+    navigate({ to: '/teacher' })
+  }
+  const handleNoTokenFound = () => {
+    navigate({ to: '/teacher/register', search: { step: 0, authSubStep: 'phone' } })
+  }
+  const handlePhoneRegistered = (phoneNumber: string) => {
+    navigate({
+      to: "/teacher/register",
+      search: { step: 0, authSubStep: "otp", phoneNumber },
+    });
+  }
+  const handleBackToPhoneStep = () => navigate({
+    to: "/teacher/register",
+    search: { step: 0, authSubStep: "phone" },
+  });
+
+  const handleOtpSuccess = (data: VerifyOtpSuccessResponseData) => {
+    upsertSession({ token: data.token })
+    if (data.nextStep.nextStep === 3) {
+      navigate({
+        to: "/teacher/register",
+        search: { step: 1, stepOneData },
+      });
+    }
+    if (data.nextStep.nextStep === 4) {
+      navigate({
+        to: "/teacher/register",
+        search: { step: 2 },
+      });
+    }
+  }
+
+  const handlePersonalInfoSuccess = (data: PersonalInfoSuccessResponseData) => {
+    upsertSession({ token: data.account.token })
+    navigate({ to: '/teacher/register', search: { step: 2 } })
+  }
+
+
   return (
     <>
       <ThemeToggleButton className="fixed top-6 left-6 w-fit z-50 p-3 rounded-full bg-white dark:bg-[#112240] shadow-lg border border-gray-200 dark:border-[#233554] text-[#003555] dark:text-[#64ffda] hover:scale-110 active:scale-95 transition-all" />
-      <div className="flex flex-col md:flex-row justify-center min-h-screen h-full bg-[#003555]">
+      <div className="flex flex-col md:flex-row justify-center min-h-screen h-full bg-primary">
         <div className={`relative flex justify-center items-center ${step > 0 ? 'md:flex-3' : 'md:flex-1'}`}>
           <img
             src="/login/qalam-login-shadow.svg"
@@ -88,48 +126,17 @@ function RouteComponent() {
               step={step}
               authSubStep={authSubStep}
               phoneNumber={phoneNumber ?? undefined}
-              onPhoneRegistered={() => {
-                navigate({
-                  to: "/teacher/register",
-                  search: { step: 0, authSubStep: "otp", phoneNumber },
-                });
-              }}
-              onBackToPhoneStep={() => {
-                navigate({
-                  to: "/teacher/register",
-                  search: { step: 0, authSubStep: "phone" },
-                });
-              }}
-              onOtpSuccess={(data) => {
-                // localStorageCollection.update("current", (draft) => {
-                //   draft.token = data.token;
-                // });
-                upsertSession({ token: data.token })
-                if (data.nextStep.nextStep === 3) {
-                  navigate({
-                    to: "/teacher/register",
-                    search: { step: 1, stepOneData },
-                  });
-                }
-                if (data.nextStep.nextStep === 4) {
-                  navigate({
-                    to: "/teacher/register",
-                    search: { step: 2 },
-                  });
-                }
-              }}
+              onPhoneRegistered={handlePhoneRegistered}
+              onBackToPhoneStep={handleBackToPhoneStep}
+              onOtpSuccess={handleOtpSuccess}
               onPhoneChanges={handlePhoneChanges}
               onStepOneDataChanges={handleStepOneDataChanges}
               stepOneData={stepOneData}
               stepTwoData={stepTwoData}
               onStepTwoDataChanges={handleStepTwoDataChanges}
-              onPersonalInfoSuccess={data => {
-                upsertSession({ token: data.account.token })
-                navigate({ to: '/teacher/register', search: { step: 2 } })
-              }}
-              onNoTokenFound={() => {
-                navigate({ to: '/teacher/register', search: { step: 0, authSubStep: 'phone' } })
-              }}
+              onPersonalInfoSuccess={handlePersonalInfoSuccess}
+              onNoTokenFound={handleNoTokenFound}
+              onStepTwoSuccess={handleStepTwoSuccess}
             />
           </div>
         </div>

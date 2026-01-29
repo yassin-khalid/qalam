@@ -108,7 +108,7 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
             dir="rtl"
         >
             {/* Scrollable Container with elegant max-height and custom scrollbar */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar max-h-[450px] pl-2 -ml-2 mb-6 rtl-scroll">
+            <div className="flex-1 overflow-y-auto custom-scrollbar max-h-[450px] pl-2 -ml-2 mb-6 rtl-scroll px-4">
                 <div className="space-y-8 pb-4">
                     {/* Saudi Residency Question */}
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4">
