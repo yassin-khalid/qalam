@@ -34,7 +34,7 @@ export class VerifyOtpError extends Error {
 
 export async function verifyOtp(params: VerifyOtpParams): Promise<VerifyOtpSuccessResponse> {
     try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/Api/V1/Authentication/Teacher/Step2-VerifyOtp`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/Api/V1/Authentication/Teacher/VerifyOtp`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
