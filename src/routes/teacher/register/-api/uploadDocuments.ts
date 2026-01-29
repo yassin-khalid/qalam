@@ -42,7 +42,7 @@ export async function uploadDocuments(params: UploadDocumentsParams){
   }
 }
     try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/Api/V1/Authentication/Teacher/Step4-UploadDocuments`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/Api/V1/Authentication/Teacher/UploadDocuments`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,

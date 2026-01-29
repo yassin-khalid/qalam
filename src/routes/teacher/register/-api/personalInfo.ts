@@ -38,7 +38,7 @@ type PersonalInfoSuccessResponse = {
 
 export async function personalInfo(params: PersonalInfoParams): Promise<PersonalInfoSuccessResponse> {
     try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/Api/V1/Authentication/Teacher/Step3-PersonalInfo`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/Api/V1/Authentication/Teacher/CompletePersonalInfo`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

@@ -50,7 +50,7 @@ export class SendOtpError extends Error {
 export async function sendOtp(params: SendOtpParams): Promise<SendOtpSuccessResponse> {
     try {
         
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/Api/V1/Authentication/Teacher/Step1-SendOtp`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/Api/V1/Authentication/Teacher/LoginOrRegister`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
