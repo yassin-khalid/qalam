@@ -102,6 +102,11 @@ function RouteComponent() {
         search: { step: 2 },
       });
     }
+    if (data.nextStep.nextStep === 0) {
+      navigate({
+        to: "/teacher/await",
+      });
+    }
   }
 
   const handlePersonalInfoSuccess = (data: PersonalInfoSuccessResponseData) => {
@@ -114,7 +119,7 @@ function RouteComponent() {
     <>
       <ThemeToggleButton className="fixed top-6 left-6 w-fit z-50 p-3 rounded-full bg-white dark:bg-[#112240] shadow-lg border border-gray-200 dark:border-[#233554] text-[#003555] dark:text-[#64ffda] hover:scale-110 active:scale-95 transition-all" />
       <div className="flex flex-col md:flex-row justify-center min-h-screen h-full bg-primary">
-        <div className={`relative flex justify-center items-center ${step > 0 ? 'md:flex-3' : 'md:flex-1'}`}>
+        <div className={`relative flex justify-center items-center ${step > 0 ? 'md:flex-3' : 'lg:flex-[0.75]'}`}>
           <img
             src="/login/qalam-login-shadow.svg"
             alt="Qalam Login Shadow"

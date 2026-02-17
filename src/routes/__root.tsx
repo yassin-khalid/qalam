@@ -7,6 +7,8 @@ import { TanStackDevtools } from "@tanstack/react-devtools";
 
 import appCss from "../styles.css?url";
 import { ClientRoot } from "@/lib/components/ClientRoot";
+import { QueryClient } from "@tanstack/query-core";
+import { QueryClientProvider } from "@tanstack/react-query";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -62,6 +64,7 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 });
 
+const queryClient = new QueryClient();
 function RootDocument({ children }: { children: React.ReactNode }) {
   const isServer = typeof window === "undefined";
 
@@ -73,7 +76,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="bg-white dark:bg-slate-950 transition-colors duration-500">
         <NuqsAdapter>
-          {isServer ? children : <ClientRoot>{children}</ClientRoot>}
+          {isServer ? children : <QueryClientProvider client={queryClient}><ClientRoot>{children}</ClientRoot></QueryClientProvider>}
           {/* {children} */}
         </NuqsAdapter>
         <Toaster position="bottom-right" />

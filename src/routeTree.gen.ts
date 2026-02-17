@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LandingRouteRouteImport } from './routes/_landing/route'
+import { Route as TeacherSurveyRouteRouteImport } from './routes/teacher/survey/route'
 import { Route as TeacherRegisterRouteRouteImport } from './routes/teacher/register/route'
 import { Route as TeacherOtpRouteRouteImport } from './routes/teacher/otp/route'
 import { Route as TeacherLoginRouteRouteImport } from './routes/teacher/login/route'
@@ -19,6 +20,11 @@ import { Route as LandingIndexRouteRouteImport } from './routes/_landing/index/r
 
 const LandingRouteRoute = LandingRouteRouteImport.update({
   id: '/_landing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeacherSurveyRouteRoute = TeacherSurveyRouteRouteImport.update({
+  id: '/teacher/survey',
+  path: '/teacher/survey',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TeacherRegisterRouteRoute = TeacherRegisterRouteRouteImport.update({
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/teacher/login': typeof TeacherLoginRouteRoute
   '/teacher/otp': typeof TeacherOtpRouteRoute
   '/teacher/register': typeof TeacherRegisterRouteRoute
+  '/teacher/survey': typeof TeacherSurveyRouteRoute
 }
 export interface FileRoutesByTo {
   '/contact': typeof LandingContactRouteRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/teacher/login': typeof TeacherLoginRouteRoute
   '/teacher/otp': typeof TeacherOtpRouteRoute
   '/teacher/register': typeof TeacherRegisterRouteRoute
+  '/teacher/survey': typeof TeacherSurveyRouteRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/teacher/login': typeof TeacherLoginRouteRoute
   '/teacher/otp': typeof TeacherOtpRouteRoute
   '/teacher/register': typeof TeacherRegisterRouteRoute
+  '/teacher/survey': typeof TeacherSurveyRouteRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -85,6 +94,7 @@ export interface FileRouteTypes {
     | '/teacher/login'
     | '/teacher/otp'
     | '/teacher/register'
+    | '/teacher/survey'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/contact'
@@ -92,6 +102,7 @@ export interface FileRouteTypes {
     | '/teacher/login'
     | '/teacher/otp'
     | '/teacher/register'
+    | '/teacher/survey'
   id:
     | '__root__'
     | '/_landing'
@@ -101,6 +112,7 @@ export interface FileRouteTypes {
     | '/teacher/login'
     | '/teacher/otp'
     | '/teacher/register'
+    | '/teacher/survey'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -109,6 +121,7 @@ export interface RootRouteChildren {
   TeacherLoginRouteRoute: typeof TeacherLoginRouteRoute
   TeacherOtpRouteRoute: typeof TeacherOtpRouteRoute
   TeacherRegisterRouteRoute: typeof TeacherRegisterRouteRoute
+  TeacherSurveyRouteRoute: typeof TeacherSurveyRouteRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -118,6 +131,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: ''
       preLoaderRoute: typeof LandingRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/teacher/survey': {
+      id: '/teacher/survey'
+      path: '/teacher/survey'
+      fullPath: '/teacher/survey'
+      preLoaderRoute: typeof TeacherSurveyRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/teacher/register': {
@@ -185,6 +205,7 @@ const rootRouteChildren: RootRouteChildren = {
   TeacherLoginRouteRoute: TeacherLoginRouteRoute,
   TeacherOtpRouteRoute: TeacherOtpRouteRoute,
   TeacherRegisterRouteRoute: TeacherRegisterRouteRoute,
+  TeacherSurveyRouteRoute: TeacherSurveyRouteRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

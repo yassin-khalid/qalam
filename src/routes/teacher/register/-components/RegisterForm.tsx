@@ -79,7 +79,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneR
                     authSubStep === 'phone' ? (
                         <StepPhone onSuccess={handlePhoneSuccess} onPhoneChanges={onPhoneChanges} phoneNumber={phoneNumber} />
                     ) : (
-                        <StepOTP phoneNumber={`+966${phoneNumber}`} onSuccess={handleOTPSuccess} onBack={handleBack} />
+                        <StepOTP phoneNumber={`${phoneNumber}`} onSuccess={handleOTPSuccess} onBack={handleBack} />
                     )
                 )}
                 {step === 1 && (

@@ -69,9 +69,9 @@ const StepPhone: React.FC<StepPhoneProps> = ({ onSuccess, onPhoneChanges, phoneN
         onSubmit: async ({ value: { phoneNumber } }) => {
             try {
 
-            const response = await sendOtp({ phoneNumber, countryCode: selectedCountry.code });
-            onSuccess(phoneNumber)
-            showToast({ type: 'success', message: response.message ?? 'تم إرسال رمز التحقق بنجاح' })
+                const response = await sendOtp({ phoneNumber, countryCode: selectedCountry.code });
+                onSuccess(phoneNumber)
+                showToast({ type: 'success', message: response.message ?? 'تم إرسال رمز التحقق بنجاح' })
             } catch (error) {
                 if (error instanceof SendOtpError) {
                     // setErrors({ phoneNumber: error.message });
@@ -100,7 +100,7 @@ const StepPhone: React.FC<StepPhoneProps> = ({ onSuccess, onPhoneChanges, phoneN
                         <button
                             type="button"
                             onClick={() => setShowPicker(!showPicker)}
-                            className="absolute right-0 top-0 h-full w-[100px] flex items-center justify-center border-l border-gray-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors rounded-r-xl z-20"
+                            className="absolute right-0 top-0 h-[64px] w-[100px] flex items-center justify-center border-l border-gray-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors rounded-r-xl z-20"
                         >
                             <div className="flex flex-col items-center leading-none gap-1">
                                 <span className="text-[#003049] dark:text-slate-200 font-bold text-lg">{selectedCountry.code}</span>
@@ -112,36 +112,36 @@ const StepPhone: React.FC<StepPhoneProps> = ({ onSuccess, onPhoneChanges, phoneN
                             const invalid = field.state.meta.isTouched && !field.state.meta.isValid;
 
                             return <>
-                                <input
-                                    type="tel"
-                                    required
-                                    value={field.state.value}
-                                    onChange={e => {
-                                        field.handleChange(e.target.value);
-                                        onPhoneChanges(e.target.value);
-                                    }}
-                                    placeholder="5xxxxxxxx"
-                                    className={`w-full h-[64px] pl-12 pr-[110px] bg-white dark:bg-slate-900 border-2 rounded-xl text-left text-xl text-slate-900 dark:text-white focus:outline-none focus:ring-4 transition-all placeholder:text-gray-300 dark:placeholder:text-slate-700 ${!invalid ? 'border-[#00B5B5] focus:ring-[#00B5B5]/10' : 'border-red-500 dark:border-red-500 focus:ring-red-500/10'
-                                        }`}
-                                />
-                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-600">
-                                    <PhoneIcon />
+                                <div className="relative h-[64px]">
+                                    <input
+                                        type="tel"
+                                        required
+                                        value={field.state.value}
+                                        onChange={e => {
+                                            field.handleChange(e.target.value);
+                                            onPhoneChanges(e.target.value);
+                                        }}
+                                        placeholder="5xxxxxxxx"
+                                        className={`w-full h-full pl-12 pr-[110px] bg-white dark:bg-slate-900 border-2 rounded-xl text-left text-xl text-slate-900 dark:text-white focus:outline-none focus:ring-4 transition-all placeholder:text-gray-300 dark:placeholder:text-slate-700 ${!invalid ? 'border-[#00B5B5] focus:ring-[#00B5B5]/10' : 'border-red-500 dark:border-red-500 focus:ring-red-500/10'
+                                            }`}
+                                    />
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-600 pointer-events-none">
+                                        <PhoneIcon />
+                                    </div>
                                 </div>
+
                                 {invalid && (
                                     <p className="text-red-500 text-sm mt-1 text-right">
                                         {field.state.meta.errors[0]?.message ?? ''}
                                     </p>
                                 )}
                                 {errors.phoneNumber && (
-
                                     <p className="text-red-500 text-sm mt-1 text-right">
                                         {errors.phoneNumber}
                                     </p>
                                 )}
                             </>
-                        }}>
-
-                        </form.Field>
+                        }}></form.Field>
                     </div>
 
                     {/* Country Selection Dropdown */}
