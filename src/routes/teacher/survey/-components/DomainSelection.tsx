@@ -123,7 +123,7 @@ const DomainSelection: React.FC<DomainSelectionProps> = ({
                         onChange={handleSearchChange}
                         className="w-full p-4 pr-12 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl text-right text-base outline-none focus:border-secondary dark:text-slate-100 transition-all"
                     />
-                    <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                 </div>
@@ -202,7 +202,7 @@ const DomainSelection: React.FC<DomainSelectionProps> = ({
             <button
                 onClick={onContinue}
                 disabled={!selectedDomainId || loading}
-                className={`w-full py-5 rounded-2xl text-white font-bold text-xl transition-all shadow-xl ${selectedDomainId && !loading ? 'bg-primary dark:bg-slate-800 hover:bg-primary/90 dark:hover:bg-slate-700' : 'bg-gray-300 dark:bg-slate-800/50 dark:text-slate-500 cursor-not-allowed'
+                className={`w-full py-5 rounded-2xl text-white font-bold text-xl transition-all shadow-xl ${selectedDomainId && !loading ? 'bg-primary hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90' : 'bg-gray-300 dark:bg-slate-700 dark:text-slate-500 cursor-not-allowed'
                     }`}
             >
                 متابعة

@@ -35,6 +35,10 @@ code {
       .dark .custom-scrollbar::-webkit-scrollbar-track {
         background: #1e293b;
       }
+      .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #475569;
+        border-radius: 10px;
+      }
 
       /* Custom scrollbar for elegant years dropdown in CalendarHijri and CalendarGrid */
       .elegant-scroll::-webkit-scrollbar {

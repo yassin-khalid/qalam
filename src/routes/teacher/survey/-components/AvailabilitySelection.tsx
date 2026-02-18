@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { DayAvailability } from '../types/types';
+import { useLiveQuery } from '@tanstack/react-db';
+import { localStorageCollection } from '@/lib/db/localStorageCollection';
 
 interface ApiDay {
     id: number;
@@ -55,13 +57,21 @@ const AvailabilitySelection: React.FC<AvailabilitySelectionProps> = ({
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const { data } = useLiveQuery(q => q.from({ session: localStorageCollection }))
+    const token = data?.[0]?.token ?? "";
+
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             const tryFetch = async (urls: string[]) => {
                 for (const url of urls) {
                     try {
-                        const res = await fetch(url);
+                        const res = await fetch(url, {
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
                         if (res.ok) {
                             const json = await res.json();
                             if (json.succeeded) return json.data.items;
@@ -70,9 +80,9 @@ const AvailabilitySelection: React.FC<AvailabilitySelectionProps> = ({
                 }
                 return null;
             };
-            const days = await tryFetch(["https://qalam.runasp.net/Api/V1/Teaching/DaysOfWeek"]);
+            const days = await tryFetch([`${import.meta.env.VITE_API_URL}/Api/V1/Teaching/DaysOfWeek`]);
             setAvailableDays(days || FALLBACK_DAYS);
-            const slots = await tryFetch(["https://qalam.runasp.net/Api/V1/Teaching/TimeSlots"]);
+            const slots = await tryFetch([`${import.meta.env.VITE_API_URL}/Api/V1/Teaching/TimeSlots`]);
             setAvailableTimeSlots(slots || FALLBACK_SLOTS);
             setLoading(false);
         };
