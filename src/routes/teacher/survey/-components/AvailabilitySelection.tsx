@@ -119,7 +119,30 @@ const AvailabilitySelection: React.FC<AvailabilitySelectionProps> = ({
 
     const handleFinalContinue = async () => {
         setIsSubmitting(true);
-        onContinue();
+        const daySchedules = selectedDays
+            .map(dayName => {
+                const day = availableDays.find(d => d.nameAr === dayName);
+                if (!day) return null;
+                const slotIds = (dayDetails[dayName]?.slots || []).map(s => Number(s.id));
+                return { dayOfWeekId: day.id, timeSlotIds: slotIds };
+            })
+            .filter((d): d is { dayOfWeekId: number; timeSlotIds: number[] } => d !== null);
+
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/Api/V1/Teacher/TeacherAvailability`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ daySchedules })
+            });
+            if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+            const json = await res.json();
+            if (!json.succeeded) throw new Error(json.message || 'Submission failed');
+            onContinue();
+        } catch (error) {
+            console.error("Availability submission failed:", error);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     if (loading) {

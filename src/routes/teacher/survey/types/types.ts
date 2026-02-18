@@ -68,15 +68,19 @@ export interface SubjectDetails {
   unitIds?: number[];
 }
 
+export interface GroupStep {
+  step: string;
+  paramKey: string;
+  id: number;
+  name: string;
+}
+
 export interface Group {
   id: string;
   name: string;
-  curriculum: string;
-  curriculumId?: number;
-  stage: string;
-  levelId?: number;
-  level: string;
-  gradeId?: number;
+  tags: string[];
+  filterParams: Record<string, any>;
+  steps: GroupStep[];
   subjects?: SubjectDetails[];
 }
 
