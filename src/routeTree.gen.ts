@@ -17,6 +17,8 @@ import { Route as TeacherLoginRouteRouteImport } from './routes/teacher/login/ro
 import { Route as TeacherAuthenticatedRouteRouteImport } from './routes/teacher/_authenticated/route'
 import { Route as LandingContactRouteRouteImport } from './routes/_landing/contact/route'
 import { Route as LandingIndexRouteRouteImport } from './routes/_landing/index/route'
+import { Route as TeacherAuthenticatedCoursesRouteRouteImport } from './routes/teacher/_authenticated/courses/route'
+import { Route as TeacherAuthenticatedCoursesNewRouteRouteImport } from './routes/teacher/_authenticated/courses/new/route'
 
 const LandingRouteRoute = LandingRouteRouteImport.update({
   id: '/_landing',
@@ -58,33 +60,51 @@ const LandingIndexRouteRoute = LandingIndexRouteRouteImport.update({
   path: '',
   getParentRoute: () => LandingRouteRoute,
 } as any)
+const TeacherAuthenticatedCoursesRouteRoute =
+  TeacherAuthenticatedCoursesRouteRouteImport.update({
+    id: '/courses',
+    path: '/courses',
+    getParentRoute: () => TeacherAuthenticatedRouteRoute,
+  } as any)
+const TeacherAuthenticatedCoursesNewRouteRoute =
+  TeacherAuthenticatedCoursesNewRouteRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => TeacherAuthenticatedCoursesRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/contact': typeof LandingContactRouteRoute
-  '/teacher': typeof TeacherAuthenticatedRouteRoute
+  '/teacher': typeof TeacherAuthenticatedRouteRouteWithChildren
   '/teacher/login': typeof TeacherLoginRouteRoute
   '/teacher/otp': typeof TeacherOtpRouteRoute
   '/teacher/register': typeof TeacherRegisterRouteRoute
   '/teacher/survey': typeof TeacherSurveyRouteRoute
+  '/teacher/courses': typeof TeacherAuthenticatedCoursesRouteRouteWithChildren
+  '/teacher/courses/new': typeof TeacherAuthenticatedCoursesNewRouteRoute
 }
 export interface FileRoutesByTo {
   '/contact': typeof LandingContactRouteRoute
-  '/teacher': typeof TeacherAuthenticatedRouteRoute
+  '/teacher': typeof TeacherAuthenticatedRouteRouteWithChildren
   '/teacher/login': typeof TeacherLoginRouteRoute
   '/teacher/otp': typeof TeacherOtpRouteRoute
   '/teacher/register': typeof TeacherRegisterRouteRoute
   '/teacher/survey': typeof TeacherSurveyRouteRoute
+  '/teacher/courses': typeof TeacherAuthenticatedCoursesRouteRouteWithChildren
+  '/teacher/courses/new': typeof TeacherAuthenticatedCoursesNewRouteRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_landing': typeof LandingRouteRouteWithChildren
   '/_landing/': typeof LandingIndexRouteRoute
   '/_landing/contact': typeof LandingContactRouteRoute
-  '/teacher/_authenticated': typeof TeacherAuthenticatedRouteRoute
+  '/teacher/_authenticated': typeof TeacherAuthenticatedRouteRouteWithChildren
   '/teacher/login': typeof TeacherLoginRouteRoute
   '/teacher/otp': typeof TeacherOtpRouteRoute
   '/teacher/register': typeof TeacherRegisterRouteRoute
   '/teacher/survey': typeof TeacherSurveyRouteRoute
+  '/teacher/_authenticated/courses': typeof TeacherAuthenticatedCoursesRouteRouteWithChildren
+  '/teacher/_authenticated/courses/new': typeof TeacherAuthenticatedCoursesNewRouteRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -95,6 +115,8 @@ export interface FileRouteTypes {
     | '/teacher/otp'
     | '/teacher/register'
     | '/teacher/survey'
+    | '/teacher/courses'
+    | '/teacher/courses/new'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/contact'
@@ -103,6 +125,8 @@ export interface FileRouteTypes {
     | '/teacher/otp'
     | '/teacher/register'
     | '/teacher/survey'
+    | '/teacher/courses'
+    | '/teacher/courses/new'
   id:
     | '__root__'
     | '/_landing'
@@ -113,11 +137,13 @@ export interface FileRouteTypes {
     | '/teacher/otp'
     | '/teacher/register'
     | '/teacher/survey'
+    | '/teacher/_authenticated/courses'
+    | '/teacher/_authenticated/courses/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   LandingRouteRoute: typeof LandingRouteRouteWithChildren
-  TeacherAuthenticatedRouteRoute: typeof TeacherAuthenticatedRouteRoute
+  TeacherAuthenticatedRouteRoute: typeof TeacherAuthenticatedRouteRouteWithChildren
   TeacherLoginRouteRoute: typeof TeacherLoginRouteRoute
   TeacherOtpRouteRoute: typeof TeacherOtpRouteRoute
   TeacherRegisterRouteRoute: typeof TeacherRegisterRouteRoute
@@ -182,6 +208,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LandingIndexRouteRouteImport
       parentRoute: typeof LandingRouteRoute
     }
+    '/teacher/_authenticated/courses': {
+      id: '/teacher/_authenticated/courses'
+      path: '/courses'
+      fullPath: '/teacher/courses'
+      preLoaderRoute: typeof TeacherAuthenticatedCoursesRouteRouteImport
+      parentRoute: typeof TeacherAuthenticatedRouteRoute
+    }
+    '/teacher/_authenticated/courses/new': {
+      id: '/teacher/_authenticated/courses/new'
+      path: '/new'
+      fullPath: '/teacher/courses/new'
+      preLoaderRoute: typeof TeacherAuthenticatedCoursesNewRouteRouteImport
+      parentRoute: typeof TeacherAuthenticatedCoursesRouteRoute
+    }
   }
 }
 
@@ -199,9 +239,39 @@ const LandingRouteRouteWithChildren = LandingRouteRoute._addFileChildren(
   LandingRouteRouteChildren,
 )
 
+interface TeacherAuthenticatedCoursesRouteRouteChildren {
+  TeacherAuthenticatedCoursesNewRouteRoute: typeof TeacherAuthenticatedCoursesNewRouteRoute
+}
+
+const TeacherAuthenticatedCoursesRouteRouteChildren: TeacherAuthenticatedCoursesRouteRouteChildren =
+  {
+    TeacherAuthenticatedCoursesNewRouteRoute:
+      TeacherAuthenticatedCoursesNewRouteRoute,
+  }
+
+const TeacherAuthenticatedCoursesRouteRouteWithChildren =
+  TeacherAuthenticatedCoursesRouteRoute._addFileChildren(
+    TeacherAuthenticatedCoursesRouteRouteChildren,
+  )
+
+interface TeacherAuthenticatedRouteRouteChildren {
+  TeacherAuthenticatedCoursesRouteRoute: typeof TeacherAuthenticatedCoursesRouteRouteWithChildren
+}
+
+const TeacherAuthenticatedRouteRouteChildren: TeacherAuthenticatedRouteRouteChildren =
+  {
+    TeacherAuthenticatedCoursesRouteRoute:
+      TeacherAuthenticatedCoursesRouteRouteWithChildren,
+  }
+
+const TeacherAuthenticatedRouteRouteWithChildren =
+  TeacherAuthenticatedRouteRoute._addFileChildren(
+    TeacherAuthenticatedRouteRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   LandingRouteRoute: LandingRouteRouteWithChildren,
-  TeacherAuthenticatedRouteRoute: TeacherAuthenticatedRouteRoute,
+  TeacherAuthenticatedRouteRoute: TeacherAuthenticatedRouteRouteWithChildren,
   TeacherLoginRouteRoute: TeacherLoginRouteRoute,
   TeacherOtpRouteRoute: TeacherOtpRouteRoute,
   TeacherRegisterRouteRoute: TeacherRegisterRouteRoute,

@@ -51,8 +51,8 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, onTitleChange }) => {
     return (
-        <aside className={`sidebar-transition h-screen p-4 flex flex-col sticky top-0 shrink-0 z-40 ${isCollapsed ? 'w-24' : 'w-80'}`}>
-            <div className="bg-primary dark:bg-secondary h-full rounded-[2.5rem] flex flex-col text-white shadow-2xl relative transition-colors duration-300">
+        <aside className={`sidebar-transition h-screen px-1.5 flex flex-col sticky top-0 shrink-0 z-40 ${isCollapsed ? 'w-24' : 'w-80'}`}>
+            <div className="bg-primary dark:bg-secondary h-full rounded-lg flex flex-col text-white shadow-2xl relative transition-colors duration-300">
 
                 {/* Toggle Button */}
                 <button
@@ -74,8 +74,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, onTitle
 
                 {/* Navigation */}
                 <nav className="flex-1 px-3 py-2 sidebar-scroll overflow-y-auto space-y-1">
-                    <NavItem isCollapsed={isCollapsed} icon={Grid} label="لوحة التحكم" linkProps={{ to: '/teacher', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('لوحة التحكم')} />
-                    <NavItem isCollapsed={isCollapsed} icon={Box} label="المنتجات" linkProps={{ to: '/teacher/products', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('المنتجات')} />
+                    <NavItem isCollapsed={isCollapsed} icon={Grid} label="لوحة التحكم" linkProps={{ to: '/teacher/dashboard', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('لوحة التحكم')} />
+                    <NavItem isCollapsed={isCollapsed} icon={Box} label="دوراتي" linkProps={{ to: '/teacher/courses', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('دوراتي')} />
                     <NavItem isCollapsed={isCollapsed} icon={Calendar} label="التقويم" linkProps={{ to: '/teacher/calendar', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('التقويم')} />
                     <NavItem isCollapsed={isCollapsed} icon={Truck} label="الموردون" linkProps={{ to: '/teacher/suppliers', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('الموردون')} />
                     <NavItem isCollapsed={isCollapsed} icon={BarChart} label="التقارير" linkProps={{ to: '/teacher/reports', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('التقارير')} />
