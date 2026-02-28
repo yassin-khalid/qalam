@@ -20,7 +20,7 @@ export interface Course {
 }
 
 export interface ApiResponse {
-  items: Course[];
+  data: Course[];
   totalCount: number;
   pageNumber: number;
   pageSize: number;

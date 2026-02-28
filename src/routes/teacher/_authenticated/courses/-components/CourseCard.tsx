@@ -3,6 +3,7 @@ import React from 'react';
 import { Calendar, Clock, Users as UsersIcon, Banknote, Eye, Trash2, Edit3, SaudiRiyal } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Course } from '../-types/types';
+import { useNavigate } from '@tanstack/react-router';
 
 interface CourseCardProps {
     course: Course;
@@ -10,6 +11,7 @@ interface CourseCardProps {
 }
 
 export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
+    const navigate = useNavigate()
     const getStatusLabel = (status: number) => {
         switch (status) {
             case 1: return 'مسودة';
@@ -100,7 +102,28 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
 
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-3">
-                    <button className="flex-1 bg-primary hover:bg-secondary text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-slate-900/10 text-sm">
+                    <button className="flex-1 bg-primary hover:bg-secondary text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-slate-900/10 text-sm"
+                        onClick={() => navigate({
+                            to: '/teacher/courses/new', search: {
+                                courseData: {
+                                    title: course.title,
+                                    description: course.descriptionShort,
+                                    teacherSubjectId: course.subjectId,
+                                    subjectName: course.subjectNameEn,
+                                    domainName: course.domainNameEn,
+                                    teachingModeId: course.teachingModeId,
+                                    sessionTypeId: course.sessionTypeId,
+                                    isFlexible: false,
+                                    sessionsCount: course.sessionsCount ?? 0,
+                                    sessionDurationMinutes: '0',
+                                    price: course.price?.toString() ?? '',
+                                    maxStudents: course.registeredCount ?? 0,
+                                    canIncludeInPackages: true,
+                                    mode: 'edit',
+                                    id: course.id
+                                }
+                            }
+                        })}  >
                         <Edit3 size={16} />
                         تعديل
                     </button>

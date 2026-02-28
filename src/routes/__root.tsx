@@ -1,16 +1,20 @@
 import React from "react";
 import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
-import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
+import { HeadContent, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { Toaster } from "react-hot-toast";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 
 import appCss from "../styles.css?url";
 import { ClientRoot } from "@/lib/components/ClientRoot";
-import { QueryClient } from "@tanstack/query-core";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-export const Route = createRootRoute({
+export interface RouterContext {
+  queryClient: QueryClient;
+}
+
+export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
       {
@@ -64,7 +68,6 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 });
 
-const queryClient = new QueryClient();
 function RootDocument({ children }: { children: React.ReactNode }) {
   const isServer = typeof window === "undefined";
 

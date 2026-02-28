@@ -89,6 +89,7 @@ function RouteComponent() {
   });
 
   const handleOtpSuccess = (data: VerifyOtpSuccessResponseData) => {
+    localStorage.setItem('token', data.token)
     upsertSession({ token: data.token })
     if (data.nextStep.nextStep === 3) {
       navigate({
@@ -110,6 +111,7 @@ function RouteComponent() {
   }
 
   const handlePersonalInfoSuccess = (data: PersonalInfoSuccessResponseData) => {
+    localStorage.setItem('token', data.account.token)
     upsertSession({ token: data.account.token })
     navigate({ to: '/teacher/register', search: { step: 2 } })
   }

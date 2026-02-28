@@ -1,9 +1,17 @@
-import { createFileRoute, Outlet } from '@tanstack/react-router'
+import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import { Sidebar } from './-components/Sidebar'
 import { Navbar } from './-components/Navbar'
 import { useState } from 'react'
 
 export const Route = createFileRoute('/teacher/_authenticated')({
+  ssr: false,
+  beforeLoad: () => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      throw redirect({ to: '/teacher/register', search: { step: 0, authSubStep: 'phone' } })
+    }
+    return { token }
+  },
   component: RouteComponent,
 })
 
@@ -19,16 +27,16 @@ function RouteComponent() {
         <Sidebar
           isCollapsed={isSidebarCollapsed}
           onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          onTitleChange={() => {}}
+          onTitleChange={() => { }}
         />
       </div>
       <main
-        className="flex flex-col min-h-screen overflow-hidden transition-[margin-right] duration-300"
+        className="flex flex-col h-screen overflow-hidden transition-[margin-right] duration-300"
         style={{ marginRight: sidebarWidth }}
       >
         <Navbar />
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto space-y-6 w-full min-w-0">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-6 lg:p-8 custom-scrollbar">
+          <div className="space-y-6 w-full min-w-0">
             <Outlet />
           </div>
         </div>
