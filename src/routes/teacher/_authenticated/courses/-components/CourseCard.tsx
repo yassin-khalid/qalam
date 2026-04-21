@@ -1,9 +1,10 @@
 
-import React from 'react';
-import { Calendar, Clock, Users as UsersIcon, Banknote, Eye, Trash2, Edit3, SaudiRiyal } from 'lucide-react';
+import React, { useState } from 'react';
+import { Calendar, Clock, Users as UsersIcon, Banknote, Eye, Trash2, Edit3, SaudiRiyal, UserPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Course } from '../-types/types';
 import { useNavigate } from '@tanstack/react-router';
+import { EnrollmentRequestsModal } from './EnrollmentRequestsModal';
 
 interface CourseCardProps {
     course: Course;
@@ -12,6 +13,7 @@ interface CourseCardProps {
 
 export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
     const navigate = useNavigate()
+    const [isEnrollmentModalOpen, setIsEnrollmentModalOpen] = useState(false);
     const getStatusLabel = (status: number) => {
         switch (status) {
             case 1: return 'مسودة';
@@ -102,7 +104,22 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
 
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-3">
-                    <button className="flex-1 bg-primary hover:bg-secondary text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-slate-900/10 text-sm"
+                    <button
+                        type="button"
+                        onClick={() => setIsEnrollmentModalOpen(true)}
+                        className="flex-1 bg-primary hover:bg-secondary text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-slate-900/10 text-sm"
+                    >
+                        <UserPlus size={16} />
+                        طلبات الانضمام
+                    </button>
+                    <button
+                        type="button"
+                        className="p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                    >
+                        <Eye size={18} />
+                    </button>
+                    <button
+                        type="button"
                         onClick={() => navigate({
                             to: '/teacher/courses/new', search: {
                                 courseData: {
@@ -123,18 +140,25 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
                                     id: course.id
                                 }
                             }
-                        })}  >
-                        <Edit3 size={16} />
-                        تعديل
+                        })}
+                        className="p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                    >
+                        <Edit3 size={18} />
                     </button>
-                    <button className="p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
-                        <Eye size={18} />
-                    </button>
-                    <button className="p-2.5 rounded-xl border border-red-50 dark:border-red-900/20 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all">
+                    <button
+                        type="button"
+                        className="p-2.5 rounded-xl border border-red-50 dark:border-red-900/20 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
+                    >
                         <Trash2 size={18} />
                     </button>
                 </div>
             </div>
+
+            <EnrollmentRequestsModal
+                course={course}
+                open={isEnrollmentModalOpen}
+                onClose={() => setIsEnrollmentModalOpen(false)}
+            />
         </motion.div>
     );
 };
