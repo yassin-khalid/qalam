@@ -125,15 +125,19 @@ src/
 │           ├── -components/    # Header, Navbar, Sidebar, StatsCards
 │           └── courses/        # Course management
 │               ├── route.tsx   # Course list, filters, stats
-│               ├── -components/# CourseCard, CourseList, Filters, StatsGrid
+│               ├── -components/# CourseCard, CourseList, EnrollmentRequestsModal, Filters, Header, StatsGrid
+│               ├── -queries/   # courseDetailQueryOptions, enrollmentRequestsQueries
 │               ├── -types/     # Course types
 │               └── new/        # Create/edit course
 │                   ├── -components/  # SubjectSelector
 │                   ├── -queries/     # Teaching mode, session type, subject queries
 │                   └── -types/       # Course form types
+├── routes/test/                # Sandbox route for ad-hoc API probing
 ├── router.tsx                  # Router configuration
 ├── routeTree.gen.ts            # Auto-generated route tree
 └── styles.css                  # Global styles
+
+queryClient.ts                  # Root-level shared TanStack Query client
 ```
 
 ## 🎯 Key Features
@@ -164,6 +168,10 @@ src/
   - Session settings (teaching mode, session type, flexible scheduling)
   - Pricing configuration
   - Live preview, save as draft or publish
+- **Enrollment Requests**: Per-course modal for reviewing student enrollment requests
+  - Paginated list with status filtering (Pending / Approved / Rejected / Cancelled)
+  - Detail view with proposed sessions and group members
+  - Approve / reject actions wired through TanStack Query mutations
 
 ### Landing Pages
 - **Home** (`/`): Hero, Why Qalam, Teacher Benefits, How It Works, App Promotion, FAQ, Testimonials
@@ -203,6 +211,11 @@ src/
 | `/teacher/courses` | Course management dashboard |
 | `/teacher/courses/new` | Create / edit a course |
 
+### Development / Sandbox
+| Path | Description |
+|------|-------------|
+| `/test` | Ad-hoc fetch sandbox (calls `dev.abwaab.sa/api/settings`) — for debugging only |
+
 ### Planned Routes (referenced in sidebar, not yet implemented)
 `/teacher/dashboard`, `/teacher/calendar`, `/teacher/suppliers`, `/teacher/reports`, `/teacher/notifications`, `/teacher/settings`, `/teacher/support`
 
@@ -218,10 +231,18 @@ All API calls are client-side fetches to an external backend configured via `VIT
 | `/Api/V1/Authentication/Teacher/UploadDocuments` | POST | Upload identity docs & certificates |
 | `/Api/V1/Authentication/IdentityTypes` | GET | Fetch identity type options |
 | `/Api/V1/Teacher/TeacherCourse` | GET/POST | List / create courses |
-| `/Api/V1/Teacher/TeacherCourse/{id}` | PUT | Update a course |
+| `/Api/V1/Teacher/TeacherCourse/{id}` | GET/PUT | Fetch / update a course |
+| `/Api/V1/Teacher/EnrollmentRequests` | GET | List enrollment requests (paginated, status filter) |
+| `/Api/V1/Teacher/EnrollmentRequests/{id}` | GET | Enrollment request details |
+| `/Api/V1/Teacher/EnrollmentRequests/{id}/Approve` | POST | Approve an enrollment request |
+| `/Api/V1/Teacher/EnrollmentRequests/{id}/Reject` | POST | Reject an enrollment request |
+| `/Api/V1/Teacher/TeacherAvailability` | POST | Save teacher availability |
 | `/Api/V1/Teaching/Modes` | GET | Fetch teaching modes |
 | `/Api/V1/Teaching/SessionTypes` | GET | Fetch session types |
+| `/Api/V1/Teaching/DaysOfWeek` | GET | Fetch days of the week |
+| `/Api/V1/Teaching/TimeSlots` | GET | Fetch time slots |
 | `/Api/V1/Teacher/TeacherSubject` | GET | Fetch teacher's subjects |
+| `/Api/V1/Education/Domains` | GET | Fetch teaching domains |
 
 ## 🔧 Configuration
 
@@ -272,6 +293,11 @@ Collections are defined using TanStack DB:
 - Route-specific collections in `-db/collections/` folders
 - Use `useLiveQuery` for reactive reads
 
+### Server State
+
+- A single shared `QueryClient` lives at the project root in `queryClient.ts` and is passed into the router so `queryClient.fetchQuery(...)` works inside loaders and action handlers (e.g. `CourseCard` prefetches course details before navigating to the editor).
+- Route-specific server-state lives in `-queries/` folders next to the route (e.g. `courseDetailQueryOptions`, `enrollmentRequestsQueries`).
+
 ## 🎨 Design System
 
 ### Colors
@@ -300,4 +326,4 @@ Collections are defined using TanStack DB:
 
 ---
 
-**Last Updated**: February 28, 2026
+**Last Updated**: April 26, 2026
