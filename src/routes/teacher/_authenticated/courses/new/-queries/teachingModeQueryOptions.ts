@@ -13,17 +13,16 @@ type TeachingModeResponse = {
     statusCode: 200,
     succeeded: true,
     message: "Success",
-    data: {
-        items: TeachingModeData[]
+    data: TeachingModeData[],
+    errors: null,
+    meta: {
         totalCount: number,
         pageNumber: number,
         pageSize: number,
         totalPages: number,
         hasPreviousPage: boolean,
         hasNextPage: boolean,
-    }
-    errors: null,
-    meta: null
+    } | null,
 }
 
 export const teachingModeQueryOptions = (token: string) => queryOptions({
@@ -44,6 +43,6 @@ export const teachingModeQueryOptions = (token: string) => queryOptions({
             throw new Error(error.message);
         }
         const data = await response.json() as TeachingModeResponse;
-        return data.data.items
+        return data.data
     }
 })

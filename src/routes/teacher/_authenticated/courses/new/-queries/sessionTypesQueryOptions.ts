@@ -12,17 +12,16 @@ type SessionTypesResponse = {
     statusCode: number,
     succeeded: boolean,
     message: string,
-    data: {
-        items: SessionTypesData[]
+    data: SessionTypesData[],
+    errors: null,
+    meta: {
         totalCount: number,
         pageNumber: number,
         pageSize: number,
         totalPages: number,
         hasPreviousPage: boolean,
         hasNextPage: boolean,
-    }
-    errors: null,
-    meta: null
+    } | null,
 }
 
 export const sessionTypesQueryOptions = (token: string) => queryOptions({
@@ -43,6 +42,6 @@ export const sessionTypesQueryOptions = (token: string) => queryOptions({
             throw new Error(error.message);
         }
         const data = await response.json() as SessionTypesResponse;
-        return data.data.items as SessionTypesData[]
+        return data.data
     }
 })

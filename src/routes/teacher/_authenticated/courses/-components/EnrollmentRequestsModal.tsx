@@ -9,6 +9,7 @@ import {
     enrollmentRequestDetailQueryOptions,
     enrollmentRequestsListQueryOptions,
     rejectEnrollmentRequest,
+    RequestStatus,
 } from '../-queries/enrollmentRequestsQueries'
 import { showToast } from '../../../../../lib/utils/toast'
 
@@ -32,7 +33,7 @@ export const EnrollmentRequestsModal: React.FC<EnrollmentRequestsModalProps> = (
     const listQuery = useQuery({
         ...enrollmentRequestsListQueryOptions(token, {
             courseId: course.id,
-            status: 'Pending',
+            status: RequestStatus.Pending,
             pageNumber: 1,
             pageSize: 50,
         }),
@@ -212,7 +213,7 @@ const RequestRow: React.FC<RequestRowProps> = ({
 }) => (
     <div className="border border-secondary/30 rounded-xl p-4 bg-white dark:bg-slate-900">
         <div className="flex items-start justify-between gap-4">
-            <div className="flex gap-2 flex-shrink-0">
+            <div className="flex gap-2 shrink-0">
                 <button
                     type="button"
                     disabled={isApproving || isRejecting}
@@ -231,17 +232,19 @@ const RequestRow: React.FC<RequestRowProps> = ({
                     رفض
                 </button>
             </div>
-            <div className="flex-1 text-right min-w-0">
-                <div className="flex items-center gap-2 justify-end">
-                    <h4 className="font-bold text-slate-800 dark:text-white truncate">
+            <div className="flex-1 min-w-0 text-right space-y-1">
+                <div className="flex items-center justify-end gap-2">
+                    <h4 className="font-bold text-slate-800 dark:text-white truncate min-w-0">
                         {detail.requestedByUserName ?? 'طالب'}
                     </h4>
-                    <span className="w-2 h-2 rounded-full bg-rose-500 flex-shrink-0" aria-hidden />
+                    <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" aria-hidden />
                 </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
                     {PLACEHOLDER_EMAIL(detail.id)}
                 </p>
-                <p className="text-xs text-slate-400 mt-1">{relativeTimeAr(detail.createdAt)}</p>
+                <p className="text-xs text-slate-400">
+                    {relativeTimeAr(detail.createdAt)}
+                </p>
             </div>
         </div>
 

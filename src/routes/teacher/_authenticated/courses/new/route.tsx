@@ -13,7 +13,10 @@ import {
     Users,
     Video,
     Star,
-    SaudiRiyal
+    SaudiRiyal,
+    Plus,
+    Trash2,
+    ListOrdered
 } from 'lucide-react';
 
 import { SubjectSelector } from './-components/SubjectSelector';
@@ -24,6 +27,14 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { showToast } from '@/lib/utils/toast';
 import { createStandardSchemaV1, parseAsJson, useQueryStates } from 'nuqs';
 import z from 'zod';
+
+const sessionItemSchema = z.object({
+    durationMinutes: z.number(),
+    title: z.string().nullable(),
+    notes: z.string().nullable()
+})
+
+type SessionItem = z.infer<typeof sessionItemSchema>
 
 const courseDataSchema = z.object({
     title: z.string(),
@@ -36,8 +47,9 @@ const courseDataSchema = z.object({
     isFlexible: z.boolean(),
     sessionsCount: z.number(),
     sessionDurationMinutes: z.string(),
+    sessions: z.array(sessionItemSchema),
     price: z.string(),
-    maxStudents: z.number(),
+    maxStudents: z.number().nullable(),
     canIncludeInPackages: z.boolean(),
     mode: z.enum(['save', 'edit', 'show']),
     id: z.number().nullable()
@@ -55,6 +67,7 @@ const searchParams = {
         isFlexible: false,
         sessionsCount: 0,
         sessionDurationMinutes: '',
+        sessions: [] as SessionItem[],
         price: '0',
         maxStudents: 15,
         canIncludeInPackages: true,
@@ -86,6 +99,97 @@ function RouteComponent() {
     const navigate = useNavigate()
     const queryClient = useQueryClient()
 
+    const currentSessionType = sessionTypes.find(t => t.id === courseData.sessionTypeId)
+    const isIndividual =
+        (currentSessionType?.code?.toLowerCase() === 'individual') ||
+        (currentSessionType?.nameEn?.toLowerCase() === 'individual')
+
+    const buildPayload = () => ({
+        title: courseData.title,
+        description: courseData.description || null,
+        teacherSubjectId: courseData.teacherSubjectId,
+        teachingModeId: courseData.teachingModeId,
+        sessionTypeId: courseData.sessionTypeId,
+        isFlexible: courseData.isFlexible,
+        sessionDurationMinutes: courseData.isFlexible
+            ? null
+            : (Number(courseData.sessionDurationMinutes) || null),
+        sessions: courseData.isFlexible ? null : courseData.sessions,
+        price: Number(courseData.price) || 0,
+        maxStudents: isIndividual ? null : courseData.maxStudents,
+        canIncludeInPackages: courseData.canIncludeInPackages,
+    })
+
+    const parseErrorMessage = (error: any) => {
+        const list = Array.isArray(error?.errors) ? error.errors : []
+        const flat = list
+            .map((e: any) => typeof e === 'string' ? e : (e?.message ?? e?.errorMessage ?? null))
+            .filter(Boolean)
+        if (flat.length) return flat.join(' • ')
+        return error?.message || 'حدث خطأ غير متوقع'
+    }
+
+    const addSession = () => {
+        setCourseData((prev) => {
+            const defaultDuration = Number(prev.courseData.sessionDurationMinutes) || 60
+            const next = [
+                ...prev.courseData.sessions,
+                { durationMinutes: defaultDuration, title: null, notes: null },
+            ]
+            return {
+                ...prev,
+                courseData: { ...prev.courseData, sessions: next, sessionsCount: next.length },
+            }
+        })
+    }
+
+    const removeSession = (index: number) => {
+        setCourseData((prev) => {
+            const next = prev.courseData.sessions.filter((_, i) => i !== index)
+            return {
+                ...prev,
+                courseData: { ...prev.courseData, sessions: next, sessionsCount: next.length },
+            }
+        })
+    }
+
+    const updateSession = (
+        index: number,
+        patch: Partial<{ durationMinutes: number; title: string | null; notes: string | null }>,
+    ) => {
+        setCourseData((prev) => {
+            const next = prev.courseData.sessions.map((s, i) => i === index ? { ...s, ...patch } : s)
+            return { ...prev, courseData: { ...prev.courseData, sessions: next } }
+        })
+    }
+
+    const syncSessionsCount = (rawCount: number) => {
+        const newCount = Math.max(0, Number.isFinite(rawCount) ? rawCount : 0)
+        setCourseData((prev) => {
+            const defaultDuration = Number(prev.courseData.sessionDurationMinutes) || 60
+            const current = prev.courseData.sessions
+            let next: SessionItem[]
+            if (newCount > current.length) {
+                next = [
+                    ...current,
+                    ...Array.from({ length: newCount - current.length }, () => ({
+                        durationMinutes: defaultDuration,
+                        title: null as string | null,
+                        notes: null as string | null,
+                    })),
+                ]
+            } else if (newCount < current.length) {
+                next = current.slice(0, newCount)
+            } else {
+                next = current
+            }
+            return {
+                ...prev,
+                courseData: { ...prev.courseData, sessionsCount: newCount, sessions: next },
+            }
+        })
+    }
+
     const { mutateAsync: createCourse } = useMutation({
         mutationFn: async () => {
             const token = localStorage.getItem('token')
@@ -97,12 +201,14 @@ function RouteComponent() {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                    'Accept-Language': 'ar-EG',
                 },
-                body: JSON.stringify(courseData),
+                body: JSON.stringify(buildPayload()),
             })
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.message);
+                throw new Error(parseErrorMessage(error));
             }
             const data = await response.json();
             return data;
@@ -138,11 +244,11 @@ function RouteComponent() {
                     'Accept': 'application/json',
                     'Accept-Language': 'ar-EG',
                 },
-                body: JSON.stringify(courseData),
+                body: JSON.stringify(buildPayload()),
             })
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.message);
+                throw new Error(parseErrorMessage(error));
             }
             const data = await response.json();
             return data;
@@ -199,7 +305,10 @@ function RouteComponent() {
                                 <Save size={16} />
                                 حفظ كمسودة
                             </button>
-                            <button className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-secondary text-white text-sm font-semibold hover:bg-secondary/80 transition-all shadow-md shadow-teal-500/20">
+                            <button
+                                onClick={async () => { await createCourse() }}
+                                className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-secondary text-white text-sm font-semibold hover:bg-secondary/80 transition-all shadow-md shadow-teal-500/20"
+                            >
                                 <Send size={16} />
                                 نشر
                             </button>
@@ -231,6 +340,7 @@ function RouteComponent() {
                                 </label>
                                 <input
                                     type="text"
+                                    maxLength={200}
                                     placeholder="مثال: دورة الفيزياء المتقدمة للصف الثالث الثانوي"
                                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-right text-sm"
                                     value={courseData.title}
@@ -238,7 +348,7 @@ function RouteComponent() {
                                         setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, title: e.target.value } }))
                                     }}
                                 />
-                                <div className="text-left text-slate-400 dark:text-slate-500 text-sm">0 / 200</div>
+                                <div className="text-left text-slate-400 dark:text-slate-500 text-sm">{courseData.title.length} / 200</div>
                             </div>
 
                             <div className="space-y-2">
@@ -248,6 +358,7 @@ function RouteComponent() {
                                 <textarea
                                     placeholder="اكتب وصفاً يساعد الطالب على فهم ما سيتعلمه..."
                                     rows={4}
+                                    maxLength={2000}
                                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-right resize-none text-sm"
                                     value={courseData.description}
                                     onChange={(e) => {
@@ -256,7 +367,7 @@ function RouteComponent() {
                                 />
                                 <div className="flex justify-between text-xs">
                                     <span className="text-slate-400 dark:text-slate-500">اكتب وصفاً يساعد الطالب على فهم ما سيتعلمه.</span>
-                                    <span className="text-slate-400 dark:text-slate-500">0 / 2000</span>
+                                    <span className="text-slate-400 dark:text-slate-500">{courseData.description.length} / 2000</span>
                                 </div>
                             </div>
                         </div>
@@ -358,10 +469,11 @@ function RouteComponent() {
                                                 </label>
                                                 <input
                                                     type="number"
+                                                    min={0}
                                                     placeholder="مثال: 10"
                                                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all text-sm"
                                                     value={Number(courseData.sessionsCount)}
-                                                    onChange={(e) => setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, sessionsCount: Number(e.target.value) } }))}
+                                                    onChange={(e) => syncSessionsCount(Number(e.target.value))}
                                                 />
                                             </div>
                                             <div className="space-y-2">
@@ -370,6 +482,7 @@ function RouteComponent() {
                                                 </label>
                                                 <input
                                                     type="number"
+                                                    min={1}
                                                     placeholder="مثال: 60"
                                                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all text-sm"
                                                     value={Number(courseData.sessionDurationMinutes)}
@@ -377,20 +490,112 @@ function RouteComponent() {
                                                 />
                                             </div>
                                         </div>
+
+                                        {/* Session details — per-session list (required by API for non-flexible courses) */}
+                                        <div className="mt-4 space-y-2.5">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <ListOrdered size={16} className="text-primary dark:text-secondary" />
+                                                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">تفاصيل الجلسات</label>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={addSession}
+                                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary dark:bg-secondary text-white hover:opacity-85 transition-all shadow-sm shadow-primary/20 dark:shadow-secondary/20"
+                                                >
+                                                    <Plus size={14} /> إضافة جلسة
+                                                </button>
+                                            </div>
+
+                                            {courseData.sessions.length === 0 ? (
+                                                <div className="p-4 text-center text-slate-400 dark:text-slate-500 text-sm font-medium rounded-lg border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-950/40">
+                                                    لم تتم إضافة أي جلسة بعد. حدّد عدد الجلسات أعلاه أو اضغط "إضافة جلسة".
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2.5">
+                                                    {courseData.sessions.map((session, idx) => (
+                                                        <div
+                                                            key={idx}
+                                                            className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 space-y-2.5"
+                                                        >
+                                                            <div className="flex items-center justify-between">
+                                                                <h5 className="text-sm font-bold text-primary dark:text-secondary">
+                                                                    الجلسة {idx + 1}
+                                                                </h5>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeSession(idx)}
+                                                                    className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 p-1.5 rounded-lg transition-all"
+                                                                    title="حذف الجلسة"
+                                                                >
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </div>
+
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                                                                <div className="space-y-1.5">
+                                                                    <label className="text-xs font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                                                        مدة الجلسة (دقيقة) <span className="text-red-500">*</span>
+                                                                    </label>
+                                                                    <input
+                                                                        type="number"
+                                                                        min={1}
+                                                                        value={session.durationMinutes}
+                                                                        onChange={(e) => updateSession(idx, { durationMinutes: Number(e.target.value) })}
+                                                                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-sm"
+                                                                    />
+                                                                </div>
+                                                                <div className="space-y-1.5">
+                                                                    <label className="text-xs font-bold text-slate-600 dark:text-slate-400">عنوان الجلسة</label>
+                                                                    <input
+                                                                        type="text"
+                                                                        maxLength={150}
+                                                                        value={session.title ?? ''}
+                                                                        onChange={(e) => updateSession(idx, { title: e.target.value || null })}
+                                                                        placeholder="مثال: مقدمة"
+                                                                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-right text-sm"
+                                                                    />
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="space-y-1.5">
+                                                                <label className="text-xs font-bold text-slate-600 dark:text-slate-400">ملاحظات</label>
+                                                                <textarea
+                                                                    rows={2}
+                                                                    maxLength={500}
+                                                                    value={session.notes ?? ''}
+                                                                    onChange={(e) => updateSession(idx, { notes: e.target.value || null })}
+                                                                    placeholder="ملاحظات اختيارية للطالب..."
+                                                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-right resize-none text-sm"
+                                                                />
+                                                                <div className="text-left text-[11px] text-slate-400 dark:text-slate-500">{(session.notes ?? '').length} / 500</div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                                    أقصى عدد للطلاب <span className="text-red-500">*</span>
+                                    أقصى عدد للطلاب {!isIndividual && <span className="text-red-500">*</span>}
                                 </label>
                                 <input
                                     type="number"
+                                    min={2}
                                     placeholder="مثال: 15"
-                                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all text-sm"
-                                    value={Number(courseData.maxStudents)}
-                                    onChange={(e) => setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, maxStudents: Number(e.target.value) } }))}
+                                    disabled={isIndividual}
+                                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                    value={courseData.maxStudents ?? ''}
+                                    onChange={(e) => setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, maxStudents: e.target.value === '' ? null : Number(e.target.value) } }))}
                                 />
+                                {isIndividual ? (
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">لا ينطبق على الجلسات الفردية.</p>
+                                ) : (
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">الحد الأدنى 2 للجلسات الجماعية.</p>
+                                )}
                             </div>
                         </div>
                     </section>

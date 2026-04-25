@@ -4,7 +4,10 @@ import { Calendar, Clock, Users as UsersIcon, Banknote, Eye, Trash2, Edit3, Saud
 import { motion } from 'framer-motion';
 import { Course } from '../-types/types';
 import { useNavigate } from '@tanstack/react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { EnrollmentRequestsModal } from './EnrollmentRequestsModal';
+import { courseDetailQueryOptions } from '../-queries/courseDetailQueryOptions';
+import { showToast } from '@/lib/utils/toast';
 
 interface CourseCardProps {
     course: Course;
@@ -13,9 +16,69 @@ interface CourseCardProps {
 
 export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
     const navigate = useNavigate()
+    const queryClient = useQueryClient()
     const [isEnrollmentModalOpen, setIsEnrollmentModalOpen] = useState(false);
-    const getStatusLabel = (status: number) => {
-        switch (status) {
+    const [isLoadingEdit, setIsLoadingEdit] = useState(false);
+
+    const handleEdit = async () => {
+        const token = localStorage.getItem('token')
+        if (!token) {
+            navigate({ to: '/teacher/register', search: { step: 0, authSubStep: 'phone' } })
+            return
+        }
+        setIsLoadingEdit(true)
+        try {
+            const detail = await queryClient.fetchQuery(courseDetailQueryOptions(course.id, token))
+            navigate({
+                to: '/teacher/courses/new',
+                search: {
+                    courseData: {
+                        title: detail.title ?? '',
+                        description: detail.description ?? '',
+                        teacherSubjectId: detail.teacherSubjectId ?? null,
+                        subjectName: detail.subjectNameAr ?? detail.subjectNameEn ?? '',
+                        domainName: detail.domainNameAr ?? detail.domainNameEn ?? '',
+                        teachingModeId: detail.teachingModeId,
+                        sessionTypeId: detail.sessionTypeId,
+                        isFlexible: !!detail.isFlexible,
+                        sessionsCount: detail.sessions?.length ?? detail.sessionsCount ?? 0,
+                        sessionDurationMinutes: detail.sessionDurationMinutes != null ? String(detail.sessionDurationMinutes) : '',
+                        sessions: (detail.sessions ?? []).map(s => ({
+                            durationMinutes: s.durationMinutes,
+                            title: s.title,
+                            notes: s.notes,
+                        })),
+                        price: detail.price != null ? String(detail.price) : '0',
+                        maxStudents: detail.maxStudents ?? null,
+                        canIncludeInPackages: !!detail.canIncludeInPackages,
+                        mode: 'edit',
+                        id: detail.id,
+                    },
+                },
+            })
+        } catch (err) {
+            showToast({
+                type: 'server',
+                message: err instanceof Error ? err.message : 'تعذّر تحميل بيانات الدورة',
+            })
+        } finally {
+            setIsLoadingEdit(false)
+        }
+    }
+
+    const normalizeStatus = (status: number | string | null | undefined): 1 | 2 | 3 | null => {
+        if (status === 1 || status === 2 || status === 3) return status
+        if (typeof status === 'string') {
+            const s = status.toLowerCase()
+            if (s === 'draft') return 1
+            if (s === 'published') return 2
+            if (s === 'archived' || s === 'inactive') return 3
+        }
+        return null
+    }
+
+    const getStatusLabel = (status: number | string | null | undefined) => {
+        switch (normalizeStatus(status)) {
             case 1: return 'مسودة';
             case 2: return 'منشورة';
             case 3: return 'متوقفة';
@@ -23,8 +86,8 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
         }
     };
 
-    const getStatusStyles = (status: number) => {
-        switch (status) {
+    const getStatusStyles = (status: number | string | null | undefined) => {
+        switch (normalizeStatus(status)) {
             case 1: return 'bg-amber-100 text-amber-700 border-amber-200';
             case 2: return 'bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]';
             case 3: return 'bg-slate-100 text-slate-700 border-slate-200';
@@ -41,9 +104,11 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
         >
             {/* Card Header (Teal Section) */}
             <div className="bg-linear-to-br from-primary to-secondary p-5 relative min-h-[140px] flex flex-col justify-end">
-                <div className={`absolute top-3 right-4 px-3 py-1 rounded-lg text-xs font-bold border ${getStatusStyles(course.status)}`}>
-                    {getStatusLabel(course.status)}
-                </div>
+                {getStatusLabel(course.status) && (
+                    <div className={`absolute top-3 right-4 px-3 py-1 rounded-lg text-xs font-bold border ${getStatusStyles(course.status)}`}>
+                        {getStatusLabel(course.status)}
+                    </div>
+                )}
                 <h3 className="text-lg font-bold text-white leading-snug mb-3 mt-8">
                     {course.title}
                 </h3>
@@ -120,30 +185,11 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
                     </button>
                     <button
                         type="button"
-                        onClick={() => navigate({
-                            to: '/teacher/courses/new', search: {
-                                courseData: {
-                                    title: course.title,
-                                    description: course.descriptionShort,
-                                    teacherSubjectId: course.subjectId,
-                                    subjectName: course.subjectNameEn,
-                                    domainName: course.domainNameEn,
-                                    teachingModeId: course.teachingModeId,
-                                    sessionTypeId: course.sessionTypeId,
-                                    isFlexible: false,
-                                    sessionsCount: course.sessionsCount ?? 0,
-                                    sessionDurationMinutes: '0',
-                                    price: course.price?.toString() ?? '',
-                                    maxStudents: course.registeredCount ?? 0,
-                                    canIncludeInPackages: true,
-                                    mode: 'edit',
-                                    id: course.id
-                                }
-                            }
-                        })}
-                        className="p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                        onClick={handleEdit}
+                        disabled={isLoadingEdit}
+                        className="p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <Edit3 size={18} />
+                        <Edit3 size={18} className={isLoadingEdit ? 'animate-pulse' : ''} />
                     </button>
                     <button
                         type="button"

@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TestRouteRouteImport } from './routes/test/route'
 import { Route as LandingRouteRouteImport } from './routes/_landing/route'
 import { Route as TeacherSurveyRouteRouteImport } from './routes/teacher/survey/route'
 import { Route as TeacherRegisterRouteRouteImport } from './routes/teacher/register/route'
@@ -20,6 +21,11 @@ import { Route as LandingIndexRouteRouteImport } from './routes/_landing/index/r
 import { Route as TeacherAuthenticatedCoursesRouteRouteImport } from './routes/teacher/_authenticated/courses/route'
 import { Route as TeacherAuthenticatedCoursesNewRouteRouteImport } from './routes/teacher/_authenticated/courses/new/route'
 
+const TestRouteRoute = TestRouteRouteImport.update({
+  id: '/test',
+  path: '/test',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LandingRouteRoute = LandingRouteRouteImport.update({
   id: '/_landing',
   getParentRoute: () => rootRouteImport,
@@ -74,6 +80,7 @@ const TeacherAuthenticatedCoursesNewRouteRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/test': typeof TestRouteRoute
   '/contact': typeof LandingContactRouteRoute
   '/teacher': typeof TeacherAuthenticatedRouteRouteWithChildren
   '/teacher/login': typeof TeacherLoginRouteRoute
@@ -84,6 +91,7 @@ export interface FileRoutesByFullPath {
   '/teacher/courses/new': typeof TeacherAuthenticatedCoursesNewRouteRoute
 }
 export interface FileRoutesByTo {
+  '/test': typeof TestRouteRoute
   '/contact': typeof LandingContactRouteRoute
   '/teacher': typeof TeacherAuthenticatedRouteRouteWithChildren
   '/teacher/login': typeof TeacherLoginRouteRoute
@@ -96,6 +104,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_landing': typeof LandingRouteRouteWithChildren
+  '/test': typeof TestRouteRoute
   '/_landing/': typeof LandingIndexRouteRoute
   '/_landing/contact': typeof LandingContactRouteRoute
   '/teacher/_authenticated': typeof TeacherAuthenticatedRouteRouteWithChildren
@@ -109,6 +118,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/test'
     | '/contact'
     | '/teacher'
     | '/teacher/login'
@@ -119,6 +129,7 @@ export interface FileRouteTypes {
     | '/teacher/courses/new'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/test'
     | '/contact'
     | '/teacher'
     | '/teacher/login'
@@ -130,6 +141,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_landing'
+    | '/test'
     | '/_landing/'
     | '/_landing/contact'
     | '/teacher/_authenticated'
@@ -143,6 +155,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   LandingRouteRoute: typeof LandingRouteRouteWithChildren
+  TestRouteRoute: typeof TestRouteRoute
   TeacherAuthenticatedRouteRoute: typeof TeacherAuthenticatedRouteRouteWithChildren
   TeacherLoginRouteRoute: typeof TeacherLoginRouteRoute
   TeacherOtpRouteRoute: typeof TeacherOtpRouteRoute
@@ -152,6 +165,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/test': {
+      id: '/test'
+      path: '/test'
+      fullPath: '/test'
+      preLoaderRoute: typeof TestRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_landing': {
       id: '/_landing'
       path: ''
@@ -271,6 +291,7 @@ const TeacherAuthenticatedRouteRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   LandingRouteRoute: LandingRouteRouteWithChildren,
+  TestRouteRoute: TestRouteRoute,
   TeacherAuthenticatedRouteRoute: TeacherAuthenticatedRouteRouteWithChildren,
   TeacherLoginRouteRoute: TeacherLoginRouteRoute,
   TeacherOtpRouteRoute: TeacherOtpRouteRoute,

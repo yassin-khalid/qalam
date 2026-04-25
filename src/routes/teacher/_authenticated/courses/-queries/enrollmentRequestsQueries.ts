@@ -1,18 +1,39 @@
 import { queryOptions } from '@tanstack/react-query'
 
-export type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled'
-export type GroupMemberType = 'Own' | 'Invited'
-export type GroupMemberConfirmationStatus = 'Pending' | 'Confirmed' | 'Rejected'
+export const RequestStatus = {
+    Pending: 1,
+    Approved: 2,
+    Rejected: 3,
+    Cancelled: 4,
+} as const
+export type RequestStatus = typeof RequestStatus[keyof typeof RequestStatus]
+
+export const GroupMemberType = {
+    Own: 1,
+    Invited: 2,
+} as const
+export type GroupMemberType = typeof GroupMemberType[keyof typeof GroupMemberType]
+
+export const GroupMemberConfirmationStatus = {
+    Pending: 1,
+    Confirmed: 2,
+    Rejected: 3,
+} as const
+export type GroupMemberConfirmationStatus =
+    typeof GroupMemberConfirmationStatus[keyof typeof GroupMemberConfirmationStatus]
 
 export interface EnrollmentRequestListItem {
     id: number
     courseId: number
     courseTitle: string | null
-    teachingModeId: number
-    teachingModeNameEn: string | null
+    requestedByUserName: string | null
     status: RequestStatus
     createdAt: string
-    notes: string | null
+    totalMinutes: number
+    estimatedTotalPrice: number
+    groupMemberCount: number
+    teachingModeNameEn: string | null
+    sessionTypeNameEn: string | null
 }
 
 export interface EnrollmentRequestGroupMember {
@@ -21,7 +42,6 @@ export interface EnrollmentRequestGroupMember {
     memberType: GroupMemberType
     confirmationStatus: GroupMemberConfirmationStatus
     confirmedAt: string | null
-    confirmedByUserId?: number | null
 }
 
 export interface EnrollmentRequestProposedSession {
@@ -49,23 +69,26 @@ export interface EnrollmentRequestDetail {
     proposedSessions: EnrollmentRequestProposedSession[] | null
 }
 
-interface ApiEnvelope<T> {
-    statusCode: string | number
-    succeeded: boolean
-    message: string
-    data: T
-    errors: unknown
-    meta: unknown
-}
-
-interface PaginatedResult<T> {
-    items: T[] | null
+interface PaginationMeta {
     totalCount: number
     pageNumber: number
     pageSize: number
     totalPages: number
     hasPreviousPage: boolean
     hasNextPage: boolean
+}
+
+interface ApiEnvelope<T, M = unknown> {
+    statusCode: string | number
+    succeeded: boolean
+    message: string
+    data: T
+    errors: unknown
+    meta: M
+}
+
+export interface PaginatedListResponse<T> extends PaginationMeta {
+    items: T[]
 }
 
 const buildHeaders = (token: string): HeadersInit => ({
@@ -95,13 +118,13 @@ export const enrollmentRequestsListQueryOptions = (
     token: string,
     params: ListParams,
 ) => {
-    const { courseId, status = 'Pending', pageNumber = 1, pageSize = 20 } = params
+    const { courseId, status, pageNumber = 1, pageSize = 20 } = params
     return queryOptions({
-        queryKey: ['enrollment-requests', 'list', courseId, status, pageNumber, pageSize],
-        queryFn: async () => {
+        queryKey: ['enrollment-requests', 'list', courseId, status ?? 'all', pageNumber, pageSize],
+        queryFn: async (): Promise<PaginatedListResponse<EnrollmentRequestListItem>> => {
             const url = new URL(`${import.meta.env.VITE_API_URL}/Api/V1/Teacher/EnrollmentRequests`)
             url.searchParams.set('CourseId', String(courseId))
-            url.searchParams.set('Status', status)
+            if (status !== undefined) url.searchParams.set('Status', String(status))
             url.searchParams.set('PageNumber', String(pageNumber))
             url.searchParams.set('PageSize', String(pageSize))
 
@@ -111,8 +134,16 @@ export const enrollmentRequestsListQueryOptions = (
             })
             if (!response.ok) throw new Error(await parseError(response))
 
-            const json = await response.json() as ApiEnvelope<PaginatedResult<EnrollmentRequestListItem>>
-            return json.data
+            const json = await response.json() as ApiEnvelope<EnrollmentRequestListItem[] | null, PaginationMeta | null>
+            return {
+                items: json.data ?? [],
+                totalCount: json.meta?.totalCount ?? 0,
+                pageNumber: json.meta?.pageNumber ?? pageNumber,
+                pageSize: json.meta?.pageSize ?? pageSize,
+                totalPages: json.meta?.totalPages ?? 0,
+                hasPreviousPage: json.meta?.hasPreviousPage ?? false,
+                hasNextPage: json.meta?.hasNextPage ?? false,
+            }
         },
     })
 }
@@ -141,7 +172,7 @@ export const approveEnrollmentRequest = async (token: string, id: number) => {
         { method: 'POST', headers: buildHeaders(token) },
     )
     if (!response.ok) throw new Error(await parseError(response))
-    return await response.json() as ApiEnvelope<unknown>
+    return await response.json() as ApiEnvelope<string>
 }
 
 export const rejectEnrollmentRequest = async (
@@ -149,14 +180,15 @@ export const rejectEnrollmentRequest = async (
     id: number,
     rejectionReason?: string,
 ) => {
+    const body = rejectionReason ? { rejectionReason } : {}
     const response = await fetch(
         `${import.meta.env.VITE_API_URL}/Api/V1/Teacher/EnrollmentRequests/${id}/Reject`,
         {
             method: 'POST',
             headers: buildHeaders(token),
-            body: JSON.stringify({ rejectionReason: rejectionReason ?? null }),
+            body: JSON.stringify(body),
         },
     )
     if (!response.ok) throw new Error(await parseError(response))
-    return await response.json() as ApiEnvelope<unknown>
+    return await response.json() as ApiEnvelope<string>
 }
