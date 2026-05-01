@@ -1,49 +1,15 @@
 'use client';
 
 import { useEffect } from 'react';
-// import { localStorageCollection } from '../db/localStorageCollection';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../hooks/useTheme';
+import { useLocale } from '../hooks/useLocale';
+import { LOCALE_DIRECTION } from '../i18n';
 
 export function ClientRoot({ children }: { children: React.ReactNode }) {
     const theme = useTheme()
-
-    // useEffect(() => {
-    //     // Check existence synchronously if possible, or use try-catch
-    //     try {
-    //         const exists = localStorageCollection.get('current');
-    //         if (!exists) {
-    //             // Only create default session if it doesn't exist
-    //             // Don't overwrite existing data
-    //             const newSession = localStorageCollection.insert({
-    //                 id: 'current',
-    //                 teacher: { id: 'guest', name: 'Guest' },
-    //                 token: '',
-    //                 theme: 'light', // default theme is light
-    //             });
-    //             if (newSession.error) {
-    //                 console.error("Failed to initialize session:", newSession.error);
-    //             }
-    //         } else {
-    //             // Ensure existing session has all required fields
-    //             // If token exists, preserve it
-    //             const current = exists;
-    //             if (!current.teacher || !current.theme) {
-    //                 localStorageCollection.update('current', (draft) => {
-    //                     if (!draft.teacher) {
-    //                         draft.teacher = { id: 'guest', name: 'Guest' };
-    //                     }
-    //                     if (!draft.theme) {
-    //                         draft.theme = 'light';
-    //                     }
-    //                 });
-    //             }
-    //         }
-    //     } catch (err) {
-    //         // If get throws or collection method is async → ignore or log
-    //         console.debug("Session check failed during init", err);
-    //     }
-    // }, []);
-
+    const locale = useLocale()
+    const { i18n } = useTranslation()
 
     useEffect(() => {
         if (theme === 'dark') {
@@ -53,6 +19,14 @@ export function ClientRoot({ children }: { children: React.ReactNode }) {
         }
     }, [theme]);
 
+    useEffect(() => {
+        const dir = LOCALE_DIRECTION[locale];
+        document.documentElement.lang = locale;
+        document.documentElement.dir = dir;
+        if (i18n.language !== locale) {
+            void i18n.changeLanguage(locale);
+        }
+    }, [locale, i18n]);
+
     return <>{children}</>;
 }
-

@@ -3,6 +3,7 @@
 import z from 'zod';
 import { localStorageCollection } from '../db/localStorageCollection';
 import { AuthSession, authSessionSchema } from '../types/auth';
+import type { Locale } from '../i18n';
 
 const DEFAULT_SESSION = {
     id: 'current',
@@ -25,6 +26,19 @@ export function updateTheme(theme: 'light' | 'dark') {
         });
     } finally {
         document.documentElement.classList.toggle('dark', theme === 'dark');
+    }
+}
+
+export function updateLocale(locale: Locale) {
+    try {
+        localStorageCollection.update('current', (draft) => {
+            draft.locale = locale;
+        });
+    } catch {
+        localStorageCollection.insert({
+            ...DEFAULT_SESSION,
+            locale,
+        });
     }
 }
 

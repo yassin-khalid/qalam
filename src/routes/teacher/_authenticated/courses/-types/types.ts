@@ -17,6 +17,7 @@ export interface Course {
   startDate?: string;
   sessionsCount?: number;
   registeredCount?: number;
+  maxStudents?: number | null;
 }
 
 export interface ApiResponse {

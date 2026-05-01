@@ -1,6 +1,8 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 const Hero: React.FC = () => {
+  const { t } = useTranslation("landing");
   return (
     <section className="relative pt-32 pb-24 md:pt-48 md:pb-40 overflow-hidden transition-colors duration-500">
       {/* Decorative Background Circles */}
@@ -12,20 +14,19 @@ const Hero: React.FC = () => {
         <div className="order-2 md:order-1 flex flex-col items-start gap-8">
           <div className="space-y-4">
             <h1 className="text-4xl md:text-5xl font-black text-teal-500 dark:text-teal-400 leading-tight">
-              مستقبل التعليم يبدأ من هنا
+              {t("hero.titleHighlight")}
             </h1>
             <p className="text-2xl md:text-3xl font-semibold text-sky-950 dark:text-white leading-relaxed max-w-xl transition-colors">
-              انضم لـ +10,000 طالب يحققون التفوق الدراسي مع نخبة المعلمين
-              السعوديين المعتمدين.
+              {t("hero.subtitle")}
             </p>
           </div>
 
           <div className="flex flex-wrap gap-4 pt-4">
             <button className="bg-sky-950 dark:bg-teal-500 text-white dark:text-slate-950 px-10 py-4 rounded-xl font-bold text-xl shadow-xl hover:translate-y-[-2px] transition-all">
-              سجـــــل الأن
+              {t("hero.registerCta")}
             </button>
             <button className="border-2 border-sky-950 dark:border-teal-500/50 text-sky-950 dark:text-teal-400 px-10 py-4 rounded-xl font-medium text-lg hover:bg-sky-950 dark:hover:bg-teal-500 hover:text-white dark:hover:text-slate-950 transition-all shadow-md">
-              حمــل التطبيــق
+              {t("hero.downloadAppCta")}
             </button>
           </div>
         </div>
@@ -35,9 +36,8 @@ const Hero: React.FC = () => {
           <div className="relative w-full max-w-[500px] aspect-square group">
             <div className="absolute inset-0 bg-sky-50 dark:bg-slate-900 rounded-full transition-colors"></div>
             <img
-              // src="https://picsum.photos/seed/edu/800/800"
               src="/qalam-hero-img.svg"
-              alt="Education"
+              alt={t("hero.imageAlt")}
               className="absolute inset-0 w-full h-full object-cover rounded-[220px] rotate-[-5deg] group-hover:rotate-0 transition-transform duration-700"
             />
             {/* Floating Accents */}
@@ -49,7 +49,6 @@ const Hero: React.FC = () => {
               />
             </div>
             <div className="absolute bottom-10 -right-5 w-32 h-16 bg-teal-500/20 rounded-xl blur-xl"></div>
-            {/* <div className="absolute top-1/4 -right-10 w-16 h-16 bg-teal-500 dark:bg-white rounded-[10px] hidden md:block transition-colors"></div> */}
           </div>
         </div>
       </div>

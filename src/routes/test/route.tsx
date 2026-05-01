@@ -9,7 +9,7 @@ function RouteComponent() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['dev-abwaab-settings'],
     queryFn: async () => {
-      const response = await fetch('https://dev.abwaab.sa/api/settings')
+      const response = await fetch('https://dev.abwaab.sa/api/stores')
       if (!response.ok) {
         throw new Error(`Request failed: ${response.status}`)
       }
@@ -19,7 +19,7 @@ function RouteComponent() {
 
   return (
     <div className="min-h-screen p-6">
-      <h1 className="text-2xl font-bold mb-4">GET https://dev.abwaab.sa/api/settings</h1>
+      <h1 className="text-2xl font-bold mb-4">GET https://dev.abwaab.sa/api/stores</h1>
       {isLoading && <p>Loading...</p>}
       {error && <p className="text-red-600">Error: {(error as Error).message}</p>}
       {data && (

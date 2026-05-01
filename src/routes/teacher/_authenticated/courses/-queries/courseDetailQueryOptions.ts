@@ -56,6 +56,23 @@ type CourseDetailResponse = {
     meta: unknown
 }
 
+export const deleteCourse = async (id: number, token: string) => {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/Api/V1/Teacher/TeacherCourse/${id}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Accept-Language': 'ar-EG',
+        },
+    })
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({})) as { message?: string }
+        throw new Error(error?.message || 'Failed to delete course')
+    }
+    return response.status === 204 ? null : await response.json().catch(() => null)
+}
+
 export const courseDetailQueryOptions = (id: number, token: string) => queryOptions({
     queryKey: ['course-detail', id],
     queryFn: async () => {

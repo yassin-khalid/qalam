@@ -9,6 +9,7 @@ import appCss from "../styles.css?url";
 import { ClientRoot } from "@/lib/components/ClientRoot";
 import { queryClient } from "@/lib/queryClient";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { DEFAULT_LOCALE, LOCALE_DIRECTION } from "@/lib/i18n";
 
 export interface RouterContext {
   queryClient: QueryClient;
@@ -73,7 +74,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
 
   return (
-    <html lang="ar" dir="rtl" className="scroll-smooth">
+    <html lang={DEFAULT_LOCALE} dir={LOCALE_DIRECTION[DEFAULT_LOCALE]} className="scroll-smooth">
       <head>
         <HeadContent />
       </head>

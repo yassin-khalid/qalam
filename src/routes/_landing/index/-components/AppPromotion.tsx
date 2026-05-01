@@ -1,4 +1,4 @@
-// import React from "react";
+import { useTranslation } from "react-i18next";
 
 // const AppPromotion: React.FC = () => {
 //   // Recreating a subset of the decorative pattern from Figma for performance and visual fidelity
@@ -105,6 +105,7 @@
 // export default AppPromotion;
 
 const AppPromotion = () => {
+  const { t } = useTranslation("landing");
   return (
     <section className="mt-96 mb-24 mx-6 lg:mx-0">
       {/* <div className="bg-sky-950 h-96 rounded-3xl relative">
@@ -133,7 +134,7 @@ const AppPromotion = () => {
             {/* Main Text Content */}
             <div className="space-y-6 max-w-3xl">
               <p className="text-lg md:text-xl text-[#F2F8FC] leading-relaxed">
-                استثمر في مستقبلك، وابدأ رحلتك التعليمية الآن! حمّل تطبيق "قلم" الآن، فهو بوابتك الذكية نحو التعلّم الممتع والفعّال.
+                {t("appPromotion.pitch")}
               </p>
             </div>
 
@@ -144,7 +145,7 @@ const AppPromotion = () => {
               <div className="bg-transparent hover:bg-white/10 p-4 rounded-2xl shadow-xl hover:scale-105 transition-transform cursor-pointer">
                 <img
                   src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://example.com/download"
-                  alt="Download QR Code"
+                  alt={t("appPromotion.qrAlt")}
                   className="w-28 h-28 md:w-36 md:h-36"
                 />
               </div>
@@ -162,8 +163,8 @@ const AppPromotion = () => {
                     </svg>
                   </div>
                   <div className="flex flex-col items-start leading-none text-right">
-                    <span className="text-[10px] opacity-70 mb-1">حمل من علي</span>
-                    <span className="text-xl font-bold font-sans">App Store</span>
+                    <span className="text-[10px] opacity-70 mb-1">{t("appPromotion.downloadOn")}</span>
+                    <span className="text-xl font-bold font-sans">{t("appPromotion.appStore")}</span>
                   </div>
                 </a>
 
@@ -178,8 +179,8 @@ const AppPromotion = () => {
                     </svg>
                   </div>
                   <div className="flex flex-col items-start leading-none text-right">
-                    <span className="text-[10px] opacity-70 mb-1">حمل من علي</span>
-                    <span className="text-xl font-bold font-sans">Google Play</span>
+                    <span className="text-[10px] opacity-70 mb-1">{t("appPromotion.downloadOn")}</span>
+                    <span className="text-xl font-bold font-sans">{t("appPromotion.googlePlay")}</span>
                   </div>
                 </a>
               </div>

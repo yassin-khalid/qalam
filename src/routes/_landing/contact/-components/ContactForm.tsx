@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { User, Phone, Mail, Users, Settings, MessageSquare, Send, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface ContactFormProps {
     onSubmit: (data: any) => void;
@@ -10,6 +11,7 @@ interface ContactFormProps {
 }
 
 const ContactForm: React.FC<ContactFormProps> = ({ onSubmit, isSubmitting }) => {
+    const { t } = useTranslation('landing');
     const [formData, setFormData] = useState({
         name: '',
         phone: '',
@@ -45,7 +47,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ onSubmit, isSubmitting }) => 
                         required
                         type="text"
                         name="name"
-                        placeholder="الإسم"
+                        placeholder={t('contact.form.name')}
                         className={inputClasses}
                         value={formData.name}
                         onChange={handleChange}
@@ -59,7 +61,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ onSubmit, isSubmitting }) => 
                         required
                         type="tel"
                         name="phone"
-                        placeholder="رقم الجوال"
+                        placeholder={t('contact.form.phone')}
                         className={inputClasses}
                         value={formData.phone}
                         onChange={handleChange}
@@ -75,7 +77,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ onSubmit, isSubmitting }) => 
                         required
                         type="email"
                         name="email"
-                        placeholder="john@example.com"
+                        placeholder={t('contact.form.email')}
                         className={inputClasses}
                         value={formData.email}
                         onChange={handleChange}
@@ -91,10 +93,10 @@ const ContactForm: React.FC<ContactFormProps> = ({ onSubmit, isSubmitting }) => 
                         value={formData.userType}
                         onChange={handleChange}
                     >
-                        <option value="" disabled className="dark:bg-slate-900">نوع المستخدم</option>
-                        <option value="individual" className="dark:bg-slate-900">فرد</option>
-                        <option value="corporate" className="dark:bg-slate-900">شركة</option>
-                        <option value="provider" className="dark:bg-slate-900">مزود خدمة</option>
+                        <option value="" disabled className="dark:bg-slate-900">{t('contact.form.userType.placeholder')}</option>
+                        <option value="individual" className="dark:bg-slate-900">{t('contact.form.userType.individual')}</option>
+                        <option value="corporate" className="dark:bg-slate-900">{t('contact.form.userType.corporate')}</option>
+                        <option value="provider" className="dark:bg-slate-900">{t('contact.form.userType.provider')}</option>
                     </select>
                     <Users className={iconClasses} />
                 </div>
@@ -108,11 +110,11 @@ const ContactForm: React.FC<ContactFormProps> = ({ onSubmit, isSubmitting }) => 
                     value={formData.serviceType}
                     onChange={handleChange}
                 >
-                    <option value="" disabled className="dark:bg-slate-900">نوع الخدمة</option>
-                    <option value="support" className="dark:bg-slate-900">دعم فني</option>
-                    <option value="sales" className="dark:bg-slate-900">مبيعات</option>
-                    <option value="billing" className="dark:bg-slate-900">الفواتير</option>
-                    <option value="complaint" className="dark:bg-slate-900">شكوى</option>
+                    <option value="" disabled className="dark:bg-slate-900">{t('contact.form.serviceType.placeholder')}</option>
+                    <option value="support" className="dark:bg-slate-900">{t('contact.form.serviceType.support')}</option>
+                    <option value="sales" className="dark:bg-slate-900">{t('contact.form.serviceType.sales')}</option>
+                    <option value="billing" className="dark:bg-slate-900">{t('contact.form.serviceType.billing')}</option>
+                    <option value="complaint" className="dark:bg-slate-900">{t('contact.form.serviceType.complaint')}</option>
                 </select>
                 <Settings className={iconClasses} />
             </div>
@@ -123,7 +125,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ onSubmit, isSubmitting }) => 
                     required
                     name="message"
                     rows={5}
-                    placeholder="اكتب ملاحظاتك"
+                    placeholder={t('contact.form.message')}
                     className={`${inputClasses} pr-12 resize-none custom-scrollbar`}
                     value={formData.message}
                     onChange={handleChange}
@@ -142,7 +144,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ onSubmit, isSubmitting }) => 
                 ) : (
                     <Send className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
                 )}
-                <span>ارسل رسالتك</span>
+                <span>{t('contact.form.submit')}</span>
             </button>
         </form>
     );

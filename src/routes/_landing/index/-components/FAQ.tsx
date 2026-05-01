@@ -1,38 +1,14 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
-export const FAQ_ITEMS = [
-  {
-    id: 1,
-    question: "كيف يمكنني طلب خدمة شحن عبر الموقع؟",
-    answer: "يمكنك طلب خدمة الشحن بسهولة عن طريق إنشاء حساب وتحديد تفاصيل الشحنة مثل الوزن والأبعاد والعنوانين (المرسل والمستلم)، ثم اختيار السائق المناسب بناءً على التقييمات والأسعار."
-  },
-  {
-    id: 2,
-    question: "هل تقدمون خصومات للطلاب أو لأفراد معينين؟",
-    answer: "نعم، نقدم عروضاً دورية وخصومات خاصة للطلاب والمؤسسات التعليمية. يمكنك متابعة صفحة العروض أو الاشتراك في نشرتنا الإخبارية ليصلك كل جديد."
-  },
-  {
-    id: 3,
-    question: "ما هي مدة تسليم الطلبات بشكل عام؟",
-    answer: "تعتمد مدة التسليم على الوجهة ونوع الخدمة المختارة، ولكن عادة ما تستغرق الشحنات المحلية من 24 إلى 48 ساعة."
-  },
-  {
-    id: 4,
-    question: "هل يمكنني تتبع شحنتي بعد إرسالها؟",
-    answer: "بالتأكيد، بمجرد تأكيد الطلب ستحصل على رقم تتبع يتيح لك معرفة حالة الشحنة وموقعها الحالي لحظة بلحظة عبر لوحة التحكم الخاصة بك."
-  },
-  {
-    id: 5,
-    question: "ما هي سياساتكم في حالة تلف المنتجات أثناء الشحن؟",
-    answer: "نحن نولي اهتماماً كبيراً لسلامة الشحنات، وفي حالة حدوث أي تلف ناتج عن عملية الشحن، نقوم بتعويض العميل وفقاً لسياسة التأمين المتبعة لدينا بعد معاينة الحالة."
-  }
-];
+const FAQ_KEYS = ['shipping', 'discounts', 'delivery', 'tracking', 'damage'] as const;
 
 const FAQSection: React.FC = () => {
-  const [openId, setOpenId] = useState<number | null>(1);
+  const { t } = useTranslation('landing');
+  const [openId, setOpenId] = useState<string | null>(FAQ_KEYS[0]);
 
-  const toggleFAQ = (id: number) => {
+  const toggleFAQ = (id: string) => {
     setOpenId(openId === id ? null : id);
   };
 
@@ -49,19 +25,19 @@ const FAQSection: React.FC = () => {
         <div className="flex flex-col items-center mb-16 relative">
 
           <h2 className="text-4xl md:text-5xl font-black transition-colors duration-500 text-sky-950 dark:text-white">
-            الأسئلة الشائعة
+            {t('faq.heading')}
           </h2>
           <div className="w-24 h-1.5 mx-auto mt-6 rounded-full transition-colors duration-500 bg-teal-500 opacity-60 dark:bg-cyan-400 dark:opacity-80" />
         </div>
 
         {/* FAQ List */}
         <div className="space-y-5">
-          {FAQ_ITEMS.map((item) => {
-            const isOpen = openId === item.id;
+          {FAQ_KEYS.map((key) => {
+            const isOpen = openId === key;
 
             return (
               <div
-                key={item.id}
+                key={key}
                 className={`
                   transition-all duration-500 rounded-3xl border-2 overflow-hidden
                   ${isOpen
@@ -71,7 +47,7 @@ const FAQSection: React.FC = () => {
                 `}
               >
                 <button
-                  onClick={() => toggleFAQ(item.id)}
+                  onClick={() => toggleFAQ(key)}
                   className="w-full px-8 py-6 flex items-center justify-between text-right flex-row-reverse gap-6 group"
                 >
                   <div className={`
@@ -90,7 +66,7 @@ const FAQSection: React.FC = () => {
                       : 'text-sky-950 dark:text-white'
                     }
                   `}>
-                    {item.question}
+                    {t(`faq.items.${key}.question`)}
                   </span>
                 </button>
 
@@ -100,7 +76,7 @@ const FAQSection: React.FC = () => {
                 `}>
                   <div className="border-t border-dashed pt-6 border-teal-100 dark:border-white/10">
                     <p className="leading-relaxed text-lg text-right font-medium transition-colors duration-500 text-slate-600 dark:text-slate-300">
-                      {item.answer}
+                      {t(`faq.items.${key}.answer`)}
                     </p>
                   </div>
                 </div>

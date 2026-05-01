@@ -1,33 +1,26 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ContactInfo from "./ContactInfo";
 import ContactForm from "./ContactForm";
 
 const ContactSection = () => {
-
+    const { t } = useTranslation("landing");
     const [isSubmitting, setIsSubmitting] = useState(false)
 
 
-    const handleFormSubmit = async (formData: any) => {
+    const handleFormSubmit = async (_formData: any) => {
         setIsSubmitting(true);
 
         try {
-            const submissionPromise = new Promise(resolve => setTimeout(resolve, 1500));
-
-            // toast.success('تم إرسال رسالتك بنجاح!', {
-            //   duration: 4000,
-            //   position: 'top-center',
-            //   style: isDarkMode ? { background: '#1e293b', color: '#fff' } : {},
-            // });
-
+            await new Promise(resolve => setTimeout(resolve, 1500));
         } catch (error) {
             console.error(error);
-            // toast.error('عذراً، حدث خطأ أثناء الإرسال.');
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    return <div className={`min-h-screen flex items-center justify-center p-4 md:p-10 transition-colors duration-300 dark:bg-[#0f172a] bg-[#f1f5f9]`} dir="rtl">
+    return <div className={`min-h-screen flex items-center justify-center p-4 md:p-10 transition-colors duration-300 dark:bg-[#0f172a] bg-[#f1f5f9]`}>
 
 
         <div className="max-w-6xl w-full bg-white dark:bg-slate-800 rounded-3xl shadow-2xl overflow-hidden border border-[#e2e8f0] dark:border-slate-700 flex flex-col lg:flex-row relative theme-transition">
@@ -40,12 +33,12 @@ const ContactSection = () => {
 
                 <div className="space-y-4">
                     <ContactInfo
-                        title="الرقم الموحد"
+                        title={t("contact.info.phoneTitle")}
                         value="920016154"
                         type="phone"
                     />
                     <ContactInfo
-                        title="البريد الإلكتروني"
+                        title={t("contact.info.emailTitle")}
                         value="info@qalam.com"
                         type="email"
                     />
@@ -55,8 +48,8 @@ const ContactSection = () => {
             {/* Right Side: Contact Form */}
             <div className="lg:w-[55%] p-8 md:p-12 bg-white dark:bg-slate-800 theme-transition">
                 <header className="mb-10 text-right">
-                    <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">تواصل معنا</h1>
-                    <p className="text-gray-500 dark:text-slate-400">نحن هنا لمساعدتك، لا تتردد في مراسلتنا في أي وقت.</p>
+                    <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">{t("contact.title")}</h1>
+                    <p className="text-gray-500 dark:text-slate-400">{t("contact.subtitle")}</p>
                 </header>
 
                 <ContactForm onSubmit={handleFormSubmit} isSubmitting={isSubmitting} />

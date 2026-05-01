@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { motion, AnimatePresence } from 'framer-motion';
+import { useState } from 'react';
 import {
     ChevronLeft,
     Save,
@@ -16,7 +17,9 @@ import {
     SaudiRiyal,
     Plus,
     Trash2,
-    ListOrdered
+    ListOrdered,
+    Check,
+    StickyNote
 } from 'lucide-react';
 
 import { SubjectSelector } from './-components/SubjectSelector';
@@ -92,6 +95,7 @@ export const Route = createFileRoute('/teacher/_authenticated/courses/new')({
 function RouteComponent() {
     const { teachingModes, sessionTypes, subjects } = Route.useLoaderData()
     const [{ courseData }, setCourseData] = useQueryStates(searchParams)
+    const [editingIndex, setEditingIndex] = useState<number | null>(null)
 
     console.log({ courseData })
 
@@ -129,7 +133,19 @@ function RouteComponent() {
         return error?.message || 'حدث خطأ غير متوقع'
     }
 
+    const isSessionValid = (s: SessionItem) => Number(s.durationMinutes) > 0
+
     const addSession = () => {
+        if (editingIndex !== null) {
+            const current = courseData.sessions[editingIndex]
+            if (!current || !isSessionValid(current)) {
+                showToast({
+                    type: 'validation',
+                    message: 'يرجى إكمال الجلسة الحالية وحفظها قبل إضافة جلسة جديدة.',
+                })
+                return
+            }
+        }
         setCourseData((prev) => {
             const defaultDuration = Number(prev.courseData.sessionDurationMinutes) || 60
             const next = [
@@ -141,6 +157,7 @@ function RouteComponent() {
                 courseData: { ...prev.courseData, sessions: next, sessionsCount: next.length },
             }
         })
+        setEditingIndex(courseData.sessions.length)
     }
 
     const removeSession = (index: number) => {
@@ -151,6 +168,38 @@ function RouteComponent() {
                 courseData: { ...prev.courseData, sessions: next, sessionsCount: next.length },
             }
         })
+        setEditingIndex((prev) => {
+            if (prev === null) return null
+            if (prev === index) return null
+            if (prev > index) return prev - 1
+            return prev
+        })
+    }
+
+    const startEditSession = (index: number) => {
+        if (editingIndex !== null && editingIndex !== index) {
+            const current = courseData.sessions[editingIndex]
+            if (current && !isSessionValid(current)) {
+                showToast({
+                    type: 'validation',
+                    message: 'يرجى إكمال الجلسة الحالية وحفظها قبل تعديل جلسة أخرى.',
+                })
+                return
+            }
+        }
+        setEditingIndex(index)
+    }
+
+    const confirmSession = (index: number) => {
+        const current = courseData.sessions[index]
+        if (!current || !isSessionValid(current)) {
+            showToast({
+                type: 'validation',
+                message: 'مدة الجلسة يجب أن تكون أكبر من صفر.',
+            })
+            return
+        }
+        setEditingIndex((prev) => (prev === index ? null : prev))
     }
 
     const updateSession = (
@@ -188,6 +237,7 @@ function RouteComponent() {
                 courseData: { ...prev.courseData, sessionsCount: newCount, sessions: next },
             }
         })
+        setEditingIndex((prev) => (prev !== null && prev >= newCount ? null : prev))
     }
 
     const { mutateAsync: createCourse } = useMutation({
@@ -514,63 +564,123 @@ function RouteComponent() {
                                             ) : (
                                                 <div className="space-y-2.5">
                                                     {courseData.sessions.map((session, idx) => (
-                                                        <div
-                                                            key={idx}
-                                                            className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 space-y-2.5"
-                                                        >
-                                                            <div className="flex items-center justify-between">
-                                                                <h5 className="text-sm font-bold text-primary dark:text-secondary">
-                                                                    الجلسة {idx + 1}
-                                                                </h5>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => removeSession(idx)}
-                                                                    className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 p-1.5 rounded-lg transition-all"
-                                                                    title="حذف الجلسة"
-                                                                >
-                                                                    <Trash2 size={14} />
-                                                                </button>
-                                                            </div>
-
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                                                                <div className="space-y-1.5">
-                                                                    <label className="text-xs font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                                                                        مدة الجلسة (دقيقة) <span className="text-red-500">*</span>
-                                                                    </label>
-                                                                    <input
-                                                                        type="number"
-                                                                        min={1}
-                                                                        value={session.durationMinutes}
-                                                                        onChange={(e) => updateSession(idx, { durationMinutes: Number(e.target.value) })}
-                                                                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-sm"
-                                                                    />
+                                                        editingIndex === idx ? (
+                                                            <div
+                                                                key={idx}
+                                                                className="p-3 rounded-lg border border-teal-300 dark:border-secondary/60 bg-slate-50 dark:bg-slate-950 space-y-2.5 ring-2 ring-teal-500/10 dark:ring-secondary/20"
+                                                            >
+                                                                <div className="flex items-center justify-between">
+                                                                    <h5 className="text-sm font-bold text-primary dark:text-secondary">
+                                                                        الجلسة {idx + 1}
+                                                                    </h5>
+                                                                    <div className="flex items-center gap-1">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => confirmSession(idx)}
+                                                                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary dark:bg-secondary text-white hover:opacity-85 transition-all"
+                                                                            title="حفظ الجلسة"
+                                                                        >
+                                                                            <Check size={14} /> حفظ الجلسة
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => removeSession(idx)}
+                                                                            className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 p-1.5 rounded-lg transition-all"
+                                                                            title="حذف الجلسة"
+                                                                        >
+                                                                            <Trash2 size={14} />
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
+
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                                                                    <div className="space-y-1.5">
+                                                                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                                                            مدة الجلسة (دقيقة) <span className="text-red-500">*</span>
+                                                                        </label>
+                                                                        <input
+                                                                            type="number"
+                                                                            min={1}
+                                                                            value={session.durationMinutes}
+                                                                            onChange={(e) => updateSession(idx, { durationMinutes: Number(e.target.value) })}
+                                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-sm"
+                                                                        />
+                                                                    </div>
+                                                                    <div className="space-y-1.5">
+                                                                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400">عنوان الجلسة</label>
+                                                                        <input
+                                                                            type="text"
+                                                                            maxLength={150}
+                                                                            value={session.title ?? ''}
+                                                                            onChange={(e) => updateSession(idx, { title: e.target.value || null })}
+                                                                            placeholder="مثال: مقدمة"
+                                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-right text-sm"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+
                                                                 <div className="space-y-1.5">
-                                                                    <label className="text-xs font-bold text-slate-600 dark:text-slate-400">عنوان الجلسة</label>
-                                                                    <input
-                                                                        type="text"
-                                                                        maxLength={150}
-                                                                        value={session.title ?? ''}
-                                                                        onChange={(e) => updateSession(idx, { title: e.target.value || null })}
-                                                                        placeholder="مثال: مقدمة"
-                                                                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-right text-sm"
+                                                                    <label className="text-xs font-bold text-slate-600 dark:text-slate-400">ملاحظات</label>
+                                                                    <textarea
+                                                                        rows={2}
+                                                                        maxLength={500}
+                                                                        value={session.notes ?? ''}
+                                                                        onChange={(e) => updateSession(idx, { notes: e.target.value || null })}
+                                                                        placeholder="ملاحظات اختيارية للطالب..."
+                                                                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-right resize-none text-sm"
                                                                     />
+                                                                    <div className="text-left text-[11px] text-slate-400 dark:text-slate-500">{(session.notes ?? '').length} / 500</div>
                                                                 </div>
                                                             </div>
-
-                                                            <div className="space-y-1.5">
-                                                                <label className="text-xs font-bold text-slate-600 dark:text-slate-400">ملاحظات</label>
-                                                                <textarea
-                                                                    rows={2}
-                                                                    maxLength={500}
-                                                                    value={session.notes ?? ''}
-                                                                    onChange={(e) => updateSession(idx, { notes: e.target.value || null })}
-                                                                    placeholder="ملاحظات اختيارية للطالب..."
-                                                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-right resize-none text-sm"
-                                                                />
-                                                                <div className="text-left text-[11px] text-slate-400 dark:text-slate-500">{(session.notes ?? '').length} / 500</div>
+                                                        ) : (
+                                                            <div
+                                                                key={idx}
+                                                                className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 transition-all"
+                                                            >
+                                                                <div className="flex items-start justify-between gap-3">
+                                                                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                                                                        <div className="w-7 h-7 shrink-0 rounded-lg bg-primary/10 dark:bg-secondary/15 flex items-center justify-center text-primary dark:text-secondary text-xs font-black">
+                                                                            {idx + 1}
+                                                                        </div>
+                                                                        <div className="min-w-0 flex-1 space-y-1">
+                                                                            <h5 className="text-sm font-bold text-slate-800 dark:text-white truncate">
+                                                                                {session.title?.trim() || `الجلسة ${idx + 1}`}
+                                                                            </h5>
+                                                                            <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                                                                <span className="flex items-center gap-1">
+                                                                                    <Clock size={12} className="text-teal-600" />
+                                                                                    {session.durationMinutes} دقيقة
+                                                                                </span>
+                                                                                {session.notes?.trim() && (
+                                                                                    <span className="flex items-center gap-1 truncate">
+                                                                                        <StickyNote size={12} className="text-slate-400 shrink-0" />
+                                                                                        <span className="truncate">{session.notes}</span>
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1 shrink-0">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => startEditSession(idx)}
+                                                                            className="text-primary dark:text-secondary hover:bg-primary/5 dark:hover:bg-secondary/10 p-1.5 rounded-lg transition-all"
+                                                                            title="تعديل الجلسة"
+                                                                        >
+                                                                            <Pencil size={14} />
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => removeSession(idx)}
+                                                                            className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 p-1.5 rounded-lg transition-all"
+                                                                            title="حذف الجلسة"
+                                                                        >
+                                                                            <Trash2 size={14} />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                        </div>
+                                                        )
                                                     ))}
                                                 </div>
                                             )}

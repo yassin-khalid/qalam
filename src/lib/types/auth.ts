@@ -15,6 +15,7 @@ export const authSessionSchema = z.object({
     teacher: teacherSchema,
     token: z.string(),
     theme: z.enum(['light', 'dark']),
+    locale: z.enum(['ar', 'en']).optional(),
 })
 
 export interface EmailPasswordCredentials {

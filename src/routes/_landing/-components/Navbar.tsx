@@ -1,10 +1,13 @@
 
+import LanguageToggleButton from "@/lib/components/LanguageToggleButton";
 import QalamLogo from "@/lib/components/QalamLogo";
 import ThemeToggleButton from "@/lib/components/ThemeToggleButton";
 import { Link } from "@tanstack/react-router";
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 const Navbar: React.FC = () => {
+  const { t } = useTranslation("landing");
 
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -43,28 +46,23 @@ const Navbar: React.FC = () => {
             activeProps={{ className: "text-lg font-bold border-b-4 border-teal-500 py-1" }}
             className="text-stone-900 dark:text-white text-base font-semibold transition-colors"
           >
-            الرئيسية
+            {t("navbar.home")}
           </Link>
-          {/* <a
-            href="#"
-            className="text-stone-900 dark:text-zinc-400 text-base font-semibold hover:text-teal-500 dark:hover:text-teal-400 transition-colors"
-          >
-            عن المنصة
-          </a> */}
           <Link
             to="/contact"
             activeProps={{ className: "text-lg font-bold border-b-4 border-teal-500 py-1" }}
             className="text-stone-900 dark:text-zinc-400 text-base font-semibold hover:text-teal-500 dark:hover:text-teal-400 transition-colors"
           >
-            تواصل معنا
+            {t("navbar.contact")}
           </Link>
         </div>
 
         {/* CTA & Theme Toggle */}
         <div className="flex items-center gap-4">
+          <LanguageToggleButton className="p-2.5 rounded-lg bg-zinc-100 dark:bg-white/5 text-sky-950 dark:text-teal-400 hover:bg-zinc-200 dark:hover:bg-white/10 transition-all min-w-10 h-10 flex items-center justify-center" />
           <ThemeToggleButton className="p-2.5 rounded-lg bg-zinc-100 dark:bg-white/5 text-sky-950 dark:text-teal-400 hover:bg-zinc-200 dark:hover:bg-white/10 transition-all" />
           <Link to="/teacher/login" className="bg-sky-950 dark:bg-teal-500 text-sky-50 dark:text-slate-950 px-6 py-2.5 rounded-lg font-bold text-lg hover:bg-sky-900 dark:hover:bg-teal-400 transition-all shadow-md">
-            سجل معنا
+            {t("common:actions.register")}
           </Link>
         </div>
       </div>

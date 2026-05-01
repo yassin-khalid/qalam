@@ -287,81 +287,12 @@
 // export default Testimonials;
 
 import React, { useState, useRef, useEffect } from 'react';
-// import { TESTIMONIALS } from '../constants';
+import { useTranslation } from 'react-i18next';
 
-const TESTIMONIALS = [
-  {
-    id: 1,
-    name: "عبدالفتاح",
-    role: "طالب ثانوي",
-    text: "منصة قلم غيرت طريقتي في المذاكرة. المعلمين جداً متمكنين والتعامل مع المنصة سهل وسلس.",
-    company: "طالب ثانوي",
-  },
-  {
-    id: 2,
-    name: "سارة أحمد",
-    role: "طالبة جامعية",
-    text: "أفضل ما في قلم هو جودة المعلمين والسرعة في الحصول على معلم في الوقت اللي أحتاجه.",
-    company: "طالبة جامعية",
-  },
-  {
-    id: 3,
-    name: "محمد خالد",
-    role: "ولي أمر",
-    text: "سهولة في متابعة مستوى أبنائي واختيار المعلمين المميزين جعلنا نثق في قلم كخيار أول.",
-    company: "ولي أمر",
-  },
-  {
-    id: 4,
-    name: "نورة العتيبي",
-    role: "طالبة لغات",
-    text: "اللغة الإنجليزية أصبحت أسهل بكثير مع المعلمين في قلم. التقنيات المستخدمة في الشرح رائعة ومبتكرة.",
-    company: "طالبة لغات",
-  },
-  {
-    id: 5,
-    name: "أحمد الزهراني",
-    role: "طالب علمي",
-    text: "ساعدني المساعد الذكي في حل مسائل الرياضيات الصعبة وفهم القوانين الفيزيائية المعقدة بسرعة.",
-    company: "طالب علمي",
-  },
-  {
-    id: 6,
-    name: "ريم الدوسري",
-    role: "طالبة متوسط",
-    text: "البيئة آمنة جداً وأشعر بالراحة التامة في طرح الأسئلة والتفاعل مع المعلمين في أي وقت.",
-    company: "طالبة متوسط",
-  },
-  {
-    id: 7,
-    name: "خالد المطيري",
-    role: "معلم فيزياء",
-    text: "كمعلم، المنصة توفر لي واجهة احترافية وسهلة لإدارة دروسي والتواصل مع طلابي بفعالية تامة.",
-    company: "معلم فيزياء",
-  },
-  {
-    id: 8,
-    name: "ليلى الشهري",
-    role: "طالبة فنون",
-    text: "تنظيم الوقت والدروس في المنصة رائع جداً، وقد ساعدني ذلك على موازنة دراستي وهواياتي بنجاح.",
-    company: "طالبة فنون",
-  },
-  {
-    id: 9,
-    name: "فهد العتيبي",
-    role: "طالب ثانوي",
-    text: "كنت أعاني من مادة الكيمياء، لكن بفضل شرح المعلمين المتميز في قلم، حصلت على الدرجة الكاملة.",
-    company: "طالب ثانوي",
-  },
-  {
-    id: 10,
-    name: "مريم الغامدي",
-    role: "ولي أمر",
-    text: "نظام التقارير الدورية في المنصة ساعدني كثيراً في معرفة نقاط القوة والضعف لدى أطفالي.",
-    company: "ولي أمر",
-  },
-];
+const TESTIMONIAL_IDS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'] as const;
+
 const TestimonialCarousel: React.FC = () => {
+  const { t } = useTranslation('landing');
   const [activeIndex, setActiveIndex] = useState(2);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -417,8 +348,8 @@ const TestimonialCarousel: React.FC = () => {
       <div className="container mx-auto px-4 mb-16">
         {/* Header */}
         <div className="text-center">
-          <h2 className="text-4xl md:text-5xl font-black text-sky-950 dark:text-white mb-4">ماذا يقول طلابنا</h2>
-          <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">آراء وتجارب حقيقية من مستخدمي المنصة</p>
+          <h2 className="text-4xl md:text-5xl font-black text-sky-950 dark:text-white mb-4">{t('testimonials.heading')}</h2>
+          <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">{t('testimonials.subheading')}</p>
         </div>
       </div>
 
@@ -433,12 +364,12 @@ const TestimonialCarousel: React.FC = () => {
         <div className="flex-none w-[calc(50vw-160px)] md:w-[calc(50vw-225px)]" />
 
         <div className="flex items-center gap-6">
-          {TESTIMONIALS.map((item, index) => {
+          {TESTIMONIAL_IDS.map((id, index) => {
             const isActive = index === activeIndex;
 
             return (
               <div
-                key={item.id}
+                key={id}
                 onClick={() => scrollToCard(index)}
                 className={`
                   testimonial-card shrink-0 snap-center transition-all duration-500 cursor-pointer relative rounded-[40px] p-8 flex flex-col justify-between
@@ -452,16 +383,16 @@ const TestimonialCarousel: React.FC = () => {
                 <div className="relative">
                   <span className={`text-4xl absolute -top-4 -right-2 leading-none font-serif ${isActive ? 'text-cyan-400' : 'text-slate-400'}`}>"</span>
                   <p className={`text-sm leading-relaxed text-right mb-6 line-clamp-4 md:line-clamp-none ${isActive ? 'text-slate-600' : 'text-slate-100 opacity-80'}`}>
-                    {item.text}
+                    {t(`testimonials.items.${id}.text`)}
                   </p>
                 </div>
 
                 {/* Footer Info */}
                 <div className="flex items-center justify-end gap-3 mt-auto">
                   <div className="text-right">
-                    <h4 className={`font-bold text-sm ${isActive ? 'text-sky-950' : 'text-white'}`}>{item.name}</h4>
+                    <h4 className={`font-bold text-sm ${isActive ? 'text-sky-950' : 'text-white'}`}>{t(`testimonials.items.${id}.name`)}</h4>
                     <p className={`text-xs ${isActive ? 'text-slate-400 font-medium' : 'text-slate-300 opacity-70'}`}>
-                      {item.role}, {item.company}
+                      {t(`testimonials.items.${id}.role`)}
                     </p>
                   </div>
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${isActive ? 'border-sky-950 bg-white' : 'border-white bg-transparent'}`}>
@@ -481,9 +412,9 @@ const TestimonialCarousel: React.FC = () => {
 
       {/* Pagination Dots */}
       <div className="flex justify-center gap-3 mt-4">
-        {TESTIMONIALS.map((_, index) => (
+        {TESTIMONIAL_IDS.map((id, index) => (
           <button
-            key={index}
+            key={id}
             onClick={() => scrollToCard(index)}
             className={`h-2.5 rounded-full transition-all duration-300 ${index === activeIndex ? 'w-10 bg-cyan-400 shadow-lg' : 'w-2.5 bg-slate-300'
               }`}
