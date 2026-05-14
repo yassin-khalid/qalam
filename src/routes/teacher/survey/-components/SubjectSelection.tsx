@@ -4,6 +4,8 @@ import { Group, GroupStep, SubjectDetails, FilterOption, UnitOption, FilterRespo
 import { localStorageCollection } from '@/lib/db/localStorageCollection';
 import { useLiveQuery } from '@tanstack/react-db';
 import { showToast } from '@/lib/utils/toast';
+import { useTranslation } from 'react-i18next';
+import { useLocale } from '@/lib/hooks/useLocale';
 
 interface SubjectSelectionProps {
     domainId: number | null;
@@ -12,11 +14,6 @@ interface SubjectSelectionProps {
     onContinue: () => void;
 }
 
-const STEP_LABELS: Record<string, string> = {
-    Curriculum: 'المنهج',
-    Level: 'المرحلة',
-    Grade: 'الصف / المستوى',
-};
 
 const fetchFilterOptions = async (params: Record<string, any>, token: string) => {
     const query = new URLSearchParams();
@@ -54,6 +51,16 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
     const [loading, setLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { data } = useLiveQuery(q => q.from({ session: localStorageCollection }))
+    const { t } = useTranslation('teacher');
+    const locale = useLocale();
+    const isAr = locale === 'ar';
+
+    const stepLabel = (step: string): string => {
+        if (step === 'Curriculum' || step === 'Level' || step === 'Grade') {
+            return t(`survey.subject.stepLabels.${step}`);
+        }
+        return step;
+    };
 
     const token = data?.[0]?.token ?? "";
 
@@ -208,8 +215,10 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
     const saveSubjectUnits = () => {
         const updated = [...groups];
         const g = updated[activeGroupIdx!];
-        const chosenUnitNames = isFullSubject ? ["كافة الوحدات"] : units.filter(u => selectedUnitIds.includes(u.id)).map(u => u.nameAr);
-        const subDetails: SubjectDetails = { id: activeSubject.id, name: activeSubject.nameAr, isFull: isFullSubject, units: chosenUnitNames, unitIds: isFullSubject ? [] : selectedUnitIds };
+        const chosenUnitNames = isFullSubject
+            ? [t('survey.subject.allUnits')]
+            : units.filter(u => selectedUnitIds.includes(u.id)).map(u => isAr ? u.nameAr : (u as any).nameEn ?? u.nameAr);
+        const subDetails: SubjectDetails = { id: activeSubject.id, name: isAr ? activeSubject.nameAr : activeSubject.nameEn ?? activeSubject.nameAr, isFull: isFullSubject, units: chosenUnitNames, unitIds: isFullSubject ? [] : selectedUnitIds };
         g.subjects = [...(g.subjects || []).filter(s => s.id !== activeSubject.id), subDetails];
         onSetGroups(updated);
         setUnitFlow(false);
@@ -237,10 +246,10 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
                 const isDuplicate = json.message?.includes('Duplicate');
                 showToast({
                     type: isDuplicate ? 'warning' : 'server',
-                    title: isDuplicate ? 'مادة مكررة' : 'خطأ في الحفظ',
+                    title: isDuplicate ? t('survey.subject.toasts.duplicateTitle') : t('survey.subject.toasts.saveErrorTitle'),
                     message: isDuplicate
-                        ? 'يوجد مادة مختارة في أكثر من مجموعة. يرجى إزالة التكرار والمحاولة مرة أخرى.'
-                        : json.message || 'حدث خطأ أثناء حفظ المواد. يرجى المحاولة مرة أخرى.',
+                        ? t('survey.subject.toasts.duplicateMessage')
+                        : json.message || t('survey.subject.toasts.saveErrorMessage'),
                 });
                 return;
             }
@@ -249,8 +258,8 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
             console.error("Subject submission failed:", error);
             showToast({
                 type: 'server',
-                title: 'خطأ في الاتصال',
-                message: 'تعذر الاتصال بالخادم. يرجى التحقق من الإنترنت والمحاولة مرة أخرى.',
+                title: t('survey.subject.toasts.connectionErrorTitle'),
+                message: t('survey.subject.toasts.connectionErrorMessage'),
             });
         } finally {
             setIsSubmitting(false);
@@ -265,12 +274,12 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
             <div className="flex flex-col items-center mb-10">
                 <div className="relative mb-2">
                     <div className="text-primary dark:text-slate-100 text-6xl font-bold flex flex-col items-center">
-                        <span className="leading-tight">قلم</span>
+                        <span className="leading-tight">{t('survey.common.brand')}</span>
                         <div className="h-1.5 w-16 bg-secondary mt-1 rounded-full opacity-40"></div>
                     </div>
                 </div>
-                <h2 className="text-2xl font-bold text-primary dark:text-slate-100 mb-1">إنشاء حساب مُعلم</h2>
-                <h3 className="text-xl font-bold text-primary dark:text-slate-200 opacity-80 mt-2">المواد الدراسية</h3>
+                <h2 className="text-2xl font-bold text-primary dark:text-slate-100 mb-1">{t('survey.common.title')}</h2>
+                <h3 className="text-xl font-bold text-primary dark:text-slate-200 opacity-80 mt-2">{t('survey.subject.title')}</h3>
             </div>
 
             <div className="grow flex flex-col overflow-hidden">
@@ -279,19 +288,19 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 w-full max-w-5xl">
                             <div className="border border-blue-50 dark:border-slate-700 rounded-4xl p-16 flex flex-col items-center text-center bg-white dark:bg-slate-800/50 shadow-sm hover:shadow-md transition-all">
                                 <div className="text-8xl mb-8">📋</div>
-                                <h4 className="text-2xl font-bold text-primary dark:text-slate-100 mb-4">ابدأ بإضافة مجموعة</h4>
-                                <p className="text-gray-400 dark:text-slate-400 text-base leading-relaxed">اضغط على زر "إضافة مجموعة جديدة" لبدء إنشاء مجموعاتك التعليمية</p>
+                                <h4 className="text-2xl font-bold text-primary dark:text-slate-100 mb-4">{t('survey.subject.startGroupTitle')}</h4>
+                                <p className="text-gray-400 dark:text-slate-400 text-base leading-relaxed">{t('survey.subject.startGroupSubtitle')}</p>
                             </div>
 
                             <div className="border border-blue-50 dark:border-slate-700 rounded-4xl p-16 flex flex-col items-center text-center bg-white dark:bg-slate-800/50 shadow-sm hover:shadow-md transition-all">
                                 <div className="text-8xl mb-8">📚</div>
-                                <h4 className="text-2xl font-bold text-primary dark:text-slate-100 mb-4">لا توجد مجموعات حتى الآن</h4>
-                                <p className="text-gray-400 dark:text-slate-400 text-base mb-10 leading-relaxed">ابدأ بإضافة مجموعة جديدة لتحديد المواد التي تدرسها</p>
+                                <h4 className="text-2xl font-bold text-primary dark:text-slate-100 mb-4">{t('survey.subject.noGroupsTitle')}</h4>
+                                <p className="text-gray-400 dark:text-slate-400 text-base mb-10 leading-relaxed">{t('survey.subject.noGroupsSubtitle')}</p>
                                 <button
                                     onClick={() => setIsAddingGroup(true)}
                                     className="bg-primary text-white px-12 py-4 rounded-xl font-bold text-base flex items-center gap-2 hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90 transition-all shadow-xl"
                                 >
-                                    <span>+ إضافة مجموعة جديدة</span>
+                                    <span>{t('survey.subject.addGroupNew')}</span>
                                 </button>
                             </div>
                         </div>
@@ -306,28 +315,28 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
                                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                                     </button>
 
-                                    <div className="text-right mb-10">
-                                        <h4 className="text-2xl font-bold text-primary dark:text-slate-100 mb-2">{editingGroupIdx !== null ? 'تعديل المجموعة' : 'إضافة مجموعة جديدة'}</h4>
-                                        <p className="text-sm text-gray-400 dark:text-slate-400">{editingGroupIdx !== null ? 'عدّل بيانات المجموعة التعليمية' : 'املأ البيانات التالية لإنشاء مجموعة تعليمية'}</p>
+                                    <div className="text-start mb-10">
+                                        <h4 className="text-2xl font-bold text-primary dark:text-slate-100 mb-2">{editingGroupIdx !== null ? t('survey.subject.editGroup') : t('survey.subject.addGroup')}</h4>
+                                        <p className="text-sm text-gray-400 dark:text-slate-400">{editingGroupIdx !== null ? t('survey.subject.editGroupSubtitle') : t('survey.subject.addGroupSubtitle')}</p>
                                     </div>
 
-                                    <div className="space-y-6 grow overflow-y-auto pr-1">
+                                    <div className="space-y-6 grow overflow-y-auto pe-1">
                                         {/* Group Name */}
-                                        <div className="text-right">
-                                            <label className="block text-sm font-bold text-primary dark:text-slate-200 mb-3">اسم المجموعة *</label>
+                                        <div className="text-start">
+                                            <label className="block text-sm font-bold text-primary dark:text-slate-200 mb-3">{t('survey.subject.groupNameLabel')}</label>
                                             <input
                                                 type="text"
-                                                placeholder="مثال: رياضيات المرحلة الابتدائية"
+                                                placeholder={t('survey.subject.groupNamePlaceholder')}
                                                 value={groupName}
                                                 onChange={e => setGroupName(e.target.value)}
-                                                className="w-full py-5 px-6 bg-[#F9FBFC] dark:bg-slate-700/50 border border-gray-100 dark:border-slate-600 rounded-2xl text-right text-base outline-none focus:bg-white dark:focus:bg-slate-700 focus:border-secondary transition-all text-primary dark:text-slate-100 placeholder:dark:text-slate-400"
+                                                className="w-full py-5 px-6 bg-[#F9FBFC] dark:bg-slate-700/50 border border-gray-100 dark:border-slate-600 rounded-2xl text-start text-base outline-none focus:bg-white dark:focus:bg-slate-700 focus:border-secondary transition-all text-primary dark:text-slate-100 placeholder:dark:text-slate-400"
                                             />
                                         </div>
 
                                         {/* Completed Steps */}
                                         {formSteps.map((s, i) => (
-                                            <div key={i} className="text-right">
-                                                <label className="block text-sm font-bold text-primary dark:text-slate-200 mb-3">{STEP_LABELS[s.step] || s.step}</label>
+                                            <div key={i} className="text-start">
+                                                <label className="block text-sm font-bold text-primary dark:text-slate-200 mb-3">{stepLabel(s.step)}</label>
                                                 <button
                                                     onClick={() => handleUndoToStep(i)}
                                                     className="w-full py-5 px-6 bg-secondary/5 dark:bg-secondary/10 border border-secondary/20 dark:border-secondary/30 rounded-2xl text-right text-base text-primary dark:text-slate-100 flex justify-between items-center hover:bg-secondary/10 dark:hover:bg-secondary/20 hover:border-secondary/40 transition-all group cursor-pointer"
@@ -343,18 +352,18 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
 
                                         {/* Current Step Dropdown */}
                                         {currentStep && currentStep !== 'Subject' && (
-                                            <div className="text-right">
-                                                <label className="block text-sm font-bold text-primary dark:text-slate-200 mb-3">{STEP_LABELS[currentStep] || currentStep} *</label>
+                                            <div className="text-start">
+                                                <label className="block text-sm font-bold text-primary dark:text-slate-200 mb-3">{stepLabel(currentStep)} *</label>
                                                 {loading ? (
-                                                    <div className="w-full py-5 px-6 bg-[#F9FBFC] dark:bg-slate-700/50 border border-gray-100 dark:border-slate-600 rounded-2xl text-center animate-pulse text-gray-300 dark:text-slate-500">جاري التحميل...</div>
+                                                    <div className="w-full py-5 px-6 bg-[#F9FBFC] dark:bg-slate-700/50 border border-gray-100 dark:border-slate-600 rounded-2xl text-center animate-pulse text-gray-300 dark:text-slate-500">{t('survey.common.loading')}</div>
                                                 ) : (
                                                     <select
                                                         value=""
                                                         onChange={e => handleStepSelection(Number(e.target.value))}
-                                                        className="w-full py-5 px-6 bg-[#F9FBFC] dark:bg-slate-700/50 border border-gray-100 dark:border-slate-600 rounded-2xl text-right text-base outline-none focus:bg-white dark:focus:bg-slate-700 focus:border-secondary appearance-none transition-all cursor-pointer text-primary dark:text-slate-100"
+                                                        className="w-full py-5 px-6 bg-[#F9FBFC] dark:bg-slate-700/50 border border-gray-100 dark:border-slate-600 rounded-2xl text-start text-base outline-none focus:bg-white dark:focus:bg-slate-700 focus:border-secondary appearance-none transition-all cursor-pointer text-primary dark:text-slate-100"
                                                     >
-                                                        <option value="" disabled>اختر {STEP_LABELS[currentStep] || currentStep}...</option>
-                                                        {currentOptions.map(o => <option key={o.id} value={o.id}>{o.nameAr}</option>)}
+                                                        <option value="" disabled>{t('survey.subject.chooseStep', { label: stepLabel(currentStep) })}</option>
+                                                        {currentOptions.map(o => <option key={o.id} value={o.id}>{isAr ? o.nameAr : (o as any).nameEn ?? o.nameAr}</option>)}
                                                     </select>
                                                 )}
                                             </div>
@@ -363,15 +372,15 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
                                         {/* Ready Indicator */}
                                         {currentStep === 'Subject' && (
                                             <div className="flex items-center justify-center gap-3 py-6 bg-green-50/50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 rounded-2xl">
-                                                <span className="text-sm font-bold text-green-600 dark:text-green-400">جاهز للحفظ</span>
+                                                <span className="text-sm font-bold text-green-600 dark:text-green-400">{t('survey.subject.readyToSave')}</span>
                                                 <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                                             </div>
                                         )}
                                     </div>
 
                                     <div className="flex gap-4 mt-10">
-                                        <button onClick={handleSaveGroup} disabled={!isFormReady} className={`flex-1 py-5 rounded-xl font-bold transition-all text-base shadow-lg ${isFormReady ? 'bg-primary text-white hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90' : 'bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-slate-500 cursor-not-allowed'}`}>حفظ</button>
-                                        <button onClick={() => { setIsAddingGroup(false); setEditingGroupIdx(null); }} className="flex-1 border border-gray-200 dark:border-slate-600 py-5 rounded-xl font-bold text-primary dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all text-base">إلغاء</button>
+                                        <button onClick={handleSaveGroup} disabled={!isFormReady} className={`flex-1 py-5 rounded-xl font-bold transition-all text-base shadow-lg ${isFormReady ? 'bg-primary text-white hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90' : 'bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-slate-500 cursor-not-allowed'}`}>{t('survey.subject.save')}</button>
+                                        <button onClick={() => { setIsAddingGroup(false); setEditingGroupIdx(null); }} className="flex-1 border border-gray-200 dark:border-slate-600 py-5 rounded-xl font-bold text-primary dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all text-base">{t('survey.subject.cancel')}</button>
                                     </div>
                                 </div>
                             ) : isAddingSubjects ? (
@@ -380,9 +389,9 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
                                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                                     </button>
 
-                                    <div className="text-right mb-6">
-                                        <h4 className="text-2xl font-bold text-primary dark:text-slate-100 mb-1">{unitFlow ? activeSubject?.nameAr : 'اختر المواد الدراسية'}</h4>
-                                        <p className="text-sm text-gray-400 dark:text-slate-400">{unitFlow ? 'اختر الوحدات أو المادة كاملة' : 'اختر المواد التي تدرسها لهذه المجموعة'}</p>
+                                    <div className="text-start mb-6">
+                                        <h4 className="text-2xl font-bold text-primary dark:text-slate-100 mb-1">{unitFlow ? (isAr ? activeSubject?.nameAr : activeSubject?.nameEn ?? activeSubject?.nameAr) : t('survey.subject.chooseSubjects')}</h4>
+                                        <p className="text-sm text-gray-400 dark:text-slate-400">{unitFlow ? t('survey.subject.chooseUnitsOrAll') : t('survey.subject.chooseSubjectsSubtitle')}</p>
                                     </div>
 
                                     {unitFlow ? (
@@ -397,19 +406,19 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
                                                 <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all ${isFullSubject ? 'bg-secondary border-secondary' : 'border-gray-300 dark:border-slate-500'}`}>
                                                     {isFullSubject && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                                                 </div>
-                                                <div className="text-right">
-                                                    <span className="font-bold text-primary dark:text-slate-100 block text-sm">المادة كاملة</span>
-                                                    <span className="text-[11px] text-gray-400 dark:text-slate-400">تدريس جميع الوحدات ({units.length} وحدة)</span>
+                                                <div className="text-start">
+                                                    <span className="font-bold text-primary dark:text-slate-100 block text-sm">{t('survey.subject.fullSubject')}</span>
+                                                    <span className="text-[11px] text-gray-400 dark:text-slate-400">{t('survey.subject.fullSubjectHint', { count: units.length })}</span>
                                                 </div>
                                             </button>
 
                                             <div className="relative flex items-center justify-center my-6">
                                                 <div className="w-full border-t border-gray-100 dark:border-slate-600"></div>
-                                                <span className="absolute px-4 bg-white dark:bg-slate-800 text-[10px] text-gray-400 dark:text-slate-500 font-bold">أو اختر وحدات محددة</span>
+                                                <span className="absolute px-4 bg-white dark:bg-slate-800 text-[10px] text-gray-400 dark:text-slate-500 font-bold">{t('survey.subject.orSelectSpecific')}</span>
                                             </div>
 
-                                            <div className="grow space-y-3 overflow-y-auto pr-2 custom-scrollbar pb-4">
-                                                {loading ? <div className="text-center py-12 animate-pulse text-gray-300 dark:text-slate-500">جاري تحميل الوحدات...</div> : units.map(u => {
+                                            <div className="grow space-y-3 overflow-y-auto pe-2 custom-scrollbar pb-4">
+                                                {loading ? <div className="text-center py-12 animate-pulse text-gray-300 dark:text-slate-500">{t('survey.subject.loadingUnits')}</div> : units.map(u => {
                                                     const isSelected = selectedUnitIds.includes(u.id);
                                                     return (
                                                         <button
@@ -421,7 +430,7 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
                                                             <div className={`h-5 w-5 rounded border flex items-center justify-center transition-all ${isSelected ? 'bg-secondary border-secondary' : 'border-gray-300 dark:border-slate-500'}`}>
                                                                 {isSelected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                                                             </div>
-                                                            <span className="text-sm font-bold text-primary dark:text-slate-100">{u.nameAr}</span>
+                                                            <span className="text-sm font-bold text-primary dark:text-slate-100">{isAr ? u.nameAr : (u as any).nameEn ?? u.nameAr}</span>
                                                         </button>
                                                     );
                                                 })}
@@ -433,44 +442,44 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
                                                     disabled={!isFullSubject && selectedUnitIds.length === 0}
                                                     className="flex-2 bg-primary text-white py-4.5 rounded-xl font-bold hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90 transition-all text-base shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
-                                                    حفظ ({isFullSubject ? units.length : selectedUnitIds.length})
+                                                    {t('survey.subject.saveWithCount', { count: isFullSubject ? units.length : selectedUnitIds.length })}
                                                 </button>
                                                 <button
                                                     onClick={() => setUnitFlow(false)}
                                                     className="flex-1 border border-gray-200 dark:border-slate-600 py-4.5 rounded-xl font-bold text-primary dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all text-base"
                                                 >
-                                                    رجوع
+                                                    {t('survey.subject.back')}
                                                 </button>
                                             </div>
                                         </div>
                                     ) : (
                                         <div className="grow flex flex-col overflow-hidden">
                                             <div className="mb-6 relative">
-                                                <input type="text" placeholder="ابحث عن مادة..." value={subjectSearch} onChange={e => { setSubjectSearch(e.target.value); }} className="w-full py-5 px-6 bg-gray-50 dark:bg-slate-700/50 border border-transparent dark:border-slate-600 rounded-2xl text-right text-base outline-none focus:bg-white dark:focus:bg-slate-700 focus:border-secondary transition-all pr-14 text-primary dark:text-slate-100 placeholder:dark:text-slate-400" />
-                                                <svg className="absolute right-5 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-300 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                                <input type="text" placeholder={t('survey.subject.searchSubject')} value={subjectSearch} onChange={e => { setSubjectSearch(e.target.value); }} className="w-full py-5 px-6 bg-gray-50 dark:bg-slate-700/50 border border-transparent dark:border-slate-600 rounded-2xl text-start text-base outline-none focus:bg-white dark:focus:bg-slate-700 focus:border-secondary transition-all pe-14 text-primary dark:text-slate-100 placeholder:dark:text-slate-400" />
+                                                <svg className="absolute end-5 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-300 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                                             </div>
-                                            <div className="grow space-y-4 overflow-y-auto pr-2 custom-scrollbar">
-                                                {loading ? <div className="text-center py-20 text-gray-300 dark:text-slate-500 animate-pulse text-lg">جاري تحميل المواد...</div> : subjects.map(s => {
+                                            <div className="grow space-y-4 overflow-y-auto pe-2 custom-scrollbar">
+                                                {loading ? <div className="text-center py-20 text-gray-300 dark:text-slate-500 animate-pulse text-lg">{t('survey.subject.loadingSubjects')}</div> : subjects.map(s => {
                                                     const isPicked = groups[activeGroupIdx!]?.subjects?.some(ps => ps.id === s.id);
                                                     return (
                                                         <button key={s.id} onClick={() => startUnitFlow(s)} className={`w-full p-5 border rounded-[1.5rem] flex items-center gap-3 transition-all bg-white dark:bg-slate-700/50 hover:border-secondary/30 hover:shadow-md dark:hover:border-secondary/40 ${isPicked ? 'border-secondary ring-1 ring-secondary/20 bg-secondary/5 dark:bg-secondary/10' : 'border-gray-50 dark:border-slate-600'}`}>
                                                             {isPicked && <div className="bg-secondary text-white rounded-full p-1 shrink-0"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg></div>}
-                                                            <div className="text-right flex-1 min-w-0">
-                                                                <h5 className="font-bold text-primary dark:text-slate-100 text-sm leading-snug line-clamp-2">{s.nameAr}</h5>
+                                                            <div className="text-start flex-1 min-w-0">
+                                                                <h5 className="font-bold text-primary dark:text-slate-100 text-sm leading-snug line-clamp-2">{isAr ? s.nameAr : s.nameEn ?? s.nameAr}</h5>
                                                             </div>
                                                         </button>
                                                     );
                                                 })}
                                             </div>
-                                            <button onClick={() => setIsAddingSubjects(false)} className="w-full bg-primary text-white py-5 rounded-xl font-bold mt-8 shadow-xl hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90">تم الاختيار</button>
+                                            <button onClick={() => setIsAddingSubjects(false)} className="w-full bg-primary text-white py-5 rounded-xl font-bold mt-8 shadow-xl hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90">{t('survey.subject.done')}</button>
                                         </div>
                                     )}
                                 </div>
                             ) : (
                                 <div className="bg-white dark:bg-slate-800/50 border border-dashed border-gray-100 dark:border-slate-600 p-16 rounded-[2rem] flex flex-col items-center justify-center text-center opacity-40 h-full">
                                     <div className="text-8xl mb-8">🏠</div>
-                                    <h4 className="text-2xl font-bold text-primary dark:text-slate-200 mb-3">إدارة المجموعة</h4>
-                                    <p className="text-sm text-gray-400 dark:text-slate-500 leading-relaxed px-10">اختر مجموعة من القائمة لبدء تعديل بياناتها أو إضافة مواد لها</p>
+                                    <h4 className="text-2xl font-bold text-primary dark:text-slate-200 mb-3">{t('survey.subject.manageGroup')}</h4>
+                                    <p className="text-sm text-gray-400 dark:text-slate-500 leading-relaxed px-10">{t('survey.subject.manageGroupHint')}</p>
                                 </div>
                             )}
                         </div>
@@ -480,9 +489,9 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
                             <div className="flex justify-between items-center mb-8 px-2">
                                 <button onClick={() => { setEditingGroupIdx(null); setIsAddingGroup(true); }} className="text-secondary font-bold text-sm flex items-center gap-2 hover:underline">
                                     <span className="text-lg">+</span>
-                                    <span>إضافة مجموعة أخرى</span>
+                                    <span>{t('survey.subject.addAnotherGroup')}</span>
                                 </button>
-                                <h4 className="text-primary dark:text-slate-100 font-bold text-xl">المجموعات الحالية</h4>
+                                <h4 className="text-primary dark:text-slate-100 font-bold text-xl">{t('survey.subject.currentGroups')}</h4>
                             </div>
 
                             <div className="grow overflow-y-auto pr-3 custom-scrollbar space-y-6 max-h-[600px]">
@@ -523,16 +532,16 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
                                                             <span className="text-base font-bold text-primary dark:text-slate-100">{s.name}</span>
                                                         </div>
                                                     ))}
-                                                    <button onClick={() => { setActiveGroupIdx(idx); setIsAddingSubjects(true); fetchGroupSubjects(idx); }} className="w-full py-5 mt-6 border border-dashed border-secondary/20 dark:border-secondary/40 rounded-xl text-secondary text-sm font-bold hover:bg-secondary/5 dark:hover:bg-secondary/10 transition-colors">+ إضافة مواد أخرى</button>
+                                                    <button onClick={() => { setActiveGroupIdx(idx); setIsAddingSubjects(true); fetchGroupSubjects(idx); }} className="w-full py-5 mt-6 border border-dashed border-secondary/20 dark:border-secondary/40 rounded-xl text-secondary text-sm font-bold hover:bg-secondary/5 dark:hover:bg-secondary/10 transition-colors">{t('survey.subject.addMoreSubjects')}</button>
                                                 </div>
                                             ) : (
                                                 <div className="flex flex-col items-center justify-center py-12 bg-gray-50/20 dark:bg-slate-700/30 rounded-[2rem] border border-dashed border-gray-100 dark:border-slate-600 text-center">
-                                                    <p className="text-gray-400 dark:text-slate-400 text-base mb-8">لم تقم بإضافة مواد لهذه المجموعة بعد</p>
+                                                    <p className="text-gray-400 dark:text-slate-400 text-base mb-8">{t('survey.subject.noSubjectsAdded')}</p>
                                                     <button
                                                         onClick={() => { setActiveGroupIdx(idx); setIsAddingSubjects(true); fetchGroupSubjects(idx); }}
                                                         className="bg-primary text-white px-12 py-4 rounded-xl font-bold text-base flex items-center gap-2 shadow-xl hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90 transition-all"
                                                     >
-                                                        <span>+ إضافة مواد</span>
+                                                        <span>{t('survey.subject.addSubjects')}</span>
                                                     </button>
                                                 </div>
                                             )}
@@ -553,7 +562,7 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
                     className={`w-full py-5 rounded-2xl font-bold text-xl shadow-2xl transition-all flex items-center justify-center gap-4 ${groups.length > 0 && groups.some(g => g.subjects && g.subjects.length > 0) && !isSubmitting ? 'bg-primary text-white hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90' : 'bg-primary text-white/40 cursor-not-allowed opacity-80 dark:opacity-60'}`}
                 >
                     {isSubmitting && <div className="animate-spin h-6 w-6 border-3 border-white/30 border-t-white rounded-full"></div>}
-                    <span>متابعة</span>
+                    <span>{t('survey.common.continue')}</span>
                 </button>
             </div>
 

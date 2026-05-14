@@ -1,5 +1,6 @@
 import QalamLogo from "@/lib/components/QalamLogo";
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import StepOne from '../-components/StepOne'
 import StepPhone from '../-components/StepPhone'
 import StepOTP from '../-components/StepOTP'
@@ -28,6 +29,7 @@ interface RegisterFormProps {
 }
 
 const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneRegistered, phoneNumber, onBackToPhoneStep, onOtpSuccess, onPhoneChanges, onStepOneDataChanges, stepOneData, onNoTokenFound, onPersonalInfoSuccess, stepTwoData, onStepTwoDataChanges, onStepTwoSuccess }) => {
+    const { t } = useTranslation('teacher');
 
     const handlePhoneSuccess = (phone: string) => {
         onPhoneRegistered(phone)
@@ -68,7 +70,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneR
                 <div className="transform scale-110 mb-2">
                     <QalamLogo className="w-24" />
                 </div>
-                <h1 className="text-3xl font-bold text-[#003049] dark:text-slate-100 mb-4">إنشاء حساب مُعلم</h1>
+                <h1 className="text-3xl font-bold text-[#003049] dark:text-slate-100 mb-4">{t('auth.register.title')}</h1>
                 {/* Show stepper only for step 1 and 2 */}
                 {step > 0 && <div className="w-full py-2 px-4 md:px-10"><Stepper currentStep={step} /></div>}
             </div>

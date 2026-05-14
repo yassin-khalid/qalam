@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 // Status styles matching CourseCard - for active filter buttons
 const getActiveStatusStyles = (status: 1 | 2 | 3 | 0) => {
@@ -25,6 +26,12 @@ export const CourseFilters = ({
     statusFilter,
     onStatusFilterChange
 }: CourseFiltersProps) => {
+    const { t } = useTranslation('teacher');
+    const statusOptions = [
+        { id: 2 as const, label: t('courses.list.filters.published') },
+        { id: 1 as const, label: t('courses.list.filters.drafts') },
+        { id: 3 as const, label: t('courses.list.filters.archived') },
+    ];
     return (
         <div className="flex flex-row items-center gap-4">
             <div className="flex-1 relative">
@@ -32,10 +39,10 @@ export const CourseFilters = ({
                     type="text"
                     value={searchQuery}
                     onChange={(e) => onSearchChange(e.target.value)}
-                    placeholder="ابحث عن دورة بالاسم أو المادة..."
-                    className="w-full bg-white dark:bg-slate-900 border border-[#00B5AD] rounded-lg py-2.5 pr-12 pl-4 focus:outline-none focus:ring-2 focus:ring-teal-500/10 transition-all text-slate-800 dark:text-slate-100 placeholder:text-slate-400 text-right text-base font-medium"
+                    placeholder={t('courses.list.searchPlaceholder')}
+                    className="w-full bg-white dark:bg-slate-900 border border-[#00B5AD] rounded-lg py-2.5 ps-12 pe-4 focus:outline-none focus:ring-2 focus:ring-teal-500/10 transition-all text-slate-800 dark:text-slate-100 placeholder:text-slate-400 text-start text-base font-medium"
                 />
-                <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                <Search className="absolute start-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
             </div>
 
             <div className="flex gap-2">
@@ -43,16 +50,12 @@ export const CourseFilters = ({
                     onClick={() => onStatusFilterChange(0)}
                     className={`px-4 py-1.5 rounded-lg font-bold text-sm shadow-sm transition-all border ${statusFilter === 0 ? getActiveStatusStyles(0) : inactiveStyles}`}
                 >
-                    الكل
+                    {t('courses.list.filters.all')}
                 </button>
-                {[
-                    { id: 2, label: 'منشورة' },
-                    { id: 1, label: 'مسودات' },
-                    { id: 3, label: 'متوقفة' }
-                ].map((filter) => (
+                {statusOptions.map((filter) => (
                     <button
                         key={filter.id}
-                        onClick={() => onStatusFilterChange(filter.id as 1 | 2 | 3)}
+                        onClick={() => onStatusFilterChange(filter.id)}
                         className={`px-4 py-1.5 rounded-lg transition-all font-semibold text-sm border ${statusFilter === filter.id ? getActiveStatusStyles(filter.id) : inactiveStyles}`}
                     >
                         {filter.label}

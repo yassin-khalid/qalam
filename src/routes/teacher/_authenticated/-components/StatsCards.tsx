@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StatCardProps } from '../types';
 
 const StatCard: React.FC<StatCardProps> = ({
@@ -29,9 +30,10 @@ const StatCard: React.FC<StatCardProps> = ({
 };
 
 export const StatsCards: React.FC = () => {
+    const { t } = useTranslation('teacher');
     const stats: StatCardProps[] = [
         {
-            label: 'إجمالي المبيعات',
+            label: t('dashboard.stats.totalSales'),
             value: '12,450 ر.س',
             change: '+12%',
             changeType: 'positive',
@@ -40,7 +42,7 @@ export const StatsCards: React.FC = () => {
             iconTextColor: 'text-emerald-500'
         },
         {
-            label: 'العملاء الجدد',
+            label: t('dashboard.stats.newCustomers'),
             value: '1,204',
             change: '+5%',
             changeType: 'positive',
@@ -49,7 +51,7 @@ export const StatsCards: React.FC = () => {
             iconTextColor: 'text-indigo-500'
         },
         {
-            label: 'المخزون المتوفر',
+            label: t('dashboard.stats.stockAvailable'),
             value: '842',
             change: '-2%',
             changeType: 'negative',
@@ -58,9 +60,9 @@ export const StatsCards: React.FC = () => {
             iconTextColor: 'text-orange-500'
         },
         {
-            label: 'طلبات معلقة',
+            label: t('dashboard.stats.pendingOrders'),
             value: '18',
-            change: 'مستقر',
+            change: t('dashboard.stats.stable'),
             changeType: 'neutral',
             icon: 'pending_actions',
             iconBgColor: 'bg-blue-50 dark:bg-blue-500/10',

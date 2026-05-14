@@ -29,6 +29,9 @@ import {
     EnrollmentRequestDetail,
 } from '../-queries/enrollmentRequestsQueries'
 import { showToast } from '../../../../../lib/utils/toast'
+import { useTranslation } from 'react-i18next'
+import { useLocale } from '@/lib/hooks/useLocale'
+import { LOCALE_DIRECTION } from '@/lib/i18n'
 
 interface EnrollmentRequestsModalProps {
     course: Course
@@ -38,14 +41,6 @@ interface EnrollmentRequestsModalProps {
 
 type StatusTab = RequestStatus | 'all'
 
-const STATUS_TABS: { id: StatusTab; label: string }[] = [
-    { id: 'all', label: 'الكل' },
-    { id: RequestStatus.Pending, label: 'قيد المراجعة' },
-    { id: RequestStatus.Approved, label: 'مقبول' },
-    { id: RequestStatus.Rejected, label: 'مرفوض' },
-    { id: RequestStatus.Cancelled, label: 'ملغى' },
-]
-
 export const EnrollmentRequestsModal: React.FC<EnrollmentRequestsModalProps> = ({
     course,
     open,
@@ -53,9 +48,19 @@ export const EnrollmentRequestsModal: React.FC<EnrollmentRequestsModalProps> = (
 }) => {
     const token = localStorage.getItem('token') ?? ''
     const queryClient = useQueryClient()
+    const { t } = useTranslation('teacher')
+    const locale = useLocale()
     const [statusTab, setStatusTab] = useState<StatusTab>(RequestStatus.Pending)
     const [expandedId, setExpandedId] = useState<number | null>(null)
     const [rejectTargetId, setRejectTargetId] = useState<number | null>(null)
+
+    const STATUS_TABS: { id: StatusTab; label: string }[] = [
+        { id: 'all', label: t('courses.enrollment.tabs.all') },
+        { id: RequestStatus.Pending, label: t('courses.enrollment.tabs.pending') },
+        { id: RequestStatus.Approved, label: t('courses.enrollment.tabs.approved') },
+        { id: RequestStatus.Rejected, label: t('courses.enrollment.tabs.rejected') },
+        { id: RequestStatus.Cancelled, label: t('courses.enrollment.tabs.cancelled') },
+    ]
 
     const listQuery = useQuery({
         ...enrollmentRequestsListQueryOptions(token, {
@@ -77,7 +82,7 @@ export const EnrollmentRequestsModal: React.FC<EnrollmentRequestsModalProps> = (
     const approveMutation = useMutation({
         mutationFn: (id: number) => approveEnrollmentRequest(token, id),
         onSuccess: () => {
-            showToast({ type: 'success', message: 'تم قبول الطلب بنجاح' })
+            showToast({ type: 'success', message: t('courses.enrollment.toasts.approved') })
             invalidate()
         },
         onError: (error: Error) => {
@@ -89,7 +94,7 @@ export const EnrollmentRequestsModal: React.FC<EnrollmentRequestsModalProps> = (
         mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
             rejectEnrollmentRequest(token, id, reason),
         onSuccess: () => {
-            showToast({ type: 'success', message: 'تم رفض الطلب' })
+            showToast({ type: 'success', message: t('courses.enrollment.toasts.rejected') })
             setRejectTargetId(null)
             invalidate()
         },
@@ -116,18 +121,19 @@ export const EnrollmentRequestsModal: React.FC<EnrollmentRequestsModalProps> = (
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.96, y: 12 }}
                         transition={{ duration: 0.22 }}
-                        dir="rtl"
+                        dir={LOCALE_DIRECTION[locale]}
                         className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <ModalHeader course={course} onClose={onClose} />
+                        <ModalHeader course={course} onClose={onClose} closeAria={t('courses.enrollment.closeAria')} />
 
                         <div className="px-6 pt-5 pb-2 flex items-center gap-2 text-primary dark:text-secondary">
                             <UserPlus size={20} />
-                            <h3 className="font-bold text-lg">طلبات الانضمام للدورة</h3>
+                            <h3 className="font-bold text-lg">{t('courses.enrollment.modalTitle')}</h3>
                         </div>
 
                         <StatusTabs
+                            tabs={STATUS_TABS}
                             value={statusTab}
                             onChange={(s) => { setStatusTab(s); setExpandedId(null) }}
                         />
@@ -141,13 +147,13 @@ export const EnrollmentRequestsModal: React.FC<EnrollmentRequestsModalProps> = (
 
                             {listQuery.isError && (
                                 <div className="text-center py-10 text-sm text-rose-600">
-                                    تعذر تحميل الطلبات. حاول لاحقاً.
+                                    {t('courses.enrollment.loadError')}
                                 </div>
                             )}
 
                             {!listQuery.isLoading && items.length === 0 && (
                                 <div className="text-center py-10 text-sm text-slate-400">
-                                    لا توجد طلبات في هذه الحالة
+                                    {t('courses.enrollment.empty')}
                                 </div>
                             )}
 
@@ -181,31 +187,35 @@ export const EnrollmentRequestsModal: React.FC<EnrollmentRequestsModalProps> = (
     )
 }
 
-const ModalHeader: React.FC<{ course: Course; onClose: () => void }> = ({
+const ModalHeader: React.FC<{ course: Course; onClose: () => void; closeAria: string }> = ({
     course,
     onClose,
-}) => (
-    <div className="bg-slate-50 dark:bg-slate-800/40 px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-4">
-        <button
-            type="button"
-            aria-label="إغلاق"
-            onClick={onClose}
-            className="p-2 rounded-lg text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-200 transition"
-        >
-            <X size={20} />
-        </button>
-        <div className="flex-1 text-right">
-            <h2 className="text-lg md:text-xl font-bold text-slate-800 dark:text-white leading-snug mb-3">
-                {course.title}
-            </h2>
-            <div className="flex flex-wrap gap-2 justify-end">
-                <HeaderPill>{course.subjectNameEn}</HeaderPill>
-                <HeaderPill icon={<UsersIcon size={13} />}>{course.sessionTypeNameEn}</HeaderPill>
-                <HeaderPill icon={<Clock size={13} />}>{course.teachingModeNameEn}</HeaderPill>
+    closeAria,
+}) => {
+    const locale = useLocale()
+    return (
+        <div className="bg-slate-50 dark:bg-slate-800/40 px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-4">
+            <button
+                type="button"
+                aria-label={closeAria}
+                onClick={onClose}
+                className="p-2 rounded-lg text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-200 transition"
+            >
+                <X size={20} />
+            </button>
+            <div className="flex-1 text-start">
+                <h2 className="text-lg md:text-xl font-bold text-slate-800 dark:text-white leading-snug mb-3">
+                    {course.title}
+                </h2>
+                <div className="flex flex-wrap gap-2 justify-start">
+                    <HeaderPill>{locale === 'ar' ? (course as any).subjectNameAr ?? course.subjectNameEn : course.subjectNameEn}</HeaderPill>
+                    <HeaderPill icon={<UsersIcon size={13} />}>{locale === 'ar' ? (course as any).sessionTypeNameAr ?? course.sessionTypeNameEn : course.sessionTypeNameEn}</HeaderPill>
+                    <HeaderPill icon={<Clock size={13} />}>{locale === 'ar' ? (course as any).teachingModeNameAr ?? course.teachingModeNameEn : course.teachingModeNameEn}</HeaderPill>
+                </div>
             </div>
         </div>
-    </div>
-)
+    )
+}
 
 const HeaderPill: React.FC<{ children: React.ReactNode; icon?: React.ReactNode }> = ({
     children,
@@ -217,9 +227,9 @@ const HeaderPill: React.FC<{ children: React.ReactNode; icon?: React.ReactNode }
     </span>
 )
 
-const StatusTabs: React.FC<{ value: StatusTab; onChange: (v: StatusTab) => void }> = ({ value, onChange }) => (
+const StatusTabs: React.FC<{ tabs: { id: StatusTab; label: string }[]; value: StatusTab; onChange: (v: StatusTab) => void }> = ({ tabs, value, onChange }) => (
     <div className="px-6 pb-2 flex gap-2 flex-wrap">
-        {STATUS_TABS.map((tab) => {
+        {tabs.map((tab) => {
             const isActive = value === tab.id
             return (
                 <button
@@ -260,6 +270,8 @@ const RequestRow: React.FC<RequestRowProps> = ({
     onReject,
 }) => {
     const isPending = item.status === RequestStatus.Pending
+    const { t } = useTranslation('teacher')
+    const locale = useLocale()
 
     return (
         <div className="border border-secondary/30 rounded-xl bg-white dark:bg-slate-900 overflow-hidden">
@@ -275,7 +287,7 @@ const RequestRow: React.FC<RequestRowProps> = ({
                                     className="bg-secondary hover:bg-primary disabled:opacity-60 disabled:cursor-not-allowed text-white px-4 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1.5 transition"
                                 >
                                     {isApproving ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                                    قبول
+                                    {t('courses.enrollment.approve')}
                                 </button>
                                 <button
                                     type="button"
@@ -283,29 +295,29 @@ const RequestRow: React.FC<RequestRowProps> = ({
                                     onClick={onReject}
                                     className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-60 disabled:cursor-not-allowed text-slate-600 dark:text-slate-300 px-4 py-1.5 rounded-lg text-sm font-bold transition"
                                 >
-                                    رفض
+                                    {t('courses.enrollment.reject')}
                                 </button>
                             </>
                         )}
                     </div>
-                    <div className="flex-1 min-w-0 text-right space-y-1">
-                        <div className="flex items-center justify-end gap-2 flex-wrap">
+                    <div className="flex-1 min-w-0 text-start space-y-1">
+                        <div className="flex items-center justify-start gap-2 flex-wrap">
                             <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${RequestStatusStyles[item.status]}`}>
                                 {RequestStatusLabel[item.status]}
                             </span>
                             <h4 className="font-bold text-slate-800 dark:text-white truncate min-w-0">
-                                {item.requestedByUserName ?? 'طالب'}
+                                {item.requestedByUserName ?? t('courses.enrollment.defaultStudent')}
                             </h4>
                         </div>
-                        <p className="text-xs text-slate-400">{relativeTimeAr(item.createdAt)}</p>
+                        <p className="text-xs text-slate-400">{relativeTime(item.createdAt, locale, t)}</p>
                     </div>
                 </div>
 
-                <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-right">
-                    <RowStat icon={<UsersIcon size={13} />} label="أعضاء" value={`${item.groupMemberCount}`} />
-                    <RowStat icon={<Clock size={13} />} label="إجمالي" value={`${item.totalMinutes} د`} />
-                    <RowStat icon={<SaudiRiyal size={13} />} label="السعر" value={`${item.estimatedTotalPrice}`} />
-                    <RowStat label="نمط" value={item.sessionTypeNameEn ?? '—'} />
+                <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-start">
+                    <RowStat icon={<UsersIcon size={13} />} label={t('courses.enrollment.stats.members')} value={`${item.groupMemberCount}`} />
+                    <RowStat icon={<Clock size={13} />} label={t('courses.enrollment.stats.total')} value={`${item.totalMinutes} ${t('courses.enrollment.stats.totalSuffixMin')}`} />
+                    <RowStat icon={<SaudiRiyal size={13} />} label={t('courses.enrollment.stats.price')} value={`${item.estimatedTotalPrice}`} />
+                    <RowStat label={t('courses.enrollment.stats.mode')} value={(locale === 'ar' ? (item as any).sessionTypeNameAr : item.sessionTypeNameEn) ?? '—'} />
                 </div>
             </div>
 
@@ -314,7 +326,7 @@ const RequestRow: React.FC<RequestRowProps> = ({
                 onClick={onToggle}
                 className="w-full px-4 py-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-slate-100 dark:hover:bg-slate-800/60 text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center justify-center gap-1.5 transition"
             >
-                {expanded ? 'إخفاء التفاصيل' : 'عرض التفاصيل'}
+                {expanded ? t('courses.enrollment.details.hide') : t('courses.enrollment.details.show')}
                 <ChevronDown size={14} className={expanded ? 'rotate-180 transition' : 'transition'} />
             </button>
 
@@ -337,7 +349,7 @@ const RequestRow: React.FC<RequestRowProps> = ({
 
 const RowStat: React.FC<{ icon?: React.ReactNode; label: string; value: string }> = ({ icon, label, value }) => (
     <div className="bg-slate-50 dark:bg-slate-800/40 rounded-lg px-3 py-2">
-        <div className="flex items-center justify-end gap-1 text-[11px] text-slate-400 mb-0.5">
+        <div className="flex items-center justify-start gap-1 text-[11px] text-slate-400 mb-0.5">
             {icon}
             <span>{label}</span>
         </div>
@@ -347,6 +359,8 @@ const RowStat: React.FC<{ icon?: React.ReactNode; label: string; value: string }
 
 const RequestDetailPanel: React.FC<{ id: number; token: string }> = ({ id, token }) => {
     const detailQuery = useQuery(enrollmentRequestDetailQueryOptions(token, id))
+    const { t } = useTranslation('teacher')
+    const locale = useLocale()
 
     if (detailQuery.isLoading) {
         return (
@@ -358,7 +372,7 @@ const RequestDetailPanel: React.FC<{ id: number; token: string }> = ({ id, token
     if (detailQuery.isError || !detailQuery.data) {
         return (
             <div className="px-4 py-4 text-center text-sm text-rose-600">
-                تعذر تحميل تفاصيل الطلب.
+                {t('courses.enrollment.detailError')}
             </div>
         )
     }
@@ -366,9 +380,42 @@ const RequestDetailPanel: React.FC<{ id: number; token: string }> = ({ id, token
     const detail: EnrollmentRequestDetail = detailQuery.data
 
     return (
-        <div className="px-4 py-4 bg-slate-50/30 dark:bg-slate-900/40 border-t border-slate-100 dark:border-slate-800 space-y-4 text-right">
+        <div className="px-4 py-4 bg-slate-50/30 dark:bg-slate-900/40 border-t border-slate-100 dark:border-slate-800 space-y-4 text-start">
+            {(detail.preferredStartDate || detail.preferredEndDate) && (
+                <DetailSection icon={<CalendarIcon size={14} />} title={t('courses.enrollment.details.preferredPeriod')}>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">
+                        {formatDate(detail.preferredStartDate, locale)}
+                        <span className="mx-2 text-slate-400">—</span>
+                        {formatDate(detail.preferredEndDate, locale)}
+                    </p>
+                </DetailSection>
+            )}
+
+            {detail.proposedScheduleDates && detail.proposedScheduleDates.length > 0 && (
+                <DetailSection icon={<CalendarIcon size={14} />} title={t('courses.enrollment.details.proposedScheduleDates')}>
+                    <ul className="space-y-1.5">
+                        {detail.proposedScheduleDates.map((s) => (
+                            <li
+                                key={s.sessionNumber}
+                                className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg px-3 py-2 flex items-center justify-between gap-3"
+                            >
+                                <span className="text-xs text-slate-400 shrink-0">{s.durationMinutes} {t('courses.enrollment.details.durationMin')}</span>
+                                <div className="flex-1 min-w-0 text-start">
+                                    <div className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">
+                                        {t('courses.enrollment.details.sessionLine', { number: s.sessionNumber })}{s.title ? ` — ${s.title}` : ''}
+                                    </div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                                        {formatDate(s.date, locale)}
+                                    </div>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </DetailSection>
+            )}
+
             {detail.notes && (
-                <DetailSection icon={<NotebookPen size={14} />} title="ملاحظات الطالب">
+                <DetailSection icon={<NotebookPen size={14} />} title={t('courses.enrollment.details.notes')}>
                     <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
                         {detail.notes}
                     </p>
@@ -376,7 +423,7 @@ const RequestDetailPanel: React.FC<{ id: number; token: string }> = ({ id, token
             )}
 
             {detail.rejectionReason && (
-                <DetailSection icon={<AlertCircle size={14} />} title="سبب الرفض السابق" tone="rose">
+                <DetailSection icon={<AlertCircle size={14} />} title={t('courses.enrollment.details.previousRejectionReason')} tone="rose">
                     <p className="text-sm text-rose-700 dark:text-rose-300 whitespace-pre-wrap">
                         {detail.rejectionReason}
                     </p>
@@ -384,7 +431,7 @@ const RequestDetailPanel: React.FC<{ id: number; token: string }> = ({ id, token
             )}
 
             {detail.groupMembers && detail.groupMembers.length > 0 && (
-                <DetailSection icon={<UsersIcon size={14} />} title="أعضاء المجموعة">
+                <DetailSection icon={<UsersIcon size={14} />} title={t('courses.enrollment.details.groupMembers')}>
                     <ul className="space-y-1.5">
                         {detail.groupMembers.map((m) => (
                             <li
@@ -395,7 +442,7 @@ const RequestDetailPanel: React.FC<{ id: number; token: string }> = ({ id, token
                                     {GroupMemberConfirmationLabel[m.confirmationStatus]}
                                 </span>
                                 <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                                    {m.studentName ?? `طالب #${m.studentId}`}
+                                    {m.studentName ?? t('courses.enrollment.studentLabel', { id: m.studentId })}
                                 </span>
                             </li>
                         ))}
@@ -404,7 +451,7 @@ const RequestDetailPanel: React.FC<{ id: number; token: string }> = ({ id, token
             )}
 
             {detail.proposedSessions && detail.proposedSessions.length > 0 && (
-                <DetailSection icon={<CalendarIcon size={14} />} title="الجلسات المقترحة">
+                <DetailSection icon={<CalendarIcon size={14} />} title={t('courses.enrollment.details.proposedSessions')}>
                     <ul className="space-y-1.5">
                         {detail.proposedSessions.map((s) => (
                             <li
@@ -412,9 +459,9 @@ const RequestDetailPanel: React.FC<{ id: number; token: string }> = ({ id, token
                                 className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg px-3 py-2"
                             >
                                 <div className="flex items-center justify-between mb-1">
-                                    <span className="text-xs text-slate-400">{s.durationMinutes} د</span>
+                                    <span className="text-xs text-slate-400">{s.durationMinutes} {t('courses.enrollment.details.durationMin')}</span>
                                     <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                                        الجلسة {s.sessionNumber}{s.title ? ` — ${s.title}` : ''}
+                                        {t('courses.enrollment.details.sessionLine', { number: s.sessionNumber })}{s.title ? ` — ${s.title}` : ''}
                                     </span>
                                 </div>
                                 {s.notes && (
@@ -427,9 +474,9 @@ const RequestDetailPanel: React.FC<{ id: number; token: string }> = ({ id, token
             )}
 
             {detail.selectedAvailabilityIds && detail.selectedAvailabilityIds.length > 0 && (
-                <DetailSection icon={<Clock size={14} />} title="المواعيد المختارة">
+                <DetailSection icon={<Clock size={14} />} title={t('courses.enrollment.details.selectedAvailability')}>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                        تم اختيار {detail.selectedAvailabilityIds.length} موعد من تقويم التوفر.
+                        {t('courses.enrollment.details.selectedAvailabilityCount', { count: detail.selectedAvailabilityIds.length })}
                     </p>
                 </DetailSection>
             )}
@@ -444,9 +491,9 @@ const DetailSection: React.FC<{
     children: React.ReactNode
 }> = ({ icon, title, tone = 'default', children }) => (
     <div className="space-y-1.5">
-        <div className={`flex items-center justify-end gap-1.5 text-xs font-bold ${tone === 'rose' ? 'text-rose-600 dark:text-rose-400' : 'text-primary dark:text-secondary'}`}>
-            <span>{title}</span>
+        <div className={`flex items-center justify-start gap-1.5 text-xs font-bold ${tone === 'rose' ? 'text-rose-600 dark:text-rose-400' : 'text-primary dark:text-secondary'}`}>
             {icon}
+            <span>{title}</span>
         </div>
         {children}
     </div>
@@ -458,6 +505,8 @@ const RejectDialog: React.FC<{
     isLoading: boolean
 }> = ({ onCancel, onConfirm, isLoading }) => {
     const [reason, setReason] = useState('')
+    const { t } = useTranslation('teacher')
+    const locale = useLocale()
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -472,23 +521,23 @@ const RejectDialog: React.FC<{
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.2 }}
-                dir="rtl"
+                dir={LOCALE_DIRECTION[locale]}
                 className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md p-6"
                 onClick={(e) => e.stopPropagation()}
             >
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2 text-right">
-                    رفض طلب الانضمام
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2 text-start">
+                    {t('courses.enrollment.rejectDialog.title')}
                 </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 text-right">
-                    يمكنك إضافة سبب الرفض لإطلاع الطالب (اختياري).
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 text-start">
+                    {t('courses.enrollment.rejectDialog.subtitle')}
                 </p>
                 <textarea
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     maxLength={500}
                     rows={4}
-                    placeholder="سبب الرفض..."
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 text-sm text-right text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-secondary resize-none"
+                    placeholder={t('courses.enrollment.rejectDialog.placeholder')}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 text-sm text-start text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-secondary resize-none"
                 />
                 <div className="flex gap-2 mt-4">
                     <button
@@ -498,7 +547,7 @@ const RejectDialog: React.FC<{
                         className="flex-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-60 disabled:cursor-not-allowed text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition"
                     >
                         {isLoading && <Loader2 size={14} className="animate-spin" />}
-                        تأكيد الرفض
+                        {t('courses.enrollment.rejectDialog.confirm')}
                     </button>
                     <button
                         type="button"
@@ -506,7 +555,7 @@ const RejectDialog: React.FC<{
                         onClick={onCancel}
                         className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 py-2.5 rounded-xl font-bold text-sm transition"
                     >
-                        إلغاء
+                        {t('courses.enrollment.rejectDialog.cancel')}
                     </button>
                 </div>
             </motion.div>
@@ -514,37 +563,38 @@ const RejectDialog: React.FC<{
     )
 }
 
-function relativeTimeAr(iso: string): string {
-    const date = new Date(iso)
-    const diffMs = Date.now() - date.getTime()
-    if (Number.isNaN(diffMs) || diffMs < 0) return 'الآن'
-
-    const min = Math.floor(diffMs / 60_000)
-    if (min < 1) return 'منذ لحظات'
-    if (min < 60) return formatArabicDuration(min, 'دقيقة', 'دقيقتين', 'دقائق', 'دقيقة')
-
-    const hr = Math.floor(min / 60)
-    if (hr < 24) return formatArabicDuration(hr, 'ساعة', 'ساعتين', 'ساعات', 'ساعة')
-
-    const day = Math.floor(hr / 24)
-    if (day < 30) return formatArabicDuration(day, 'يوم', 'يومين', 'أيام', 'يوماً')
-
-    const month = Math.floor(day / 30)
-    if (month < 12) return formatArabicDuration(month, 'شهر', 'شهرين', 'أشهر', 'شهراً')
-
-    const year = Math.floor(day / 365)
-    return formatArabicDuration(year, 'سنة', 'سنتين', 'سنوات', 'سنة')
+function formatDate(value: string | null | undefined, locale: string): string {
+    if (!value) return '—'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return value
+    return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-US', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+    }).format(date)
 }
 
-function formatArabicDuration(
-    n: number,
-    singular: string,
-    dual: string,
-    plural: string,
-    genitive: string,
-): string {
-    if (n === 1) return `منذ ${singular}`
-    if (n === 2) return `منذ ${dual}`
-    if (n >= 3 && n <= 10) return `منذ ${n} ${plural}`
-    return `منذ ${n} ${genitive}`
+function relativeTime(iso: string, locale: string, t: (key: string, opts?: any) => string): string {
+    const date = new Date(iso)
+    const diffMs = Date.now() - date.getTime()
+    if (Number.isNaN(diffMs) || diffMs < 0) return t('courses.enrollment.relativeTime.now')
+
+    const sec = Math.floor(diffMs / 1000)
+    const min = Math.floor(sec / 60)
+    if (min < 1) return t('courses.enrollment.relativeTime.moments')
+
+    try {
+        const rtf = new Intl.RelativeTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-US', { numeric: 'auto' })
+        if (min < 60) return rtf.format(-min, 'minute')
+        const hr = Math.floor(min / 60)
+        if (hr < 24) return rtf.format(-hr, 'hour')
+        const day = Math.floor(hr / 24)
+        if (day < 30) return rtf.format(-day, 'day')
+        const month = Math.floor(day / 30)
+        if (month < 12) return rtf.format(-month, 'month')
+        const year = Math.floor(day / 365)
+        return rtf.format(-year, 'year')
+    } catch {
+        return t('courses.enrollment.relativeTime.moments')
+    }
 }

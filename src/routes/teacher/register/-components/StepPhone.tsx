@@ -5,6 +5,7 @@ import { PhoneIcon } from 'lucide-react';
 import z from 'zod';
 import { sendOtp, SendOtpError } from '../-api/sendOtp';
 import { showToast } from '@/lib/utils/toast';
+import { useTranslation } from 'react-i18next';
 
 interface CountryCode {
     code: string;
@@ -12,8 +13,7 @@ interface CountryCode {
     flag: string;
 }
 
-const registerPhoneSchema = z.object({ phoneNumber: z.string().min(9, { error: 'رقم الهاتف يجب أن يكون على الأقل 9 أرقام' }).max(15, { error: 'رقم الهاتف يجب أن يكون على الأكثر 15 أرقام' }).refine(val => !Number.isNaN(Number(val)), { error: 'رقم الهاتف يجب أن يكون أرقاماً' }) });
-type registerPhoneSchemaType = z.infer<typeof registerPhoneSchema>;
+type registerPhoneSchemaType = { phoneNumber: string };
 type registerPhoneSchemaErrors = {
     [K in keyof registerPhoneSchemaType]: string;
 };
@@ -52,6 +52,14 @@ const StepPhone: React.FC<StepPhoneProps> = ({ onSuccess, onPhoneChanges, phoneN
     const [showPicker, setShowPicker] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [errors, setErrors] = useState<registerPhoneSchemaErrors>({ phoneNumber: '' });
+    const { t } = useTranslation('teacher');
+
+    const registerPhoneSchema = useMemo(() => z.object({
+        phoneNumber: z.string()
+            .min(9, { error: t('auth.register.phone.validation.minLength') })
+            .max(15, { error: t('auth.register.phone.validation.maxLength') })
+            .refine(val => !Number.isNaN(Number(val)), { error: t('auth.register.phone.validation.mustBeNumeric') })
+    }), [t]);
 
     const filteredCountries = useMemo(() => {
         return COUNTRIES.filter(c =>
@@ -71,14 +79,13 @@ const StepPhone: React.FC<StepPhoneProps> = ({ onSuccess, onPhoneChanges, phoneN
 
                 const response = await sendOtp({ phoneNumber, countryCode: selectedCountry.code });
                 onSuccess(phoneNumber)
-                showToast({ type: 'success', message: response.message ?? 'تم إرسال رمز التحقق بنجاح' })
+                showToast({ type: 'success', message: response.message ?? t('auth.register.phone.toasts.otpSent') })
             } catch (error) {
                 if (error instanceof SendOtpError) {
-                    // setErrors({ phoneNumber: error.message });
                     showToast({ type: 'validation', message: error.message })
                     return
                 }
-                showToast({ type: 'server', message: error instanceof Error ? error.message : 'حدث خطأ ما' })
+                showToast({ type: 'server', message: error instanceof Error ? error.message : t('auth.register.stepOne.toasts.unexpected') })
             }
         },
     })
@@ -92,8 +99,8 @@ const StepPhone: React.FC<StepPhoneProps> = ({ onSuccess, onPhoneChanges, phoneN
             }}
                 className="w-full space-y-4">
                 <div className="space-y-2">
-                    <label className="block text-right text-lg font-bold text-[#003049] dark:text-slate-100 pr-1">
-                        رقم الجوال
+                    <label className="block text-start text-lg font-bold text-[#003049] dark:text-slate-100 ps-1">
+                        {t('auth.register.phone.label')}
                     </label>
                     <div className="relative" dir="ltr">
                         {/* Country Picker Button */}
@@ -121,7 +128,7 @@ const StepPhone: React.FC<StepPhoneProps> = ({ onSuccess, onPhoneChanges, phoneN
                                             field.handleChange(e.target.value);
                                             onPhoneChanges(e.target.value);
                                         }}
-                                        placeholder="5xxxxxxxx"
+                                        placeholder={t('auth.register.phone.placeholder')}
                                         className={`w-full h-full pl-12 pr-[110px] bg-white dark:bg-slate-900 border-2 rounded-xl text-left text-xl text-slate-900 dark:text-white focus:outline-none focus:ring-4 transition-all placeholder:text-gray-300 dark:placeholder:text-slate-700 ${!invalid ? 'border-[#00B5B5] focus:ring-[#00B5B5]/10' : 'border-red-500 dark:border-red-500 focus:ring-red-500/10'
                                             }`}
                                     />
@@ -150,11 +157,10 @@ const StepPhone: React.FC<StepPhoneProps> = ({ onSuccess, onPhoneChanges, phoneN
                             <div className="p-3 border-b border-gray-100 dark:border-slate-700 shrink-0 bg-white dark:bg-slate-800">
                                 <input
                                     type="text"
-                                    placeholder="ابحث عن الدولة أو الرمز..."
-                                    className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-900 border-none rounded-lg text-right text-sm outline-none focus:ring-1 focus:ring-[#00B5B5]"
+                                    placeholder={t('auth.register.phone.searchCountry')}
+                                    className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-900 border-none rounded-lg text-start text-sm outline-none focus:ring-1 focus:ring-[#00B5B5]"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    dir="rtl"
                                 />
                             </div>
                             <div className="overflow-y-auto custom-scrollbar flex-1">
@@ -178,14 +184,14 @@ const StepPhone: React.FC<StepPhoneProps> = ({ onSuccess, onPhoneChanges, phoneN
                                         </button>
                                     ))
                                 ) : (
-                                    <div className="p-8 text-center text-gray-400 text-sm">لا توجد نتائج</div>
+                                    <div className="p-8 text-center text-gray-400 text-sm">{t('auth.register.phone.noResults')}</div>
                                 )}
                             </div>
                         </div>
                     )}
 
-                    <p className="text-right text-gray-400 dark:text-slate-500 text-sm mt-2">
-                        سيتم استخدام رقم الهاتف لتسجيل الدخول أو إنشاء حساب جديد
+                    <p className="text-start text-gray-400 dark:text-slate-500 text-sm mt-2">
+                        {t('auth.register.phone.hint')}
                     </p>
                 </div>
 
@@ -202,7 +208,7 @@ const StepPhone: React.FC<StepPhoneProps> = ({ onSuccess, onPhoneChanges, phoneN
                         >
                             {isSubmitting ? (
                                 <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
-                            ) : 'متابعة'}
+                            ) : t('auth.register.phone.continue')}
                         </button>
                     </>
                 }} />
@@ -210,7 +216,7 @@ const StepPhone: React.FC<StepPhoneProps> = ({ onSuccess, onPhoneChanges, phoneN
 
 
                 <p className="mt-8 text-center text-gray-400 dark:text-slate-500 text-sm">
-                    بالمتابعة، أنت توافق على الشروط والأحكام وسياسة الخصوصية
+                    {t('auth.register.phone.terms')}
                 </p>
             </form>
 

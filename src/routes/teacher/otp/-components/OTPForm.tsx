@@ -1,11 +1,13 @@
 import QalamLogo from '@/lib/components/QalamLogo';
 import React, { useState, useRef, useEffect, ChangeEvent, KeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const OTPForm: React.FC<{ phone: string }> = ({ phone }) => {
     const [otp, setOtp] = useState<string[]>(['', '', '', '']);
     const [timer, setTimer] = useState<number>(120);
     const [isVerifying, setIsVerifying] = useState<boolean>(false);
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+    const { t } = useTranslation('teacher');
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -45,7 +47,7 @@ const OTPForm: React.FC<{ phone: string }> = ({ phone }) => {
         setIsVerifying(true);
         setTimeout(() => {
             setIsVerifying(false);
-            alert(`تم التحقق بنجاح! الرمز: ${code}`);
+            alert(t('auth.otp.toasts.verifyAlert', { code }));
         }, 1500);
     };
 
@@ -57,24 +59,23 @@ const OTPForm: React.FC<{ phone: string }> = ({ phone }) => {
 
                 <div className="text-center w-full my-10">
                     <h2 className="text-[#333] dark:text-[#ccd6f6] text-lg md:text-xl font-medium mb-2 transition-colors">
-                        لقد أرسلنا رمزاً مكوناً من 4 أرقام إلى هاتفك
+                        {t('auth.otp.sentMessage')}
                     </h2>
                     <div className="text-[#003555] dark:text-[#64ffda] text-xl font-bold mb-4 transition-colors tracking-wide" dir="ltr">
                         +966 {phone.slice(1)}
                     </div>
-                    <p className="text-gray-700 dark:text-[#8892b0] font-medium transition-colors">يرجى إدخاله أدناه</p>
+                    <p className="text-gray-700 dark:text-[#8892b0] font-medium transition-colors">{t('auth.otp.enterCodeBelow')}</p>
                 </div>
 
                 <div className="w-full mb-10">
                     <label className="block text-gray-500 dark:text-[#8892b0] text-sm mb-5 text-center transition-colors">
-                        أدخل الكود المُرسل
+                        {t('auth.otp.enterSentCode')}
                     </label>
                     <div className="flex justify-center gap-4" dir="ltr">
                         {otp.map((digit, idx) => (
                             <input
                                 key={idx}
                                 ref={(el) => { inputRefs.current[idx] = el; }}
-                                // type="number"
                                 value={digit}
                                 onChange={(e) => handleChange(e, idx)}
                                 onKeyDown={(e) => handleKeyDown(e, idx)}
@@ -93,12 +94,12 @@ const OTPForm: React.FC<{ phone: string }> = ({ phone }) => {
                         : 'bg-[#d1d5db] dark:bg-[#233554] text-white dark:text-gray-500 cursor-not-allowed shadow-none'
                         }`}
                 >
-                    {isVerifying ? 'جاري التحقق...' : 'تحقق'}
+                    {isVerifying ? t('auth.otp.verifying') : t('auth.otp.verify')}
                 </button>
 
                 <div className="mt-10 text-center">
                     <p className="text-[#333] dark:text-[#8892b0] font-medium text-sm flex items-center justify-center gap-2 transition-colors">
-                        إعادة ارسال الرمز بعد
+                        {t('auth.otp.resendIn')}
                         <span className="text-red-600 dark:text-rose-400 font-mono font-bold text-lg transition-colors">{formatTime(timer)}</span>
                     </p>
                 </div>

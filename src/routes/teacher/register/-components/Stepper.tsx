@@ -64,12 +64,14 @@
 import React from 'react';
 import { FormStep } from '../-types/FormStep';
 import { CheckIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface StepperProps {
     currentStep: FormStep;
 }
 
 const Stepper: React.FC<StepperProps> = ({ currentStep }) => {
+    const { t } = useTranslation('teacher');
     const isStep1Complete = currentStep > FormStep.PERSONAL_INFO;
     const isStep2Active = currentStep === FormStep.UPLOAD_DOCUMENTS;
 
@@ -87,9 +89,9 @@ const Stepper: React.FC<StepperProps> = ({ currentStep }) => {
                     )}
                 </div>
                 <div className="flex flex-col items-start overflow-hidden">
-                    <span className="text-base md:text-lg font-bold text-primary dark:text-white whitespace-nowrap">المعلومات الشخصية</span>
+                    <span className="text-base md:text-lg font-bold text-primary dark:text-white whitespace-nowrap">{t('auth.register.stepper.personalInfo')}</span>
                     <span className={`text-xs md:text-sm transition-colors duration-500 ${isStep1Complete ? 'text-secondary' : 'text-slate-500 dark:text-slate-400'}`}>
-                        {isStep1Complete ? 'اكتملت الخطوة بنجاح' : 'الخطوة الأولى'}
+                        {isStep1Complete ? t('auth.register.stepper.completed') : t('auth.register.stepper.firstStep')}
                     </span>
                 </div>
 
@@ -107,9 +109,9 @@ const Stepper: React.FC<StepperProps> = ({ currentStep }) => {
                     <span className={`text-lg md:text-xl font-bold transition-colors duration-500 ${isStep2Active ? 'text-secondary' : 'text-slate-400 dark:text-slate-500'}`}>02</span>
                 </div>
                 <div className="flex flex-col items-start overflow-hidden">
-                    <span className={`text-base md:text-lg font-bold transition-colors duration-500 ${isStep2Active ? 'text-primary dark:text-white' : 'text-slate-400 dark:text-slate-500'} whitespace-nowrap`}>رفع الوثائق والشهادات</span>
+                    <span className={`text-base md:text-lg font-bold transition-colors duration-500 ${isStep2Active ? 'text-primary dark:text-white' : 'text-slate-400 dark:text-slate-500'} whitespace-nowrap`}>{t('auth.register.stepper.documents')}</span>
                     <span className={`text-xs md:text-sm transition-colors duration-500 ${isStep2Active ? 'text-secondary' : 'text-slate-400 dark:text-slate-500'}`}>
-                        {isStep2Active ? 'الخطوة الحالية' : 'قيد الانتظار'}
+                        {isStep2Active ? t('auth.register.stepper.currentStep') : t('auth.register.stepper.waiting')}
                     </span>
                 </div>
             </div>

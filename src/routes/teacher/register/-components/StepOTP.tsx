@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { verifyOtp, VerifyOtpError } from "../-api/verifyOtp";
 import { VerifyOtpSuccessResponseData } from "../-types/VerifyOtpSuccessResponseData";
 import { showToast } from "@/lib/utils/toast";
+import { useTranslation } from "react-i18next";
 
 interface StepOTPProps {
   onSuccess: (data: VerifyOtpSuccessResponseData) => void;
@@ -19,6 +20,7 @@ const StepOTP: React.FC<StepOTPProps> = ({
   const [timer, setTimer] = useState(299); // 4:59 in seconds
   const [loading, setLoading] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const { t } = useTranslation('teacher');
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -63,19 +65,17 @@ const StepOTP: React.FC<StepOTPProps> = ({
       // toast.success(result.message)
       showToast({
         type: "success",
-        message: result.message ?? "تم التحقق بنجاح",
+        message: result.message ?? t('auth.register.otpStep.toasts.success'),
       });
     } catch (error) {
       if (error instanceof VerifyOtpError) {
         console.log({ error });
-        // toast.error(error.message)
         showToast({ type: "validation", message: error.message });
         return;
       }
-      // toast.error(error instanceof Error ? error.message : 'حدث خطأ ما')
       showToast({
         type: "server",
-        message: error instanceof Error ? error.message : "حدث خطأ ما",
+        message: error instanceof Error ? error.message : t('auth.register.stepOne.toasts.unexpected'),
       });
     } finally {
       setLoading(false);
@@ -86,16 +86,16 @@ const StepOTP: React.FC<StepOTPProps> = ({
     <div className="flex flex-col items-center w-full max-w-sm mx-auto animate-in fade-in slide-in-from-left-4 duration-500">
       <div className="text-center space-y-2 mb-8">
         <h2 className="text-xl font-bold text-[#003049] dark:text-slate-100">
-          تحقق من رقم جوالك
+          {t('auth.register.otpStep.title')}
         </h2>
         <div className="text-sm text-gray-500 dark:text-slate-400">
-          تم إرسال رمز التحقق إلى
+          {t('auth.register.otpStep.subtitle')}
           <div className="flex items-center justify-center gap-2">
             <button
               onClick={onBack}
               className="text-[#00B5B5] hover:underline text-xs"
             >
-              تغيير الرقم؟
+              {t('auth.register.otpStep.changeNumber')}
             </button>
             <div
               className="font-bold text-[#003049] dark:text-slate-200 mt-1"
@@ -131,7 +131,7 @@ const StepOTP: React.FC<StepOTPProps> = ({
         <div className="text-center space-y-4">
           <div className="text-sm">
             <span className="text-gray-400 dark:text-slate-500">
-              انتهاء الصلاحية بعد{" "}
+              {t('auth.register.otpStep.expiresAfter')}
             </span>
             <span className="text-[#00B5B5] font-bold" dir="ltr">
               {formatTime(timer)}
@@ -142,7 +142,7 @@ const StepOTP: React.FC<StepOTPProps> = ({
             onClick={() => setTimer(299)}
             className="text-[#00B5B5] font-bold text-sm hover:underline"
           >
-            إعادة إرسال الرمز
+            {t('auth.register.otpStep.resend')}
           </button>
         </div>
 
@@ -154,7 +154,7 @@ const StepOTP: React.FC<StepOTPProps> = ({
           {loading ? (
             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           ) : (
-            "متابعة"
+            t('auth.register.otpStep.continue')
           )}
         </button>
       </form>

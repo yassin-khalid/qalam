@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface StrengthMeterProps {
   score: number;
@@ -7,6 +8,7 @@ interface StrengthMeterProps {
 
 const StrengthMeter: React.FC<StrengthMeterProps> = ({ score }) => {
   const segments = [1, 2, 3, 4];
+  const { t } = useTranslation('teacher');
 
   const getSegmentColor = (index: number) => {
     if (index > score) return 'bg-slate-200 dark:bg-slate-800';
@@ -17,17 +19,17 @@ const StrengthMeter: React.FC<StrengthMeterProps> = ({ score }) => {
   };
 
   const getStrengthLabel = () => {
-    if (score === 0) return 'ابدأ الكتابة...';
-    if (score === 1) return 'ضعيفة جداً';
-    if (score === 2) return 'ضعيفة';
-    if (score === 3) return 'جيدة';
-    return 'قوية جداً';
+    if (score === 0) return t('auth.register.password.strength.start');
+    if (score === 1) return t('auth.register.password.strength.veryWeak');
+    if (score === 2) return t('auth.register.password.strength.weak');
+    if (score === 3) return t('auth.register.password.strength.good');
+    return t('auth.register.password.strength.veryStrong');
   };
 
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-center text-xs font-bold text-slate-500 dark:text-slate-400 px-1">
-        <span>قوة كلمة المرور</span>
+        <span>{t('auth.register.password.strength.title')}</span>
         <span className="transition-colors duration-300 uppercase tracking-tighter" style={{ color: score === 4 ? '#00B5B5' : undefined }}>
           {getStrengthLabel()}
         </span>

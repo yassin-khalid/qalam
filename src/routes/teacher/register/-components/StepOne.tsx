@@ -18,38 +18,7 @@ import StrengthMeter from "./password/components/PasswordStrengthMeter";
 import { PASSWORD_RULES } from "./password/constanst";
 import ValidationItem from "./password/components/PasswordValidationItem";
 import { showToast } from "@/lib/utils/toast";
-
-const stepOneFormSchema = z
-    .object({
-        userId: z.number(),
-        firstName: z
-            .string()
-            .min(1, { error: "الاسم الأول يجب أن يكون على الأقل 1 حرف" })
-            .max(100, { error: "الاسم الأول يجب أن يكون على الأقل 100 حرف" }),
-        lastName: z
-            .string()
-            .min(1, { error: "الاسم الأخير يجب أن يكون على الأقل 1 حرف" })
-            .max(100, { error: "الاسم الأخير يجب أن يكون على الأقل 100 حرف" }),
-        email: z.email({ error: "البريد الإلكتروني غير صالح" }),
-        // at least 8 characters, at least one uppercase letter, at least one lowercase letter, at least one number, at least one special character
-        password: z
-            .string()
-            .min(8, { error: "كلمة المرور يجب أن تكون على الأقل 8 أحرف" })
-            .regex(
-                /[A-Z]/,
-                "يجب أن تحتوي كلمة المرور على حرف أو أكثر من الحروف الكبيرة",
-            )
-            .regex(
-                /[^A-Za-z0-9]/,
-                "كلمة المرور يجب أن تحتوي على رمز خاص واحد على الأقل",
-            )
-            .regex(/\d/, "يجب أن تحتوي كلمة المرور على عدد واحد على الأقل"),
-        confirmPassword: z.string(),
-    })
-    .refine((data) => data.password === data.confirmPassword, {
-        path: ["confirmPassword"],
-        message: "كلمات المرور غير متطابقة",
-    });
+import { useTranslation } from "react-i18next";
 
 // type StepOneData = z.infer<typeof stepOneFormSchema>;
 
@@ -70,6 +39,32 @@ const StepOne: React.FC<StepOneProps> = ({
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { t } = useTranslation('teacher');
+
+    const stepOneFormSchema = useMemo(() => z
+        .object({
+            userId: z.number(),
+            firstName: z
+                .string()
+                .min(1, { error: t('auth.register.stepOne.validation.firstNameMin') })
+                .max(100, { error: t('auth.register.stepOne.validation.firstNameMax') }),
+            lastName: z
+                .string()
+                .min(1, { error: t('auth.register.stepOne.validation.lastNameMin') })
+                .max(100, { error: t('auth.register.stepOne.validation.lastNameMax') }),
+            email: z.email({ error: t('auth.register.stepOne.validation.emailInvalid') }),
+            password: z
+                .string()
+                .min(8, { error: t('auth.register.stepOne.validation.passwordMin') })
+                .regex(/[A-Z]/, t('auth.register.stepOne.validation.passwordUppercase'))
+                .regex(/[^A-Za-z0-9]/, t('auth.register.stepOne.validation.passwordSpecial'))
+                .regex(/\d/, t('auth.register.stepOne.validation.passwordNumber')),
+            confirmPassword: z.string(),
+        })
+        .refine((data) => data.password === data.confirmPassword, {
+            path: ["confirmPassword"],
+            message: t('auth.register.stepOne.validation.passwordsMismatch'),
+        }), [t]);
 
     // const [data, setData] = useState<StepOneData>({
     //     userId: 0,
@@ -106,7 +101,7 @@ const StepOne: React.FC<StepOneProps> = ({
                 const response = await personalInfo({ ...data.value, token });
                 onSuccess(response.data)
             } catch (error) {
-                showToast({ type: 'server', message: error instanceof Error ? error.message : 'حدث خطأ ما' })
+                showToast({ type: 'server', message: error instanceof Error ? error.message : t('auth.register.stepOne.toasts.unexpected') })
             }
             // onSuccess(mockUserId);
         },
@@ -183,8 +178,8 @@ const StepOne: React.FC<StepOneProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* First Name Field */}
                 <div className="space-y-2">
-                    <label className="block text-right text-sm font-bold text-[#003049] dark:text-slate-200">
-                        الاسم الأول
+                    <label className="block text-start text-sm font-bold text-[#003049] dark:text-slate-200">
+                        {t('auth.register.stepOne.firstName')}
                     </label>
                     <form.Field
                         name="firstName"
@@ -198,15 +193,15 @@ const StepOne: React.FC<StepOneProps> = ({
                                             type="text"
                                             value={field.state.value}
                                             onChange={(e) => field.handleChange(e.target.value)}
-                                            placeholder="محمد"
-                                            className="w-full px-10 py-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-right text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#00B5B5] focus:border-transparent transition-all"
+                                            placeholder={t('auth.register.stepOne.firstNamePlaceholder')}
+                                            className="w-full px-10 py-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-start text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#00B5B5] focus:border-transparent transition-all"
                                         />
-                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500">
+                                        <div className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500">
                                             <UserIcon />
                                         </div>
                                     </div>
                                     {invalid && (
-                                        <p className="text-red-500 text-sm text-right">
+                                        <p className="text-red-500 text-sm text-start">
                                             {field.state.meta.errors?.[0]?.message}
                                         </p>
                                     )}
@@ -218,8 +213,8 @@ const StepOne: React.FC<StepOneProps> = ({
 
                 {/* Last Name Field */}
                 <div className="space-y-2">
-                    <label className="block text-right text-sm font-bold text-[#003049] dark:text-slate-200">
-                        الاسم الأخير
+                    <label className="block text-start text-sm font-bold text-[#003049] dark:text-slate-200">
+                        {t('auth.register.stepOne.lastName')}
                     </label>
                     <form.Field
                         name="lastName"
@@ -233,15 +228,15 @@ const StepOne: React.FC<StepOneProps> = ({
                                             type="text"
                                             value={field.state.value}
                                             onChange={(e) => field.handleChange(e.target.value)}
-                                            placeholder="أحمد"
-                                            className="w-full px-10 py-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-right text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#00B5B5] focus:border-transparent transition-all"
+                                            placeholder={t('auth.register.stepOne.lastNamePlaceholder')}
+                                            className="w-full px-10 py-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-start text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#00B5B5] focus:border-transparent transition-all"
                                         />
-                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500">
+                                        <div className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500">
                                             <UserIcon />
                                         </div>
                                     </div>
                                     {invalid && (
-                                        <p className="text-red-500 text-sm text-right">
+                                        <p className="text-red-500 text-sm text-start">
                                             {field.state.meta.errors?.[0]?.message}
                                         </p>
                                     )}
@@ -254,8 +249,8 @@ const StepOne: React.FC<StepOneProps> = ({
 
             {/* Email Field */}
             <div className="space-y-2">
-                <label className="block text-right text-sm font-bold text-[#003049] dark:text-slate-200">
-                    البريد الإلكتروني
+                <label className="block text-start text-sm font-bold text-[#003049] dark:text-slate-200">
+                    {t('auth.register.stepOne.email')}
                 </label>
                 <form.Field
                     name="email"
@@ -268,15 +263,15 @@ const StepOne: React.FC<StepOneProps> = ({
                                     <input
                                         value={field.state.value}
                                         onChange={(e) => field.handleChange(e.target.value)}
-                                        placeholder="example@email.com"
-                                        className="w-full px-10 py-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-right text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#00B5B5] focus:border-transparent transition-all"
+                                        placeholder={t('auth.register.stepOne.emailPlaceholder')}
+                                        className="w-full px-10 py-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-start text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#00B5B5] focus:border-transparent transition-all"
                                     />
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500">
+                                    <div className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500">
                                         <MailIcon />
                                     </div>
                                 </div>
                                 {invalid && (
-                                    <p className="text-red-500 text-sm text-right">
+                                    <p className="text-red-500 text-sm text-start">
                                         {field.state.meta.errors?.[0]?.message}
                                     </p>
                                 )}
@@ -288,8 +283,8 @@ const StepOne: React.FC<StepOneProps> = ({
 
             {/* Password Field */}
             <div className="space-y-2">
-                <label className="block text-right text-sm font-bold text-[#003049] dark:text-slate-200">
-                    كلمة المرور
+                <label className="block text-start text-sm font-bold text-[#003049] dark:text-slate-200">
+                    {t('auth.register.stepOne.password')}
                 </label>
                 <form.Field
                     name="password"
@@ -350,13 +345,13 @@ const StepOne: React.FC<StepOneProps> = ({
                                         placeholder="••••••••"
                                         autoComplete="new-password"
                                     />
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500">
+                                    <div className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500">
                                         <LockIcon />
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword((prev) => !prev)}
-                                        className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-xl text-slate-400 dark:text-slate-500 hover:text-accent transition-colors"
+                                        className="absolute start-4 top-1/2 -translate-y-1/2 p-2 rounded-xl text-slate-400 dark:text-slate-500 hover:text-accent transition-colors"
                                         tabIndex={-1}
                                     >
                                         {showPassword ? (
@@ -373,7 +368,7 @@ const StepOne: React.FC<StepOneProps> = ({
 
                                 {/* Rules Checklist */}
                                 <div className="space-y-4 pt-6 border-t border-slate-50 dark:border-slate-800">
-                                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">المتطلبات الأمنية</p>
+                                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('auth.register.stepOne.securityRequirements')}</p>
                                     <div className="space-y-3.5">
                                         {metRules.map((rule) => (
                                             <ValidationItem
@@ -393,8 +388,8 @@ const StepOne: React.FC<StepOneProps> = ({
 
             {/* Confirm Password Field */}
             <div className="space-y-2">
-                <label className="block text-right text-sm font-bold text-[#003049] dark:text-slate-200">
-                    تأكيد كلمة المرور
+                <label className="block text-start text-sm font-bold text-[#003049] dark:text-slate-200">
+                    {t('auth.register.stepOne.confirmPassword')}
                 </label>
                 <form.Field
                     name="confirmPassword"
@@ -408,22 +403,22 @@ const StepOne: React.FC<StepOneProps> = ({
                                         type={showConfirmPassword ? "text" : "password"}
                                         value={field.state.value}
                                         onChange={(e) => field.handleChange(e.target.value)}
-                                        placeholder="تأكيد كلمة المرور"
-                                        className="w-full px-10 py-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-right text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#00B5B5] focus:border-transparent transition-all"
+                                        placeholder={t('auth.register.stepOne.confirmPasswordPlaceholder')}
+                                        className="w-full px-10 py-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-start text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#00B5B5] focus:border-transparent transition-all"
                                     />
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500">
+                                    <div className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500">
                                         <LockIcon />
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#00B5B5] dark:hover:text-[#00B5B5] p-2"
+                                        className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#00B5B5] dark:hover:text-[#00B5B5] p-2"
                                     >
                                         <EyeIcon />
                                     </button>
                                 </div>
                                 {invalid && (
-                                    <p className="text-red-500 text-sm text-right">
+                                    <p className="text-red-500 text-sm text-start">
                                         {field.state.meta.errors?.[0]?.message}
                                     </p>
                                 )}
@@ -444,7 +439,7 @@ const StepOne: React.FC<StepOneProps> = ({
                         {isSubmitting ? (
                             <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
                         ) : (
-                            "متابعة الخطوة التالية"
+                            t('auth.register.stepOne.submit')
                         )}
                     </button>
                 )}

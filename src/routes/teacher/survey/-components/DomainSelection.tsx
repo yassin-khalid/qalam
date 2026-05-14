@@ -5,6 +5,8 @@ import DomainCard from './DomainCard';
 import { useQuery } from "@tanstack/react-query";
 import { useLiveQuery, } from '@tanstack/react-db';
 import { localStorageCollection } from '@/lib/db/localStorageCollection';
+import { useTranslation } from 'react-i18next';
+import { useLocale } from '@/lib/hooks/useLocale';
 
 interface DomainSelectionProps {
     selectedDomainId: number | null;
@@ -42,6 +44,9 @@ const DomainSelection: React.FC<DomainSelectionProps> = ({
     const [pageNumber, setPageNumber] = useState(1);
     const [pageSize] = useState(6);
     const [totalPages, setTotalPages] = useState(1);
+    const { t } = useTranslation('teacher');
+    const locale = useLocale();
+    const isAr = locale === 'ar';
 
     const { data: currentSession } = useLiveQuery(q => q.from({ session: localStorageCollection }))
 
@@ -107,23 +112,23 @@ const DomainSelection: React.FC<DomainSelectionProps> = ({
     return (
         <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 md:p-12 shadow-2xl w-full max-w-2xl transform transition-all duration-300">
             <div className="flex flex-col items-center mb-10">
-                <div className="mb-4 text-primary dark:text-slate-100 text-6xl font-bold">قلم</div>
-                <h2 className="text-2xl font-semibold text-primary/80 dark:text-slate-300">إنشاء حساب مُعلم</h2>
+                <div className="mb-4 text-primary dark:text-slate-100 text-6xl font-bold">{t('survey.common.brand')}</div>
+                <h2 className="text-2xl font-semibold text-primary/80 dark:text-slate-300">{t('survey.common.title')}</h2>
             </div>
 
             <div className="mb-8 text-center">
-                <h3 className="text-xl font-bold text-primary dark:text-slate-100 mb-2">اختر مجال التدريس</h3>
-                <p className="text-gray-400 dark:text-slate-400 text-sm mb-6">اختر مجالاً واحداً فقط. سيتم تخصيص الخيارات المتاحة بناءً على اختيارك.</p>
+                <h3 className="text-xl font-bold text-primary dark:text-slate-100 mb-2">{t('survey.domain.title')}</h3>
+                <p className="text-gray-400 dark:text-slate-400 text-sm mb-6">{t('survey.domain.subtitle')}</p>
 
                 <div className="relative max-w-md mx-auto">
                     <input
                         type="text"
-                        placeholder="بحث عن مجال..."
+                        placeholder={t('survey.domain.searchPlaceholder')}
                         value={searchTerm}
                         onChange={handleSearchChange}
-                        className="w-full p-4 pr-12 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl text-right text-base outline-none focus:border-secondary dark:text-slate-100 transition-all"
+                        className="w-full p-4 pe-12 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl text-start text-base outline-none focus:border-secondary dark:text-slate-100 transition-all"
                     />
-                    <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="absolute end-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                 </div>
@@ -132,7 +137,7 @@ const DomainSelection: React.FC<DomainSelectionProps> = ({
             {loading ? (
                 <div className="flex flex-col items-center justify-center py-20 space-y-4">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary"></div>
-                    <p className="text-primary dark:text-slate-100 font-bold">جاري تحميل المجالات...</p>
+                    <p className="text-primary dark:text-slate-100 font-bold">{t('survey.domain.loading')}</p>
                 </div>
             ) : error ? (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 p-6 rounded-2xl text-center mb-8">
@@ -141,7 +146,7 @@ const DomainSelection: React.FC<DomainSelectionProps> = ({
                         onClick={() => window.location.reload()}
                         className="bg-red-500 text-white px-6 py-2 rounded-xl text-sm font-bold hover:bg-red-600 transition-colors"
                     >
-                        إعادة المحاولة
+                        {t('survey.domain.retry')}
                     </button>
                 </div>
             ) : (
@@ -151,14 +156,14 @@ const DomainSelection: React.FC<DomainSelectionProps> = ({
                             domains?.map(option => (
                                 <DomainCard
                                     key={option.id}
-                                    option={{ icon: '🎓', id: option.id, title: option.nameAr }}
+                                    option={{ icon: '🎓', id: option.id, title: isAr ? option.nameAr : option.nameEn ?? option.nameAr }}
                                     isSelected={selectedDomainId === option.id}
                                     onSelect={handleSelect}
                                 />
                             ))
                         ) : (
                             <div className="col-span-2 text-center py-10 text-gray-400 dark:text-slate-500 italic">
-                                لم يتم العثور على نتائج للبحث "{searchTerm}"
+                                {t('survey.domain.noResults', { term: searchTerm })}
                             </div>
                         )}
                     </div>
@@ -205,7 +210,7 @@ const DomainSelection: React.FC<DomainSelectionProps> = ({
                 className={`w-full py-5 rounded-2xl text-white font-bold text-xl transition-all shadow-xl ${selectedDomainId && !loading ? 'bg-primary hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90' : 'bg-gray-300 dark:bg-slate-700 dark:text-slate-500 cursor-not-allowed'
                     }`}
             >
-                متابعة
+                {t('survey.common.continue')}
             </button>
         </div>
     );

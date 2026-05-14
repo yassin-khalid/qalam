@@ -5,6 +5,8 @@ import { getRouter } from '@/router';
 import { Link, LinkProps } from '@tanstack/react-router';
 import QalamLogo from '@/lib/components/QalamLogo';
 import { BarChart, Bell, Box, Calendar, ChevronLeft, ChevronRight, Grid, HelpCircle, LucideIcon, Settings, Truck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useLocale } from '@/lib/hooks/useLocale';
 
 
 const router = getRouter()
@@ -36,7 +38,7 @@ const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, linkProps, isColla
         {!isCollapsed && <span className="text-lg font-medium whitespace-nowrap">{label}</span>}
 
         {hasDot && (
-            <span className={`absolute ${isCollapsed ? 'top-3 right-5' : 'left-6'} w-2 h-2 bg-rose-500 rounded-full border-2 border-primary dark:border-secondary`}></span>
+            <span className={`absolute ${isCollapsed ? 'top-3 end-5' : 'start-6'} w-2 h-2 bg-rose-500 rounded-full border-2 border-primary dark:border-secondary`}></span>
         )}
     </Link>
 );
@@ -50,6 +52,11 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, onTitleChange }) => {
+    const { t } = useTranslation('teacher');
+    const locale = useLocale();
+    const isRtl = locale === 'ar';
+    const ExpandIcon = isRtl ? ChevronRight : ChevronLeft;
+    const CollapseIcon = isRtl ? ChevronLeft : ChevronRight;
     return (
         <aside className={`sidebar-transition h-screen px-1.5 flex flex-col sticky top-0 shrink-0 z-40 ${isCollapsed ? 'w-24' : 'w-80'}`}>
             <div className="bg-primary dark:bg-secondary h-full rounded-lg flex flex-col text-white shadow-2xl relative transition-colors duration-300">
@@ -57,9 +64,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, onTitle
                 {/* Toggle Button */}
                 <button
                     onClick={onToggle}
-                    className="absolute -left-3 top-10 w-8 h-8 bg-primary dark:bg-white border border-white/20 rounded-full flex items-center justify-center text-white dark:text-secondary hover:scale-110 transition-transform z-50 shadow-md"
+                    className="absolute -start-3 top-10 w-8 h-8 bg-primary dark:bg-white border border-white/20 rounded-full flex items-center justify-center text-white dark:text-secondary hover:scale-110 transition-transform z-50 shadow-md"
                 >
-                    {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+                    {isCollapsed ? <ExpandIcon className="w-4 h-4" /> : <CollapseIcon className="w-4 h-4" />}
                 </button>
 
                 {/* Logo Section */}
@@ -74,17 +81,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, onTitle
 
                 {/* Navigation */}
                 <nav className="flex-1 px-3 py-2 sidebar-scroll overflow-y-auto space-y-1">
-                    <NavItem isCollapsed={isCollapsed} icon={Grid} label="لوحة التحكم" linkProps={{ to: '/teacher/dashboard', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('لوحة التحكم')} />
-                    <NavItem isCollapsed={isCollapsed} icon={Box} label="دوراتي" linkProps={{ to: '/teacher/courses', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('دوراتي')} />
-                    <NavItem isCollapsed={isCollapsed} icon={Calendar} label="التقويم" linkProps={{ to: '/teacher/calendar', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('التقويم')} />
-                    <NavItem isCollapsed={isCollapsed} icon={Truck} label="الموردون" linkProps={{ to: '/teacher/suppliers', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('الموردون')} />
-                    <NavItem isCollapsed={isCollapsed} icon={BarChart} label="التقارير" linkProps={{ to: '/teacher/reports', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('التقارير')} />
+                    <NavItem isCollapsed={isCollapsed} icon={Grid} label={t('dashboard.sidebar.dashboard')} linkProps={{ to: '/teacher/dashboard', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange(t('dashboard.sidebar.dashboard'))} />
+                    <NavItem isCollapsed={isCollapsed} icon={Box} label={t('dashboard.sidebar.courses')} linkProps={{ to: '/teacher/courses', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange(t('dashboard.sidebar.courses'))} />
+                    <NavItem isCollapsed={isCollapsed} icon={Calendar} label={t('dashboard.sidebar.calendar')} linkProps={{ to: '/teacher/calendar', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange(t('dashboard.sidebar.calendar'))} />
+                    <NavItem isCollapsed={isCollapsed} icon={Truck} label={t('dashboard.sidebar.suppliers')} linkProps={{ to: '/teacher/suppliers', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange(t('dashboard.sidebar.suppliers'))} />
+                    <NavItem isCollapsed={isCollapsed} icon={BarChart} label={t('dashboard.sidebar.reports')} linkProps={{ to: '/teacher/reports', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange(t('dashboard.sidebar.reports'))} />
 
                     <div className="my-6 border-t border-white/10 mx-6"></div>
 
-                    <NavItem isCollapsed={isCollapsed} icon={Bell} label="الإشعارات" linkProps={{ to: '/teacher/notifications', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} hasDot onClick={() => onTitleChange('الإشعارات')} />
-                    <NavItem isCollapsed={isCollapsed} icon={Settings} label="الإعدادات" linkProps={{ to: '/teacher/settings', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('الإعدادات')} />
-                    <NavItem isCollapsed={isCollapsed} icon={HelpCircle} label="الدعم" linkProps={{ to: '/teacher/support', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange('الدعم')} />
+                    <NavItem isCollapsed={isCollapsed} icon={Bell} label={t('dashboard.sidebar.notifications')} linkProps={{ to: '/teacher/notifications', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} hasDot onClick={() => onTitleChange(t('dashboard.sidebar.notifications'))} />
+                    <NavItem isCollapsed={isCollapsed} icon={Settings} label={t('dashboard.sidebar.settings')} linkProps={{ to: '/teacher/settings', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange(t('dashboard.sidebar.settings'))} />
+                    <NavItem isCollapsed={isCollapsed} icon={HelpCircle} label={t('dashboard.sidebar.support')} linkProps={{ to: '/teacher/support', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange(t('dashboard.sidebar.support'))} />
                 </nav>
 
                 {/* User Profile */}
@@ -100,13 +107,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, onTitle
                             </div>
                             {!isCollapsed && (
                                 <div className="flex flex-col min-w-0">
-                                    <span className="text-[10px] text-white/70 whitespace-nowrap">مرحبًا بعودتك 👋</span>
+                                    <span className="text-[10px] text-white/70 whitespace-nowrap">{t('dashboard.greeting')}</span>
                                     <span className="text-sm font-bold truncate">عبدالفتاح</span>
                                 </div>
                             )}
                         </div>
                         {/* {!isCollapsed && <span className="material-icons-outlined text-white/50 text-sm group-hover:translate-x-1 transition-transform">chevron_left</span>} */}
-                        {!isCollapsed && <ChevronLeft className="w-4 h-4 text-white/50 group-hover:translate-x-1 transition-transform" />}
+                        {!isCollapsed && <CollapseIcon className="w-4 h-4 text-white/50 group-hover:translate-x-1 transition-transform" />}
                     </div>
                 </div>
             </div>

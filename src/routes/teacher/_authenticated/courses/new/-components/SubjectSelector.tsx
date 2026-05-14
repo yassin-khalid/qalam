@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Check, BookOpen, Layers } from 'lucide-react';
 import { Subject } from '../-types/types';
+import { useTranslation } from 'react-i18next';
+import { useLocale } from '@/lib/hooks/useLocale';
 
 interface SubjectSelectorProps {
     selectedSubjectId: number | null;
@@ -11,6 +13,9 @@ interface SubjectSelectorProps {
 
 export const SubjectSelector: React.FC<SubjectSelectorProps> = ({ selectedSubjectId, onSelect, subjects }) => {
     const [searchQuery, setSearchQuery] = useState('');
+    const { t } = useTranslation('teacher');
+    const locale = useLocale();
+    const isAr = locale === 'ar';
 
     console.log({ selectedSubjectId, subjects })
 
@@ -22,11 +27,11 @@ export const SubjectSelector: React.FC<SubjectSelectorProps> = ({ selectedSubjec
     return (
         <div className="space-y-4">
             <div className="relative">
-                <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <Search className="absolute end-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                 <input
                     type="text"
-                    placeholder="ابحث عن مادة..."
-                    className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary transition-all text-right text-sm"
+                    placeholder={t('courses.new.sections.subject.searchPlaceholder')}
+                    className="w-full pe-10 ps-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary transition-all text-start text-sm"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -57,25 +62,25 @@ export const SubjectSelector: React.FC<SubjectSelectorProps> = ({ selectedSubjec
                                     <div className="min-w-0">
                                         <h4 className={`text-base font-semibold leading-tight wrap-break-words transition-colors ${selectedSubjectId === subject.id ? 'text-primary dark:text-secondary' : 'text-slate-800 dark:text-white'
                                             }`}>
-                                            {subject.subjectNameAr}
+                                            {isAr ? subject.subjectNameAr : subject.subjectNameEn}
                                         </h4>
-                                        <p className="text-slate-400 dark:text-slate-500 font-semibold text-xs mt-0.5 truncate">{subject.subjectNameEn}</p>
+                                        <p className="text-slate-400 dark:text-slate-500 font-semibold text-xs mt-0.5 truncate">{isAr ? subject.subjectNameEn : subject.subjectNameAr}</p>
                                     </div>
                                 </div>
 
                                 <div className="flex flex-wrap gap-1.5 md:justify-end max-w-full md:max-w-[52%]">
                                     {subject.canTeachFullSubject ? (
                                         <span className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-lg text-xs font-semibold border border-emerald-100 dark:border-emerald-900/30">
-                                            كافة الوحدات
+                                            {t('courses.new.sections.subject.allUnits')}
                                         </span>
                                     ) : subject.units.length > 0 ? (
                                         subject.units.map(unit => (
                                             <span key={unit.id} className="max-w-full wrap-break-words bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-100 dark:border-slate-800">
-                                                {unit.unitNameAr}
+                                                {isAr ? unit.unitNameAr : (unit as any).unitNameEn ?? unit.unitNameAr}
                                             </span>
                                         ))
                                     ) : (
-                                        <span className="text-slate-300 dark:text-slate-700 text-xs font-bold italic">لا توجد وحدات محددة</span>
+                                        <span className="text-slate-300 dark:text-slate-700 text-xs font-bold italic">{t('courses.new.sections.subject.noUnits')}</span>
                                     )}
                                 </div>
                             </div>
@@ -84,7 +89,7 @@ export const SubjectSelector: React.FC<SubjectSelectorProps> = ({ selectedSubjec
                                 <motion.div
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
-                                    className="absolute -top-1.5 -left-1.5 w-7 h-7 bg-primary dark:bg-secondary text-white rounded-full flex items-center justify-center shadow-md border-2 border-white dark:border-slate-900"
+                                    className="absolute -top-1.5 -start-1.5 w-7 h-7 bg-primary dark:bg-secondary text-white rounded-full flex items-center justify-center shadow-md border-2 border-white dark:border-slate-900"
                                 >
                                     <Check size={14} strokeWidth={3.5} />
                                 </motion.div>
@@ -94,7 +99,7 @@ export const SubjectSelector: React.FC<SubjectSelectorProps> = ({ selectedSubjec
                 ) : (
                     <div className="text-center py-14 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
                         <Layers className="mx-auto text-slate-300 mb-3" size={36} />
-                        <p className="text-slate-400 text-sm font-bold">لم يتم العثور على مواد تطابق بحثك</p>
+                        <p className="text-slate-400 text-sm font-bold">{t('courses.new.sections.subject.noResults')}</p>
                     </div>
                 )}
             </div>

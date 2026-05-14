@@ -22,7 +22,7 @@ function RouteComponent() {
     <div className="min-h-screen bg-background-light dark:bg-background-dark transition-colors duration-300 overflow-x-hidden">
       <div
         className="fixed top-0 bottom-0 z-40 transition-[width] duration-300 ease-in-out"
-        style={{ right: 0, width: sidebarWidth }}
+        style={{ insetInlineEnd: 0, width: sidebarWidth }}
       >
         <Sidebar
           isCollapsed={isSidebarCollapsed}
@@ -31,8 +31,8 @@ function RouteComponent() {
         />
       </div>
       <main
-        className="flex flex-col h-screen overflow-hidden transition-[margin-right] duration-300"
-        style={{ marginRight: sidebarWidth }}
+        className="flex flex-col h-screen overflow-hidden transition-[margin] duration-300"
+        style={{ marginInlineEnd: sidebarWidth }}
       >
         <Navbar />
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-6 lg:p-8 custom-scrollbar">

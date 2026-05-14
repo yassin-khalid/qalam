@@ -15,6 +15,9 @@ import { eq, useLiveQuery } from "@tanstack/react-db";
 import { localStorageCollection } from "@/lib/db/localStorageCollection";
 import { uploadDocuments } from "../-api/uploadDocuments";
 import { NonSaudiIdentityTypesCollection, SaudiIdentityTypesCollection } from "../-db/collections/identityTypesCollection";
+import { useTranslation } from "react-i18next";
+import { useLocale } from "@/lib/hooks/useLocale";
+import { LOCALE_DIRECTION } from "@/lib/i18n";
 
 interface StepTwoProps {
     onSuccess: (data: StepTwoData) => void;
@@ -25,6 +28,8 @@ interface StepTwoProps {
 const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges }) => {
     const [loading, setLoading] = useState(false);
     const idFileInputRef = useRef<HTMLInputElement>(null);
+    const { t } = useTranslation('teacher');
+    const locale = useLocale();
 
 
     const { data: currentSession } = useLiveQuery((q) =>
@@ -71,7 +76,7 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                     onSuccess(response.data);
                     showToast({
                         type: "success",
-                        message: response.message ?? "تم تحميل المستندات بنجاح",
+                        message: response.message ?? t('auth.register.stepTwo.toasts.uploadSuccess'),
                     });
                 } else {
                     const response = await uploadDocuments({
@@ -83,13 +88,13 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                     onSuccess(response.data);
                     showToast({
                         type: "success",
-                        message: response.message ?? "تم تحميل المستندات بنجاح",
+                        message: response.message ?? t('auth.register.stepTwo.toasts.uploadSuccess'),
                     });
                 }
             } catch (error) {
                 showToast({
                     type: "server",
-                    message: error instanceof Error ? error.message : "حدث خطأ ما",
+                    message: error instanceof Error ? error.message : t('auth.register.stepTwo.toasts.unexpected'),
                 });
             } finally {
                 setLoading(false);
@@ -115,15 +120,15 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                 form.handleSubmit();
             }}
             className="flex flex-col h-full"
-            dir="rtl"
+            dir={LOCALE_DIRECTION[locale]}
         >
             {/* Scrollable Container with elegant max-height and custom scrollbar */}
             <div className="flex-1 overflow-y-auto custom-scrollbar max-h-[450px] pl-2 -ml-2 mb-6 rtl-scroll px-4">
                 <div className="space-y-8 pb-4">
                     {/* Saudi Residency Question */}
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                        <h3 className="text-[#003049] dark:text-slate-100 font-bold text-base text-right w-full md:w-auto">
-                            هل تقيم داخل المملكة العربية السعودية؟
+                        <h3 className="text-[#003049] dark:text-slate-100 font-bold text-base text-start w-full md:w-auto">
+                            {t('auth.register.stepTwo.residencyQuestion')}
                         </h3>
                         <form.Field
                             name="isInSaudiArabia"
@@ -136,14 +141,14 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                                             onClick={() => field.handleChange(true)}
                                             className={`flex-1 md:w-28 py-1.5 rounded-xl border-2 transition-all font-bold ${isInSaudiArabia ? "bg-[#00B5B5] border-[#00B5B5] text-white shadow-lg shadow-[#00B5B5]/20" : "border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 bg-white dark:bg-slate-800"}`}
                                         >
-                                            نعم
+                                            {t('auth.register.stepTwo.yes')}
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => field.handleChange(false)}
                                             className={`flex-1 md:w-28 py-1.5 rounded-xl border-2 transition-all font-bold ${!isInSaudiArabia ? "bg-[#00B5B5] border-[#00B5B5] text-white shadow-lg shadow-[#00B5B5]/20" : "border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 bg-white dark:bg-slate-800"}`}
                                         >
-                                            لا
+                                            {t('auth.register.stepTwo.no')}
                                         </button>
                                     </div>
                                 );
@@ -155,8 +160,8 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Identity Type */}
                         <div className="space-y-2">
-                            <label className="block text-right text-sm font-bold text-[#003049] dark:text-slate-200">
-                                نوع الهوية
+                            <label className="block text-start text-sm font-bold text-[#003049] dark:text-slate-200">
+                                {t('auth.register.stepTwo.identityType')}
                             </label>
                             <div className="relative">
                                 <form.Field
@@ -172,9 +177,9 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                                                     onChange={(e) =>
                                                         field.handleChange(Number(e.target.value))
                                                     }
-                                                    className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-right text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#00B5B5] appearance-none cursor-pointer"
+                                                    className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-start text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#00B5B5] appearance-none cursor-pointer"
                                                 >
-                                                    <option value="">اختر نوع الهوية</option>
+                                                    <option value="">{t('auth.register.stepTwo.identityTypePlaceholder')}</option>
                                                     {/* {form.state.values.isInSaudiArabia ? (
                                                         <>
                                                             <option value={IdentityType.NATIONAL_ID}>
@@ -197,7 +202,7 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                                                     ))}
                                                 </select>
                                                 {invalid && (
-                                                    <p className="text-red-500 text-sm mt-1 text-right">
+                                                    <p className="text-red-500 text-sm mt-1 text-start">
                                                         {field.state.meta.errors[0]?.message ?? ""}
                                                     </p>
                                                 )}
@@ -205,7 +210,7 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                                         );
                                     }}
                                 />
-                                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#00B5B5]">
+                                <div className="absolute start-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#00B5B5]">
                                     {/* <svg
                                         className="w-4 h-4"
                                         fill="none"
@@ -226,10 +231,10 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
 
                         {/* Document Number */}
                         <div className="space-y-2">
-                            <label className="block text-right text-sm font-bold text-[#003049] dark:text-slate-200">
+                            <label className="block text-start text-sm font-bold text-[#003049] dark:text-slate-200">
                                 {form.state.values.isInSaudiArabia
-                                    ? "رقم الإقامة / الهوية"
-                                    : "رقم الجواز / الوثيقة"}
+                                    ? t('auth.register.stepTwo.documentNumberSaudi')
+                                    : t('auth.register.stepTwo.documentNumberForeign')}
                             </label>
                             <form.Field
                                 name="documentNumber"
@@ -243,11 +248,11 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                                                 required
                                                 value={field.state.value}
                                                 onChange={(e) => field.handleChange(e.target.value)}
-                                                placeholder="مثال: 123456789"
-                                                className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-right text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#00B5B5] transition-all"
+                                                placeholder={t('auth.register.stepTwo.documentNumberPlaceholder')}
+                                                className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-start text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#00B5B5] transition-all"
                                             />
                                             {invalid && (
-                                                <p className="text-red-500 text-sm mt-1 text-right">
+                                                <p className="text-red-500 text-sm mt-1 text-start">
                                                     {field.state.meta.errors[0]?.message ?? ""}
                                                 </p>
                                             )}
@@ -267,11 +272,11 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                             return (
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center mb-1">
-                                        <label className="block text-right text-sm font-bold text-[#003049] dark:text-slate-200">
-                                            صورة الهوية / الوثيقة
+                                        <label className="block text-start text-sm font-bold text-[#003049] dark:text-slate-200">
+                                            {t('auth.register.stepTwo.identityFile')}
                                         </label>
                                         <span className="text-[10px] sm:text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wider">
-                                            الحد الأقصى لحجم الملف هو 5MB
+                                            {t('auth.register.stepTwo.maxFileSize')}
                                         </span>
                                     </div>
                                     <div
@@ -298,7 +303,7 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                                                         field.handleChange(null as any);
                                                     }}
                                                 >
-                                                    حذف الملف
+                                                    {t('auth.register.stepTwo.deleteFile')}
                                                 </button>
                                             </div>
                                         ) : (
@@ -307,7 +312,7 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                                                     <UploadIcon />
                                                 </div>
                                                 <span className="text-sm font-bold text-gray-500 dark:text-slate-400">
-                                                    انقر لرفع وثيقة الهوية
+                                                    {t('auth.register.stepTwo.uploadIdentity')}
                                                 </span>
                                             </>
                                         )}
@@ -361,14 +366,14 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                                                 className="text-[#00B5B5] font-bold text-sm flex items-center gap-2 hover:opacity-80 transition-opacity disabled:opacity-50 w-full md:w-auto justify-center bg-[#00B5B5]/10 px-4 py-2 rounded-lg"
                                             >
                                                 <PlusIcon />
-                                                إضافة شهادة أخرى
+                                                {t('auth.register.stepTwo.addCertificate')}
                                             </button>
                                             <div className="flex flex-col items-start gap-1 w-full md:w-auto">
                                                 <h3 className="text-[#003049] dark:text-slate-100 font-bold text-lg leading-none">
-                                                    الشهادات والدورات
+                                                    {t('auth.register.stepTwo.certificatesTitle')}
                                                 </h3>
                                                 <span className="text-[10px] text-gray-400 dark:text-slate-500 font-medium">
-                                                    أضف حتى 5 شهادات تدعم طلبك
+                                                    {t('auth.register.stepTwo.certificatesHint')}
                                                 </span>
                                             </div>
                                         </div>
@@ -381,13 +386,13 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                                                     <button
                                                         type="button"
                                                         onClick={() => field.removeValue(index)}
-                                                        className="absolute top-4 left-4 text-gray-300 hover:text-red-500 transition-colors"
+                                                        className="absolute top-4 start-4 text-gray-300 hover:text-red-500 transition-colors"
                                                     >
                                                         <XIcon />
                                                     </button>
 
                                                     <div className="inline-block bg-[#00B5B5]/10 text-[#00B5B5] px-3 py-1 rounded-full text-[10px] font-bold mb-1">
-                                                        المستند #{index + 1}
+                                                        {t('auth.register.stepTwo.documentNumberLabel', { number: index + 1 })}
                                                     </div>
 
                                                     <div className="space-y-3">
@@ -401,16 +406,16 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                                                                     <>
                                                                         <input
                                                                             type="text"
-                                                                            placeholder="عنوان الشهادة (مثال: بكالوريوس تعليم)"
+                                                                            placeholder={t('auth.register.stepTwo.certificateTitlePlaceholder')}
                                                                             required
                                                                             value={field.state.value}
                                                                             onChange={(e) =>
                                                                                 field.handleChange(e.target.value)
                                                                             }
-                                                                            className="w-full bg-gray-50/50 dark:bg-slate-950 px-3 py-2.5 rounded-xl text-right text-sm text-slate-900 dark:text-slate-100 border border-transparent focus:border-[#00B5B5] outline-none transition-all"
+                                                                            className="w-full bg-gray-50/50 dark:bg-slate-950 px-3 py-2.5 rounded-xl text-start text-sm text-slate-900 dark:text-slate-100 border border-transparent focus:border-[#00B5B5] outline-none transition-all"
                                                                         />
                                                                         {invalid && (
-                                                                            <p className="text-red-500 text-sm mt-1 text-right">
+                                                                            <p className="text-red-500 text-sm mt-1 text-start">
                                                                                 {field.state.meta.errors?.[0]
                                                                                     ?.message ?? ""}
                                                                             </p>
@@ -430,16 +435,16 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                                                                     <>
                                                                         <input
                                                                             type="text"
-                                                                            placeholder="جهة الإصدار"
+                                                                            placeholder={t('auth.register.stepTwo.issuerPlaceholder')}
                                                                             required
                                                                             value={field.state.value}
                                                                             onChange={(e) =>
                                                                                 field.handleChange(e.target.value)
                                                                             }
-                                                                            className="w-full bg-gray-50/50 dark:bg-slate-950 px-3 py-2.5 rounded-xl text-right text-sm text-slate-900 dark:text-slate-100 border border-transparent focus:border-[#00B5B5] outline-none transition-all"
+                                                                            className="w-full bg-gray-50/50 dark:bg-slate-950 px-3 py-2.5 rounded-xl text-start text-sm text-slate-900 dark:text-slate-100 border border-transparent focus:border-[#00B5B5] outline-none transition-all"
                                                                         />
                                                                         {invalid && (
-                                                                            <p className="text-red-500 text-sm mt-1 text-right">
+                                                                            <p className="text-red-500 text-sm mt-1 text-start">
                                                                                 {field.state.meta.errors?.[0]
                                                                                     ?.message ?? ""}
                                                                             </p>
@@ -458,8 +463,8 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                                                                 return (
                                                                     <>
                                                                         <DatePicker
-                                                                            label="تاريخ الإصدار"
-                                                                            placeholder="اختر تاريخ الإصدار..."
+                                                                            label={t('auth.register.stepTwo.issueDateLabel')}
+                                                                            placeholder={t('auth.register.stepTwo.issueDatePlaceholder')}
                                                                             initialType="hijri"
                                                                             onChange={(date) => {
                                                                                 console.log({ date: date.toISOString().split('T')[0] })
@@ -467,7 +472,7 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                                                                             }}
                                                                         />
                                                                         {invalid && (
-                                                                            <p className="text-red-500 text-sm mt-1 text-right">
+                                                                            <p className="text-red-500 text-sm mt-1 text-start">
                                                                                 {field.state.meta.errors?.[0]
                                                                                     ?.message ?? ""}
                                                                             </p>
@@ -512,7 +517,7 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                                                                             <UploadIcon />
                                                                         )}
                                                                         {field.state.value?.name ||
-                                                                            "رفع ملف الشهادة"}
+                                                                            t('auth.register.stepTwo.uploadCertificateFile')}
                                                                     </button>
                                                                     {field.state.value?.name && (
                                                                         <button
@@ -522,11 +527,11 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                                                                             }}
                                                                             className="text-red-500 text-xs font-bold hover:underline mt-2 text-center block w-full"
                                                                         >
-                                                                            حذف الملف
+                                                                            {t('auth.register.stepTwo.deleteFile')}
                                                                         </button>
                                                                     )}
                                                                     {invalid && (
-                                                                        <p className="text-red-500 text-sm mt-1 text-right">
+                                                                        <p className="text-red-500 text-sm mt-1 text-start">
                                                                             {field.state.meta.errors?.[0]?.message ??
                                                                                 ""}
                                                                         </p>
@@ -558,10 +563,10 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                             {loading ? (
                                 <>
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                    Jاري الإرسال...
+                                    {t('auth.register.stepTwo.submitting')}
                                 </>
                             ) : (
-                                "إرسال الطلب النهائي"
+                                t('auth.register.stepTwo.submit')
                             )}
                         </button>
                     )}

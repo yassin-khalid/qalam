@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { Bell, Globe, Menu, Moon, Sun } from 'lucide-react';
+import { Bell, Menu, Moon, Sun } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/hooks/useTheme';
 import { updateTheme } from '@/lib/utils/sessionHelpers';
+import { useTranslation } from 'react-i18next';
+import LanguageToggleButton from '@/lib/components/LanguageToggleButton';
 
 export const Navbar: React.FC = () => {
     const theme = useTheme()
     const isDarkMode = theme === 'dark'
+    const { t } = useTranslation('teacher');
 
     const [hasNotification, setHasNotification] = useState(true);
 
@@ -28,7 +31,7 @@ export const Navbar: React.FC = () => {
                         >
                             <Bell size={20} strokeWidth={2} />
                             {hasNotification && (
-                                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
+                                <span className="absolute top-1.5 end-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
                             )}
                         </button>
 
@@ -37,7 +40,7 @@ export const Navbar: React.FC = () => {
                             <button
                                 onClick={() => updateTheme(isDarkMode ? 'light' : 'dark')}
                                 className="relative flex h-8 w-14 items-center rounded-full bg-slate-200 dark:bg-slate-700 p-1 overflow-hidden border border-slate-300/50 dark:border-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900"
-                                aria-label={isDarkMode ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'}
+                                aria-label={isDarkMode ? t('dashboard.navbar.toggleLightAria') : t('dashboard.navbar.toggleDarkAria')}
                             >
                                 <motion.div
                                     animate={{ x: isDarkMode ? -22 : 0 }}
@@ -54,10 +57,7 @@ export const Navbar: React.FC = () => {
                         </div>
 
                         {/* Language Selector */}
-                        <button className="flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 px-2 py-1 rounded-md transition-all">
-                            <Globe size={20} strokeWidth={2} />
-                            <span className="text-sm font-semibold tracking-wide">EN</span>
-                        </button>
+                        <LanguageToggleButton className="flex items-center justify-center gap-2 text-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 px-3 py-1.5 rounded-md transition-all" />
                     </div>
 
                     {/* End: Menu */}

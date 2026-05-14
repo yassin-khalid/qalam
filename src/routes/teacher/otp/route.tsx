@@ -2,11 +2,12 @@ import { createFileRoute } from '@tanstack/react-router'
 import OTPForm from './-components/OTPForm'
 import ThemeToggleButton from '@/lib/components/ThemeToggleButton'
 import z from 'zod'
+import i18n from '@/lib/i18n'
 
 export const Route = createFileRoute('/teacher/otp')({
   component: RouteComponent,
   validateSearch: z.object({
-    phone: z.string().regex(/^05\d{8}$/, 'رقم الهاتف يجب أن يكون 10 رقماً ويبدأ بـ05'),
+    phone: z.string().regex(/^05\d{8}$/, i18n.t('teacher:auth.otp.phoneValidation')),
   }),
 
 })

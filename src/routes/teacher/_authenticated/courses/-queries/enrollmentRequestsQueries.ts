@@ -1,4 +1,5 @@
 import { queryOptions } from '@tanstack/react-query'
+import i18n from '@/lib/i18n'
 
 export const RequestStatus = {
     Pending: 1,
@@ -51,6 +52,14 @@ export interface EnrollmentRequestProposedSession {
     notes: string | null
 }
 
+export interface EnrollmentRequestProposedScheduleDate {
+    sessionNumber: number
+    date: string
+    teacherAvailabilityId: number
+    durationMinutes: number
+    title: string | null
+}
+
 export interface EnrollmentRequestDetail {
     id: number
     courseId: number
@@ -64,9 +73,12 @@ export interface EnrollmentRequestDetail {
     sessionTypeNameEn: string | null
     notes: string | null
     rejectionReason: string | null
+    preferredStartDate: string | null
+    preferredEndDate: string | null
     selectedAvailabilityIds: number[] | null
     groupMembers: EnrollmentRequestGroupMember[] | null
     proposedSessions: EnrollmentRequestProposedSession[] | null
+    proposedScheduleDates: EnrollmentRequestProposedScheduleDate[] | null
 }
 
 interface PaginationMeta {
@@ -99,11 +111,12 @@ const buildHeaders = (token: string): HeadersInit => ({
 })
 
 const parseError = async (response: Response): Promise<string> => {
+    const fallback = i18n.t('teacher:courses.new.toasts.unexpected')
     try {
         const err = await response.json() as { message?: string }
-        return err.message ?? 'حدث خطأ غير متوقع'
+        return err.message ?? fallback
     } catch {
-        return 'حدث خطأ غير متوقع'
+        return fallback
     }
 }
 
@@ -193,12 +206,19 @@ export const rejectEnrollmentRequest = async (
     return await response.json() as ApiEnvelope<string>
 }
 
-export const RequestStatusLabel: Record<RequestStatus, string> = {
-    [RequestStatus.Pending]: 'قيد المراجعة',
-    [RequestStatus.Approved]: 'مقبول',
-    [RequestStatus.Rejected]: 'مرفوض',
-    [RequestStatus.Cancelled]: 'ملغى',
+const REQUEST_STATUS_KEYS: Record<RequestStatus, string> = {
+    [RequestStatus.Pending]: 'teacher:courses.enrollment.tabs.pending',
+    [RequestStatus.Approved]: 'teacher:courses.enrollment.tabs.approved',
+    [RequestStatus.Rejected]: 'teacher:courses.enrollment.tabs.rejected',
+    [RequestStatus.Cancelled]: 'teacher:courses.enrollment.tabs.cancelled',
 }
+
+export const RequestStatusLabel: Record<RequestStatus, string> = new Proxy({} as Record<RequestStatus, string>, {
+    get(_target, prop) {
+        const status = Number(prop) as RequestStatus
+        return i18n.t(REQUEST_STATUS_KEYS[status])
+    },
+})
 
 export const RequestStatusStyles: Record<RequestStatus, string> = {
     [RequestStatus.Pending]: 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/50',
@@ -207,11 +227,18 @@ export const RequestStatusStyles: Record<RequestStatus, string> = {
     [RequestStatus.Cancelled]: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700',
 }
 
-export const GroupMemberConfirmationLabel: Record<GroupMemberConfirmationStatus, string> = {
-    [GroupMemberConfirmationStatus.Pending]: 'في انتظار الرد',
-    [GroupMemberConfirmationStatus.Confirmed]: 'وافق',
-    [GroupMemberConfirmationStatus.Rejected]: 'رفض',
+const GROUP_MEMBER_STATUS_KEYS: Record<GroupMemberConfirmationStatus, string> = {
+    [GroupMemberConfirmationStatus.Pending]: 'teacher:courses.enrollment.memberStatus.pending',
+    [GroupMemberConfirmationStatus.Confirmed]: 'teacher:courses.enrollment.memberStatus.confirmed',
+    [GroupMemberConfirmationStatus.Rejected]: 'teacher:courses.enrollment.memberStatus.rejected',
 }
+
+export const GroupMemberConfirmationLabel: Record<GroupMemberConfirmationStatus, string> = new Proxy({} as Record<GroupMemberConfirmationStatus, string>, {
+    get(_target, prop) {
+        const status = Number(prop) as GroupMemberConfirmationStatus
+        return i18n.t(GROUP_MEMBER_STATUS_KEYS[status])
+    },
+})
 
 export const GroupMemberConfirmationStyles: Record<GroupMemberConfirmationStatus, string> = {
     [GroupMemberConfirmationStatus.Pending]: 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400',

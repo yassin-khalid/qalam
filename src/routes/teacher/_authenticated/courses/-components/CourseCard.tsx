@@ -10,6 +10,9 @@ import { courseDetailQueryOptions, deleteCourse } from '../-queries/courseDetail
 import { showToast } from '@/lib/utils/toast';
 import { AnimatePresence } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useLocale } from '@/lib/hooks/useLocale';
+import { LOCALE_DIRECTION } from '@/lib/i18n';
 
 interface CourseCardProps {
     course: Course;
@@ -19,6 +22,8 @@ interface CourseCardProps {
 export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
     const navigate = useNavigate()
     const queryClient = useQueryClient()
+    const { t } = useTranslation('teacher');
+    const locale = useLocale();
     const [isEnrollmentModalOpen, setIsEnrollmentModalOpen] = useState(false);
     const [isLoadingEdit, setIsLoadingEdit] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -33,7 +38,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
             return await deleteCourse(course.id, token)
         },
         onSuccess: () => {
-            showToast({ type: 'success', message: 'تم حذف الدورة' })
+            showToast({ type: 'success', message: t('courses.card.toasts.deleted') })
             setIsDeleteOpen(false)
             queryClient.invalidateQueries({ queryKey: ['courses'] })
         },
@@ -81,7 +86,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
         } catch (err) {
             showToast({
                 type: 'server',
-                message: err instanceof Error ? err.message : 'تعذّر تحميل بيانات الدورة',
+                message: err instanceof Error ? err.message : t('courses.card.toasts.loadFailed'),
             })
         } finally {
             setIsLoadingEdit(false)
@@ -101,9 +106,9 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
 
     const getStatusLabel = (status: number | string | null | undefined) => {
         switch (normalizeStatus(status)) {
-            case 1: return 'مسودة';
-            case 2: return 'منشورة';
-            case 3: return 'متوقفة';
+            case 1: return t('courses.card.status.draft');
+            case 2: return t('courses.card.status.published');
+            case 3: return t('courses.card.status.archived');
             default: return '';
         }
     };
@@ -127,7 +132,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
             {/* Card Header (Teal Section) */}
             <div className="bg-linear-to-br from-primary to-secondary p-5 relative min-h-[140px] flex flex-col justify-end">
                 {getStatusLabel(course.status) && (
-                    <div className={`absolute top-3 right-4 px-3 py-1 rounded-lg text-xs font-bold border ${getStatusStyles(course.status)}`}>
+                    <div className={`absolute top-3 end-4 px-3 py-1 rounded-lg text-xs font-bold border ${getStatusStyles(course.status)}`}>
                         {getStatusLabel(course.status)}
                     </div>
                 )}
@@ -136,15 +141,15 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
                 </h3>
                 <div className="flex flex-wrap gap-1.5">
                     <span className="bg-white/10 backdrop-blur-md text-white px-3 py-1 rounded-lg text-xs font-medium border border-white/20">
-                        {course.subjectNameEn}
+                        {locale === 'ar' ? (course as any).subjectNameAr ?? course.subjectNameEn : course.subjectNameEn}
                     </span>
                     <span className="bg-white/10 backdrop-blur-md text-white px-3 py-1 rounded-lg text-xs font-medium border border-white/20 flex items-center gap-1">
                         <UsersIcon size={14} />
-                        {course.sessionTypeNameEn}
+                        {locale === 'ar' ? (course as any).sessionTypeNameAr ?? course.sessionTypeNameEn : course.sessionTypeNameEn}
                     </span>
                     <span className="bg-white/10 backdrop-blur-md text-white px-3 py-1 rounded-lg text-xs font-medium border border-white/20 flex items-center gap-1">
                         <Clock size={14} />
-                        {course.teachingModeNameEn}
+                        {locale === 'ar' ? (course as any).teachingModeNameAr ?? course.teachingModeNameEn : course.teachingModeNameEn}
                     </span>
                 </div>
             </div>
@@ -155,21 +160,21 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
                     <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
                         <div className="flex items-center gap-2">
                             <Calendar size={18} className="text-slate-400" />
-                            <span className="text-sm font-medium">تاريخ البداية</span>
+                            <span className="text-sm font-medium">{t('courses.card.startDate')}</span>
                         </div>
                         <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{course.startDate}</span>
                     </div>
                     <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
                         <div className="flex items-center gap-2">
                             <Clock size={18} className="text-slate-400" />
-                            <span className="text-sm font-medium">عدد الجلسات</span>
+                            <span className="text-sm font-medium">{t('courses.card.sessionsCount')}</span>
                         </div>
-                        <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{course.sessionsCount} جلسة</span>
+                        <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{course.sessionsCount} {t('courses.card.sessionsSuffix')}</span>
                     </div>
                     <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
                         <div className="flex items-center gap-2">
                             <UsersIcon size={18} className="text-slate-400" />
-                            <span className="text-sm font-medium">الطلاب المسجلين</span>
+                            <span className="text-sm font-medium">{t('courses.card.registeredStudents')}</span>
                         </div>
                         <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
                             {course.registeredCount ?? 0}
@@ -181,7 +186,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
                 <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Banknote size={18} className="text-slate-400" />
-                        <span className="text-sm font-medium text-slate-500">السعر</span>
+                        <span className="text-sm font-medium text-slate-500">{t('courses.card.price')}</span>
                     </div>
                     <div className="flex items-baseline gap-1.5">
                         <span className="text-xl font-black text-primary dark:text-secondary">{course.price}</span>
@@ -197,7 +202,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
                         className="flex-1 bg-primary hover:bg-secondary text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-slate-900/10 text-sm"
                     >
                         <UserPlus size={16} />
-                        طلبات الانضمام
+                        {t('courses.card.enrollmentRequests')}
                     </button>
                     <button
                         type="button"
@@ -239,15 +244,15 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
                             transition={{ duration: 0.2 }}
-                            dir="rtl"
+                            dir={LOCALE_DIRECTION[locale]}
                             className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md p-6"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2 text-right">
-                                حذف الدورة
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2 text-start">
+                                {t('courses.card.deleteConfirm.title')}
                             </h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 text-right">
-                                هل أنت متأكد من حذف "{course.title}"؟ لا يمكن التراجع عن هذا الإجراء.
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 text-start">
+                                {t('courses.card.deleteConfirm.message', { title: course.title })}
                             </p>
                             <div className="flex gap-2">
                                 <button
@@ -257,7 +262,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
                                     className="flex-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-60 disabled:cursor-not-allowed text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition"
                                 >
                                     {isDeleting && <Loader2 size={14} className="animate-spin" />}
-                                    تأكيد الحذف
+                                    {t('courses.card.deleteConfirm.confirm')}
                                 </button>
                                 <button
                                     type="button"
@@ -265,7 +270,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
                                     onClick={() => setIsDeleteOpen(false)}
                                     className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 py-2.5 rounded-xl font-bold text-sm transition"
                                 >
-                                    إلغاء
+                                    {t('courses.card.deleteConfirm.cancel')}
                                 </button>
                             </div>
                         </motion.div>

@@ -6,6 +6,9 @@ import { StatsGrid } from './-components/StatsGrid';
 import { CourseFilters } from './-components/Filters';
 import { CourseList } from './-components/CourseList';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import { useLocale } from '@/lib/hooks/useLocale';
+import { LOCALE_DIRECTION } from '@/lib/i18n';
 
 export const Route = createFileRoute('/teacher/_authenticated/courses')({
   component: RouteComponent,
@@ -14,6 +17,8 @@ export const Route = createFileRoute('/teacher/_authenticated/courses')({
 function RouteComponent() {
   const location = useLocation()
   const isNewCoursePage = location.pathname.endsWith('/new')
+  const { t } = useTranslation('teacher');
+  const locale = useLocale();
 
   const [statusFilter, setStatusFilter] = useState<1 | 2 | 3 | 0>(0); // 2: published, 1: draft, 3: archived, 0: all
   const [pageNumber, setPageNumber] = useState(1);
@@ -50,7 +55,7 @@ function RouteComponent() {
 
   const stats = useMemo(() => [
     {
-      label: 'إجمالي الدورات',
+      label: t('courses.list.stats.total'),
       value: String(data?.data.length ?? 0),
       color: 'bg-gradient-to-r from-secondary to-primary',
       textColor: 'text-white',
@@ -58,7 +63,7 @@ function RouteComponent() {
       valueColor: 'text-white',
     },
     {
-      label: 'منشورة',
+      label: t('courses.list.stats.published'),
       value: String(data?.data.filter(item => item.status === 2).length ?? 0),
       color: 'bg-[#F0FFF4] dark:bg-emerald-950/20',
       textColor: 'text-[#0D9488] dark:text-emerald-400',
@@ -66,7 +71,7 @@ function RouteComponent() {
       valueColor: 'text-[#064E3B] dark:text-emerald-200',
     },
     {
-      label: 'مسودات',
+      label: t('courses.list.stats.drafts'),
       value: String(data?.data.filter(item => item.status === 1).length ?? 0),
       color: 'bg-[#FFFBEB] dark:bg-amber-950/20',
       textColor: 'text-[#D97706] dark:text-amber-400',
@@ -74,7 +79,7 @@ function RouteComponent() {
       valueColor: 'text-[#78350F] dark:text-amber-200',
     },
     {
-      label: 'متوقفة',
+      label: t('courses.list.stats.archived'),
       value: String(data?.data.filter(item => item.status === 3).length ?? 0),
       color: 'bg-[#F7FAFC] dark:bg-slate-900/30',
       textColor: 'text-[#475569] dark:text-slate-400',
@@ -82,14 +87,14 @@ function RouteComponent() {
       valueColor: 'text-[#0F172A] dark:text-slate-200',
     },
     {
-      label: 'إجمالي الطلاب',
+      label: t('courses.list.stats.totalStudents'),
       value: String(data?.data.reduce((acc, item) => acc + (item.registeredCount ?? 0), 0) ?? 0),
       color: 'bg-[#EBF8FF] dark:bg-blue-950/20',
       textColor: 'text-[#2563EB] dark:text-blue-400',
       borderColor: 'border-[#93C5FD] dark:border-blue-900/40',
       valueColor: 'text-[#1E3A8A] dark:text-blue-200',
     },
-  ], []);
+  ], [data, t]);
 
   if (isNewCoursePage) {
     return <Outlet />
@@ -97,7 +102,7 @@ function RouteComponent() {
 
   console.log({ data })
   return (
-    <div className={`min-h-screen transition-colors duration-300`} dir="rtl">
+    <div className={`min-h-screen transition-colors duration-300`} dir={LOCALE_DIRECTION[locale]}>
       <div className="px-4 md:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto space-y-6">
           <DashboardHeader

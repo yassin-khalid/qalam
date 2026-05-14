@@ -30,6 +30,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { showToast } from '@/lib/utils/toast';
 import { createStandardSchemaV1, parseAsJson, useQueryStates } from 'nuqs';
 import z from 'zod';
+import { useTranslation } from 'react-i18next';
+import { useLocale } from '@/lib/hooks/useLocale';
+import { LOCALE_DIRECTION } from '@/lib/i18n';
 
 const sessionItemSchema = z.object({
     durationMinutes: z.number(),
@@ -96,6 +99,9 @@ function RouteComponent() {
     const { teachingModes, sessionTypes, subjects } = Route.useLoaderData()
     const [{ courseData }, setCourseData] = useQueryStates(searchParams)
     const [editingIndex, setEditingIndex] = useState<number | null>(null)
+    const { t } = useTranslation('teacher')
+    const locale = useLocale()
+    const isAr = locale === 'ar'
 
     console.log({ courseData })
 
@@ -130,7 +136,7 @@ function RouteComponent() {
             .map((e: any) => typeof e === 'string' ? e : (e?.message ?? e?.errorMessage ?? null))
             .filter(Boolean)
         if (flat.length) return flat.join(' • ')
-        return error?.message || 'حدث خطأ غير متوقع'
+        return error?.message || t('courses.new.toasts.unexpected')
     }
 
     const isSessionValid = (s: SessionItem) => Number(s.durationMinutes) > 0
@@ -141,7 +147,7 @@ function RouteComponent() {
             if (!current || !isSessionValid(current)) {
                 showToast({
                     type: 'validation',
-                    message: 'يرجى إكمال الجلسة الحالية وحفظها قبل إضافة جلسة جديدة.',
+                    message: t('courses.new.sections.sessions.validation.completeBeforeAdd'),
                 })
                 return
             }
@@ -182,7 +188,7 @@ function RouteComponent() {
             if (current && !isSessionValid(current)) {
                 showToast({
                     type: 'validation',
-                    message: 'يرجى إكمال الجلسة الحالية وحفظها قبل تعديل جلسة أخرى.',
+                    message: t('courses.new.sections.sessions.validation.completeBeforeEdit'),
                 })
                 return
             }
@@ -195,7 +201,7 @@ function RouteComponent() {
         if (!current || !isSessionValid(current)) {
             showToast({
                 type: 'validation',
-                message: 'مدة الجلسة يجب أن تكون أكبر من صفر.',
+                message: t('courses.new.sections.sessions.validation.durationGtZero'),
             })
             return
         }
@@ -267,7 +273,7 @@ function RouteComponent() {
 
             showToast({
                 type: 'success',
-                message: 'تم إنشاء الدورة بنجاح',
+                message: t('courses.new.toasts.created'),
             })
             navigate({ to: '/teacher/courses' })
             queryClient.invalidateQueries({ queryKey: ['courses'] })
@@ -306,7 +312,7 @@ function RouteComponent() {
         onSuccess: () => {
             showToast({
                 type: 'success',
-                message: 'تم تحديث الدورة بنجاح',
+                message: t('courses.new.toasts.updated'),
             })
             navigate({ to: '/teacher/courses' })
             queryClient.invalidateQueries({ queryKey: ['courses'] })
@@ -320,20 +326,20 @@ function RouteComponent() {
     })
 
     return (
-        <div className={`min-h-screen px-3 md:px-5 lg:px-6 transition-colors duration-300 dark:bg-[#020617] bg-[#F8FAFC]`} dir="rtl">
+        <div className={`min-h-screen px-3 md:px-5 lg:px-6 transition-colors duration-300 dark:bg-[#020617] bg-[#F8FAFC]`} dir={LOCALE_DIRECTION[locale]}>
             {/* Breadcrumbs & Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-3">
                 <div className="flex items-center gap-4">
 
                     <div className="space-y-1">
                         <div className="flex items-center gap-1.5 text-slate-400 dark:text-slate-500 text-sm font-medium">
-                            <button onClick={() => { navigate({ to: '/teacher' }) }} className="hover:text-teal-600 transition-colors">لوحة التحكم</button>
-                            <ChevronLeft size={16} />
-                            <button onClick={() => { navigate({ to: '/teacher/courses' }) }} className="hover:text-teal-600 transition-colors">الدورات</button>
-                            <ChevronLeft size={16} />
-                            <span className="text-slate-600 dark:text-slate-300">إنشاء دورة</span>
+                            <button onClick={() => { navigate({ to: '/teacher' }) }} className="hover:text-teal-600 transition-colors">{t('courses.new.breadcrumbs.dashboard')}</button>
+                            {isAr ? <ChevronLeft size={16} /> : <ChevronLeft size={16} className="rotate-180" />}
+                            <button onClick={() => { navigate({ to: '/teacher/courses' }) }} className="hover:text-teal-600 transition-colors">{t('courses.new.breadcrumbs.courses')}</button>
+                            {isAr ? <ChevronLeft size={16} /> : <ChevronLeft size={16} className="rotate-180" />}
+                            <span className="text-slate-600 dark:text-slate-300">{t('courses.new.breadcrumbs.create')}</span>
                         </div>
-                        <h1 className="text-3xl font-black text-primary dark:text-secondary">إنشاء دورة</h1>
+                        <h1 className="text-3xl font-black text-primary dark:text-secondary">{t('courses.new.heading')}</h1>
                     </div>
                 </div>
 
@@ -344,7 +350,7 @@ function RouteComponent() {
                             className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary dark:bg-secondary text-white text-sm font-semibold hover:bg-primary/85 dark:hover:bg-secondary/85 transition-all shadow-md shadow-primary/20 dark:shadow-secondary/20"
                         >
                             <Pencil size={16} />
-                            حفظ التعديلات
+                            {t('courses.new.actions.saveEdits')}
                         </button>
                     ) : (
                         <>
@@ -353,14 +359,14 @@ function RouteComponent() {
                                 onClick={async () => { await createCourse() }}
                             >
                                 <Save size={16} />
-                                حفظ كمسودة
+                                {t('courses.new.actions.saveDraft')}
                             </button>
                             <button
                                 onClick={async () => { await createCourse() }}
                                 className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-secondary text-white text-sm font-semibold hover:bg-secondary/80 transition-all shadow-md shadow-teal-500/20"
                             >
                                 <Send size={16} />
-                                نشر
+                                {t('courses.new.actions.publish')}
                             </button>
                         </>
                     )}
@@ -378,45 +384,45 @@ function RouteComponent() {
                                 <Info size={18} />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold text-slate-800 dark:text-white">المعلومات الأساسية</h2>
-                                <p className="text-xs text-slate-400 font-medium">أدخل المعلومات الأساسية للدورة</p>
+                                <h2 className="text-lg font-bold text-slate-800 dark:text-white">{t('courses.new.sections.basic.title')}</h2>
+                                <p className="text-xs text-slate-400 font-medium">{t('courses.new.sections.basic.subtitle')}</p>
                             </div>
                         </div>
 
                         <div className="space-y-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                                    عنوان الدورة <span className="text-red-500">*</span>
+                                    {t('courses.new.sections.basic.titleField')} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     maxLength={200}
-                                    placeholder="مثال: دورة الفيزياء المتقدمة للصف الثالث الثانوي"
-                                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-right text-sm"
+                                    placeholder={t('courses.new.sections.basic.titlePlaceholder')}
+                                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-start text-sm"
                                     value={courseData.title}
                                     onChange={(e) => {
                                         setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, title: e.target.value } }))
                                     }}
                                 />
-                                <div className="text-left text-slate-400 dark:text-slate-500 text-sm">{courseData.title.length} / 200</div>
+                                <div className="text-end text-slate-400 dark:text-slate-500 text-sm">{courseData.title.length} / 200</div>
                             </div>
 
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                                    وصف الدورة <span className="text-red-500">*</span>
+                                    {t('courses.new.sections.basic.descriptionField')} <span className="text-red-500">*</span>
                                 </label>
                                 <textarea
-                                    placeholder="اكتب وصفاً يساعد الطالب على فهم ما سيتعلمه..."
+                                    placeholder={t('courses.new.sections.basic.descriptionPlaceholder')}
                                     rows={4}
                                     maxLength={2000}
-                                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-right resize-none text-sm"
+                                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-start resize-none text-sm"
                                     value={courseData.description}
                                     onChange={(e) => {
                                         setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, description: e.target.value } }))
                                     }}
                                 />
                                 <div className="flex justify-between text-xs">
-                                    <span className="text-slate-400 dark:text-slate-500">اكتب وصفاً يساعد الطالب على فهم ما سيتعلمه.</span>
+                                    <span className="text-slate-400 dark:text-slate-500">{t('courses.new.sections.basic.descriptionHelp')}</span>
                                     <span className="text-slate-400 dark:text-slate-500">{courseData.description.length} / 2000</span>
                                 </div>
                             </div>
@@ -430,8 +436,8 @@ function RouteComponent() {
                                 <BookOpen size={18} />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold text-slate-800 dark:text-white">اختيار المادة</h2>
-                                <p className="text-xs text-slate-400 font-medium">اختر المادة التعليمية لهذه الدورة</p>
+                                <h2 className="text-lg font-bold text-slate-800 dark:text-white">{t('courses.new.sections.subject.title')}</h2>
+                                <p className="text-xs text-slate-400 font-medium">{t('courses.new.sections.subject.subtitle')}</p>
                             </div>
                         </div>
 
@@ -439,9 +445,15 @@ function RouteComponent() {
                             subjects={subjects}
                             selectedSubjectId={courseData.teacherSubjectId}
                             onSelect={(subject) => {
+                                const subjectName = isAr ? subject.subjectNameAr : subject.subjectNameEn
+                                const domainName = subject.domainCode === 'school'
+                                    ? t('courses.new.sections.subject.domainSchool')
+                                    : subject.domainCode === 'language'
+                                        ? t('courses.new.sections.subject.domainLanguage')
+                                        : t('courses.new.sections.subject.domainSkills')
                                 setCourseData((prev) => ({
                                     ...prev,
-                                    courseData: { ...prev.courseData, teacherSubjectId: subject.id, subjectName: subject.subjectNameAr, domainName: subject.domainCode === 'school' ? 'مدرسي' : subject.domainCode === 'language' ? 'لغات' : 'مهارات' }
+                                    courseData: { ...prev.courseData, teacherSubjectId: subject.id, subjectName, domainName }
                                 }))
                             }}
                         />
@@ -454,14 +466,14 @@ function RouteComponent() {
                                 <Settings size={18} />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold text-slate-800 dark:text-white">إعدادات الجلسات</h2>
-                                <p className="text-xs text-slate-400 font-medium">حدد طريقة التدريس ونوع الجلسة</p>
+                                <h2 className="text-lg font-bold text-slate-800 dark:text-white">{t('courses.new.sections.sessions.title')}</h2>
+                                <p className="text-xs text-slate-400 font-medium">{t('courses.new.sections.sessions.subtitle')}</p>
                             </div>
                         </div>
 
                         <div className="space-y-5">
                             <div className="space-y-2.5">
-                                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">طريقة التدريس</label>
+                                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t('courses.new.sections.sessions.teachingMode')}</label>
                                 <div className="flex p-1 bg-slate-100 dark:bg-slate-950 rounded-xl w-full max-w-md">
                                     {teachingModes.map(teachingMode => (
                                         <button
@@ -469,14 +481,14 @@ function RouteComponent() {
                                             onClick={() => setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, teachingModeId: teachingMode.id } }))}
                                             className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${courseData.teachingModeId === teachingMode.id ? 'bg-white dark:bg-slate-800 text-teal-600 shadow-sm' : 'text-slate-500'}`}
                                         >
-                                            {teachingMode.nameAr}
+                                            {isAr ? teachingMode.nameAr : teachingMode.nameEn ?? teachingMode.nameAr}
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
                             <div className="space-y-2.5">
-                                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">نوع الجلسة</label>
+                                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t('courses.new.sections.sessions.sessionType')}</label>
                                 <div className="flex p-1 bg-slate-100 dark:bg-slate-950 rounded-xl w-full max-w-md">
                                     {sessionTypes.map(sessionType => (
                                         <button
@@ -484,7 +496,7 @@ function RouteComponent() {
                                             onClick={() => setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, sessionTypeId: sessionType.id } }))}
                                             className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${courseData.sessionTypeId === sessionType.id ? 'bg-white dark:bg-slate-800 text-teal-600 shadow-sm' : 'text-slate-500'}`}
                                         >
-                                            {sessionType.nameAr}
+                                            {isAr ? sessionType.nameAr : sessionType.nameEn ?? sessionType.nameAr}
                                         </button>
                                     ))}
                                 </div>
@@ -492,14 +504,14 @@ function RouteComponent() {
 
                             <div className="p-3.5 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40 flex items-center justify-between">
                                 <div>
-                                    <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">الدورة مرنة؟</h4>
-                                    <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">محددة: عدد الجلسات ومدة الجلسة ثابتة.</p>
+                                    <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">{t('courses.new.sections.sessions.flexibleTitle')}</h4>
+                                    <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">{t('courses.new.sections.sessions.flexibleSubtitle')}</p>
                                 </div>
                                 <button
                                     onClick={() => setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, isFlexible: !prev.courseData.isFlexible } }))}
                                     className={`w-11 h-6 rounded-full relative transition-all ${courseData.isFlexible ? 'dark:bg-secondary bg-primary' : 'bg-slate-300 dark:bg-slate-700'}`}
                                 >
-                                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${courseData.isFlexible ? 'left-1' : 'left-6'}`} />
+                                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${courseData.isFlexible ? 'start-1' : 'start-6'}`} />
                                 </button>
                             </div>
 
@@ -515,12 +527,12 @@ function RouteComponent() {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                             <div className="space-y-2">
                                                 <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                                                    عدد الجلسات <span className="text-red-500">*</span>
+                                                    {t('courses.new.sections.sessions.sessionsCount')} <span className="text-red-500">*</span>
                                                 </label>
                                                 <input
                                                     type="number"
                                                     min={0}
-                                                    placeholder="مثال: 10"
+                                                    placeholder={t('courses.new.sections.sessions.sessionsCountPlaceholder')}
                                                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all text-sm"
                                                     value={Number(courseData.sessionsCount)}
                                                     onChange={(e) => syncSessionsCount(Number(e.target.value))}
@@ -528,12 +540,12 @@ function RouteComponent() {
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                                                    مدة الجلسة (بالدقائق) <span className="text-red-500">*</span>
+                                                    {t('courses.new.sections.sessions.sessionDuration')} <span className="text-red-500">*</span>
                                                 </label>
                                                 <input
                                                     type="number"
                                                     min={1}
-                                                    placeholder="مثال: 60"
+                                                    placeholder={t('courses.new.sections.sessions.sessionDurationPlaceholder')}
                                                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all text-sm"
                                                     value={Number(courseData.sessionDurationMinutes)}
                                                     onChange={(e) => setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, sessionDurationMinutes: e.target.value } }))}
@@ -546,20 +558,20 @@ function RouteComponent() {
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <ListOrdered size={16} className="text-primary dark:text-secondary" />
-                                                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">تفاصيل الجلسات</label>
+                                                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t('courses.new.sections.sessions.detailsTitle')}</label>
                                                 </div>
                                                 <button
                                                     type="button"
                                                     onClick={addSession}
                                                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary dark:bg-secondary text-white hover:opacity-85 transition-all shadow-sm shadow-primary/20 dark:shadow-secondary/20"
                                                 >
-                                                    <Plus size={14} /> إضافة جلسة
+                                                    <Plus size={14} /> {t('courses.new.sections.sessions.addSession')}
                                                 </button>
                                             </div>
 
                                             {courseData.sessions.length === 0 ? (
                                                 <div className="p-4 text-center text-slate-400 dark:text-slate-500 text-sm font-medium rounded-lg border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-950/40">
-                                                    لم تتم إضافة أي جلسة بعد. حدّد عدد الجلسات أعلاه أو اضغط "إضافة جلسة".
+                                                    {t('courses.new.sections.sessions.emptyHint')}
                                                 </div>
                                             ) : (
                                                 <div className="space-y-2.5">
@@ -571,22 +583,22 @@ function RouteComponent() {
                                                             >
                                                                 <div className="flex items-center justify-between">
                                                                     <h5 className="text-sm font-bold text-primary dark:text-secondary">
-                                                                        الجلسة {idx + 1}
+                                                                        {t('courses.new.sections.sessions.sessionLabel', { number: idx + 1 })}
                                                                     </h5>
                                                                     <div className="flex items-center gap-1">
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => confirmSession(idx)}
                                                                             className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary dark:bg-secondary text-white hover:opacity-85 transition-all"
-                                                                            title="حفظ الجلسة"
+                                                                            title={t('courses.new.sections.sessions.saveSession')}
                                                                         >
-                                                                            <Check size={14} /> حفظ الجلسة
+                                                                            <Check size={14} /> {t('courses.new.sections.sessions.saveSession')}
                                                                         </button>
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => removeSession(idx)}
                                                                             className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 p-1.5 rounded-lg transition-all"
-                                                                            title="حذف الجلسة"
+                                                                            title={t('courses.new.sections.sessions.deleteSession')}
                                                                         >
                                                                             <Trash2 size={14} />
                                                                         </button>
@@ -596,7 +608,7 @@ function RouteComponent() {
                                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                                                                     <div className="space-y-1.5">
                                                                         <label className="text-xs font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                                                                            مدة الجلسة (دقيقة) <span className="text-red-500">*</span>
+                                                                            {t('courses.new.sections.sessions.fieldDuration')} <span className="text-red-500">*</span>
                                                                         </label>
                                                                         <input
                                                                             type="number"
@@ -607,29 +619,29 @@ function RouteComponent() {
                                                                         />
                                                                     </div>
                                                                     <div className="space-y-1.5">
-                                                                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400">عنوان الجلسة</label>
+                                                                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400">{t('courses.new.sections.sessions.fieldTitle')}</label>
                                                                         <input
                                                                             type="text"
                                                                             maxLength={150}
                                                                             value={session.title ?? ''}
                                                                             onChange={(e) => updateSession(idx, { title: e.target.value || null })}
-                                                                            placeholder="مثال: مقدمة"
-                                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-right text-sm"
+                                                                            placeholder={t('courses.new.sections.sessions.fieldTitlePlaceholder')}
+                                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-start text-sm"
                                                                         />
                                                                     </div>
                                                                 </div>
 
                                                                 <div className="space-y-1.5">
-                                                                    <label className="text-xs font-bold text-slate-600 dark:text-slate-400">ملاحظات</label>
+                                                                    <label className="text-xs font-bold text-slate-600 dark:text-slate-400">{t('courses.new.sections.sessions.fieldNotes')}</label>
                                                                     <textarea
                                                                         rows={2}
                                                                         maxLength={500}
                                                                         value={session.notes ?? ''}
                                                                         onChange={(e) => updateSession(idx, { notes: e.target.value || null })}
-                                                                        placeholder="ملاحظات اختيارية للطالب..."
-                                                                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-right resize-none text-sm"
+                                                                        placeholder={t('courses.new.sections.sessions.fieldNotesPlaceholder')}
+                                                                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-start resize-none text-sm"
                                                                     />
-                                                                    <div className="text-left text-[11px] text-slate-400 dark:text-slate-500">{(session.notes ?? '').length} / 500</div>
+                                                                    <div className="text-end text-[11px] text-slate-400 dark:text-slate-500">{(session.notes ?? '').length} / 500</div>
                                                                 </div>
                                                             </div>
                                                         ) : (
@@ -644,12 +656,12 @@ function RouteComponent() {
                                                                         </div>
                                                                         <div className="min-w-0 flex-1 space-y-1">
                                                                             <h5 className="text-sm font-bold text-slate-800 dark:text-white truncate">
-                                                                                {session.title?.trim() || `الجلسة ${idx + 1}`}
+                                                                                {session.title?.trim() || t('courses.new.sections.sessions.sessionLabel', { number: idx + 1 })}
                                                                             </h5>
                                                                             <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 font-medium">
                                                                                 <span className="flex items-center gap-1">
                                                                                     <Clock size={12} className="text-teal-600" />
-                                                                                    {session.durationMinutes} دقيقة
+                                                                                    {t('courses.new.sections.sessions.durationMinutes', { count: session.durationMinutes })}
                                                                                 </span>
                                                                                 {session.notes?.trim() && (
                                                                                     <span className="flex items-center gap-1 truncate">
@@ -665,7 +677,7 @@ function RouteComponent() {
                                                                             type="button"
                                                                             onClick={() => startEditSession(idx)}
                                                                             className="text-primary dark:text-secondary hover:bg-primary/5 dark:hover:bg-secondary/10 p-1.5 rounded-lg transition-all"
-                                                                            title="تعديل الجلسة"
+                                                                            title={t('courses.new.sections.sessions.editSession')}
                                                                         >
                                                                             <Pencil size={14} />
                                                                         </button>
@@ -673,7 +685,7 @@ function RouteComponent() {
                                                                             type="button"
                                                                             onClick={() => removeSession(idx)}
                                                                             className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 p-1.5 rounded-lg transition-all"
-                                                                            title="حذف الجلسة"
+                                                                            title={t('courses.new.sections.sessions.deleteSession')}
                                                                         >
                                                                             <Trash2 size={14} />
                                                                         </button>
@@ -690,21 +702,21 @@ function RouteComponent() {
                             </AnimatePresence>
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                                    أقصى عدد للطلاب {!isIndividual && <span className="text-red-500">*</span>}
+                                    {t('courses.new.sections.sessions.maxStudents')} {!isIndividual && <span className="text-red-500">*</span>}
                                 </label>
                                 <input
                                     type="number"
                                     min={2}
-                                    placeholder="مثال: 15"
+                                    placeholder={t('courses.new.sections.sessions.maxStudentsPlaceholder')}
                                     disabled={isIndividual}
                                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                     value={courseData.maxStudents ?? ''}
                                     onChange={(e) => setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, maxStudents: e.target.value === '' ? null : Number(e.target.value) } }))}
                                 />
                                 {isIndividual ? (
-                                    <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">لا ينطبق على الجلسات الفردية.</p>
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">{t('courses.new.sections.sessions.individualHint')}</p>
                                 ) : (
-                                    <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">الحد الأدنى 2 للجلسات الجماعية.</p>
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">{t('courses.new.sections.sessions.groupHint')}</p>
                                 )}
                             </div>
                         </div>
@@ -717,44 +729,44 @@ function RouteComponent() {
                                 <Banknote size={18} />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold text-slate-800 dark:text-white">التسعير</h2>
-                                <p className="text-xs text-slate-400 font-medium">حدد سعر الدورة</p>
+                                <h2 className="text-lg font-bold text-slate-800 dark:text-white">{t('courses.new.sections.pricing.title')}</h2>
+                                <p className="text-xs text-slate-400 font-medium">{t('courses.new.sections.pricing.subtitle')}</p>
                             </div>
                         </div>
 
                         <div className="space-y-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                                    السعر <span className="text-red-500">*</span>
+                                    {t('courses.new.sections.pricing.price')} <span className="text-red-500">*</span>
                                 </label>
                                 <div className="relative">
                                     <input
                                         type="number"
-                                        placeholder="0.00"
-                                        className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all text-left text-sm"
+                                        placeholder={t('courses.new.sections.pricing.pricePlaceholder')}
+                                        className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all text-end text-sm"
                                         value={Number(courseData.price)}
                                         onChange={(e) => setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, price: e.target.value } }))}
                                     />
-                                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
+                                    <span className="absolute end-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
                                         <SaudiRiyal size={16} />
                                     </span>
                                 </div>
                             </div>
 
                             <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-300 text-sm font-medium text-center">
-                                يُحتسب السعر للدورة كاملة.
+                                {t('courses.new.sections.pricing.fullCourseNote')}
                             </div>
 
                             <div className="flex items-center justify-between pt-3">
                                 <div>
-                                    <h4 className="text-sm font-bold text-slate-800 dark:text-white">إتاحة إدراجها ضمن الباقات</h4>
-                                    <p className="text-xs text-slate-400 font-medium">السماح بتضمين هذه الدورة ضمن الباقات الشاملة</p>
+                                    <h4 className="text-sm font-bold text-slate-800 dark:text-white">{t('courses.new.sections.pricing.includeInPackages')}</h4>
+                                    <p className="text-xs text-slate-400 font-medium">{t('courses.new.sections.pricing.includeInPackagesHint')}</p>
                                 </div>
                                 <button
                                     onClick={() => setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, canIncludeInPackages: !prev.courseData.canIncludeInPackages } }))}
                                     className={`w-11 h-6 rounded-full relative transition-all ${courseData.canIncludeInPackages ? 'dark:bg-secondary bg-primary' : 'bg-slate-300 dark:bg-slate-700'}`}
                                 >
-                                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${courseData.canIncludeInPackages ? 'left-1' : 'left-6'}`} />
+                                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${courseData.canIncludeInPackages ? 'start-1' : 'start-6'}`} />
                                 </button>
                             </div>
                         </div>
@@ -764,7 +776,7 @@ function RouteComponent() {
                 {/* Preview Section */}
                 <div className="lg:col-span-4">
                     <div className="sticky top-4 space-y-3">
-                        <h3 className="text-lg font-bold text-slate-800 dark:text-white">معاينة ظهور الدورة للطالب</h3>
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-white">{t('courses.new.preview.title')}</h3>
 
                         <div className="bg-white dark:bg-slate-900 rounded-xl overflow-hidden shadow-md border border-slate-100 dark:border-slate-800">
                             <div className="p-5 space-y-3">
@@ -775,10 +787,10 @@ function RouteComponent() {
                                         </div>
                                         <div>
                                             <h4 className="text-base font-bold text-slate-800 dark:text-white leading-tight">
-                                                {courseData.title || 'عنوان الدورة يظهر هنا'}
+                                                {courseData.title || t('courses.new.preview.placeholderTitle')}
                                             </h4>
                                             <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-sm text-slate-400 font-medium">أ. فاطمة العلي</span>
+                                                <span className="text-sm text-slate-400 font-medium">{t('courses.new.preview.teacherName')}</span>
                                                 <div className="flex items-center gap-1 text-amber-500 text-sm font-bold">
                                                     <Star size={12} fill="currentColor" />
                                                     <span className="leading-none">4.8</span>
@@ -788,32 +800,32 @@ function RouteComponent() {
                                         </div>
                                     </div>
                                     <div className="bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg text-slate-500 text-xs font-bold">
-                                        مطابق 95%
+                                        {t('courses.new.preview.match')}
                                     </div>
                                 </div>
 
                                 <div className="flex flex-wrap gap-1.5">
-                                    <span className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2.5 py-1 rounded-lg text-xs font-bold">{courseData.domainName || 'المجال'}</span>
-                                    <span className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2.5 py-1 rounded-lg text-xs font-bold">{courseData.subjectName || 'المادة'}</span>
-                                    <span className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2.5 py-1 rounded-lg text-xs font-bold">{sessionTypes.find(type => type.id === courseData.sessionTypeId)?.nameAr}</span>
+                                    <span className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2.5 py-1 rounded-lg text-xs font-bold">{courseData.domainName || t('courses.new.preview.domainFallback')}</span>
+                                    <span className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2.5 py-1 rounded-lg text-xs font-bold">{courseData.subjectName || t('courses.new.preview.subjectFallback')}</span>
+                                    <span className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2.5 py-1 rounded-lg text-xs font-bold">{(() => { const st = sessionTypes.find(type => type.id === courseData.sessionTypeId); return isAr ? st?.nameAr : st?.nameEn ?? st?.nameAr; })()}</span>
                                 </div>
 
                                 <div className="space-y-2.5 pt-2.5 border-t border-slate-50 dark:border-slate-800">
                                     <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                                         <Video size={14} className="text-teal-600" />
-                                        <span className="text-sm font-medium">{teachingModes.find(mode => mode.id === courseData.teachingModeId)?.nameAr}</span>
+                                        <span className="text-sm font-medium">{(() => { const m = teachingModes.find(mode => mode.id === courseData.teachingModeId); return isAr ? m?.nameAr : m?.nameEn ?? m?.nameAr; })()}</span>
                                     </div>
                                     <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                                         <Clock size={14} className="text-teal-600" />
-                                        <span className="text-sm font-medium">يبدأ في 8 رمضان</span>
+                                        <span className="text-sm font-medium">{t('courses.new.preview.startsIn')}</span>
                                     </div>
                                     <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                                         <Clock size={14} className="text-teal-600" />
-                                        <span className="text-sm font-medium">{courseData.sessionsCount || '16'} جلسة • {courseData.sessionDurationMinutes || '90'} دقيقة</span>
+                                        <span className="text-sm font-medium">{t('courses.new.preview.sessionsSummary', { sessions: courseData.sessionsCount || '16', duration: courseData.sessionDurationMinutes || '90' })}</span>
                                     </div>
                                     <div className="flex items-center gap-2 text-red-500">
                                         <Users size={14} />
-                                        <span className="text-sm font-bold">{courseData.maxStudents} مقاعد فقط</span>
+                                        <span className="text-sm font-bold">{t('courses.new.preview.seatsOnly', { count: courseData.maxStudents ?? 0 })}</span>
                                     </div>
                                 </div>
 
