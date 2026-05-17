@@ -13,11 +13,11 @@ import z from "zod";
 import { StepOneDataOmitPassword } from "./-types/StepOneData";
 import { upsertSession } from "@/lib/utils/sessionHelpers";
 import { StepTwoData, StepTwoDataOmitIssuingCountryCodeAndIdentityDocumentFileAndCertificates } from "./-types/StepTwoData";
-import { VerifyOtpSuccessResponseData } from "./-types/VerifyOtpSuccessResponseData";
+import { RegistrationStep, VerifyOtpSuccessResponseData } from "./-types/VerifyOtpSuccessResponseData";
 import { PersonalInfoSuccessResponseData } from "./-api/personalInfo";
+import { nextStepToNavigateOptions } from "@/lib/utils/teacherAuthRouting";
 
 const stepOneDataSchema = z.object({
-  userId: z.number(),
   firstName: z.string(),
   lastName: z.string(),
   email: z.string(),
@@ -38,7 +38,6 @@ const searchParams = {
   ] as const).withDefault("none"),
   phoneNumber: parseAsString.withDefault(""),
   stepOneData: parseAsJson(stepOneDataSchema).withDefault({
-    userId: 0,
     firstName: "",
     lastName: "",
     email: "",
@@ -57,6 +56,18 @@ export const Route = createFileRoute("/teacher/register")({
   ),
 });
 
+function persistRegistrationStep(step: RegistrationStep) {
+  upsertSession({
+    registrationStep: {
+      currentStep: step.currentStep,
+      nextStep: step.nextStep,
+      nextStepName: step.nextStepName,
+      isRegistrationComplete: step.isRegistrationComplete,
+      message: step.message,
+    },
+  });
+}
+
 function RouteComponent() {
   const navigate = useNavigate();
   const [{ step, authSubStep, phoneNumber, stepOneData, stepTwoData }, setSearchParams] =
@@ -71,13 +82,15 @@ function RouteComponent() {
   const handleStepTwoDataChanges = (stepTwoData: StepTwoDataOmitIssuingCountryCodeAndIdentityDocumentFileAndCertificates) => {
     setSearchParams((prev) => ({ ...prev, stepTwoData }));
   };
-  const handleStepTwoSuccess = (stepTwoData: StepTwoData) => {
-    navigate({ to: '/teacher' })
+  const handleStepTwoSuccess = (_stepTwoData: StepTwoData) => {
+    // After upload, server moves teacher to PendingVerification → go to await screen
+    navigate({ to: '/teacher/await' });
   }
   const handleNoTokenFound = () => {
     navigate({ to: '/teacher/register', search: { step: 0, authSubStep: 'phone' } })
   }
   const handlePhoneRegistered = (phoneNumber: string) => {
+    upsertSession({ phoneNumber });
     navigate({
       to: "/teacher/register",
       search: { step: 0, authSubStep: "otp", phoneNumber },
@@ -89,31 +102,18 @@ function RouteComponent() {
   });
 
   const handleOtpSuccess = (data: VerifyOtpSuccessResponseData) => {
-    localStorage.setItem('token', data.token)
-    upsertSession({ token: data.token })
-    if (data.nextStep.nextStep === 3) {
-      navigate({
-        to: "/teacher/register",
-        search: { step: 1, stepOneData },
-      });
-    }
-    if (data.nextStep.nextStep === 4) {
-      navigate({
-        to: "/teacher/register",
-        search: { step: 2 },
-      });
-    }
-    if (data.nextStep.nextStep === 0) {
-      navigate({
-        to: "/teacher/await",
-      });
-    }
+    localStorage.setItem('token', data.token);
+    upsertSession({ token: data.token });
+    persistRegistrationStep(data.nextStep);
+    navigate(nextStepToNavigateOptions(data.nextStep));
   }
 
   const handlePersonalInfoSuccess = (data: PersonalInfoSuccessResponseData) => {
-    localStorage.setItem('token', data.account.token)
-    upsertSession({ token: data.account.token })
-    navigate({ to: '/teacher/register', search: { step: 2 } })
+    // CompletePersonalInfo returns a NEW token carrying the Teacher role claim — replace it.
+    localStorage.setItem('token', data.account.token);
+    upsertSession({ token: data.account.token });
+    persistRegistrationStep(data.nextStep);
+    navigate(nextStepToNavigateOptions(data.nextStep));
   }
 
 
@@ -128,7 +128,6 @@ function RouteComponent() {
             className="absolute top-0 right-0 w-full h-full z-0"
           />
           <div className={`w-full relative z-10 mx-2 md:mx-0 px-0 md:px-8`}>
-            {/* <RegisterForm onNavigateToOTP={(phone) => { navigate({ to: '/teacher/otp', search: { phone } }) }} onNavigateToBack={() => { navigate({ to: '/teacher/login' }) }} onLogoClick={() => { navigate({ to: '/' }) }} /> */}
             <RegisterForm
               step={step}
               authSubStep={authSubStep}

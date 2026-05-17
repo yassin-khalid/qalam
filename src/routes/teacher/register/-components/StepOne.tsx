@@ -11,7 +11,7 @@ import {
 import { useForm, useStore } from "@tanstack/react-form";
 import z from "zod";
 import { StepOneDataOmitPassword } from "../-types/StepOneData";
-import { personalInfo, PersonalInfoSuccessResponseData } from "../-api/personalInfo";
+import { personalInfo, PersonalInfoError, PersonalInfoSuccessResponseData } from "../-api/personalInfo";
 import { eq, useLiveQuery } from "@tanstack/react-db";
 import { localStorageCollection } from "@/lib/db/localStorageCollection";
 import StrengthMeter from "./password/components/PasswordStrengthMeter";
@@ -43,20 +43,20 @@ const StepOne: React.FC<StepOneProps> = ({
 
     const stepOneFormSchema = useMemo(() => z
         .object({
-            userId: z.number(),
             firstName: z
                 .string()
                 .min(1, { error: t('auth.register.stepOne.validation.firstNameMin') })
-                .max(100, { error: t('auth.register.stepOne.validation.firstNameMax') }),
+                .max(50, { error: t('auth.register.stepOne.validation.firstNameMax') }),
             lastName: z
                 .string()
                 .min(1, { error: t('auth.register.stepOne.validation.lastNameMin') })
-                .max(100, { error: t('auth.register.stepOne.validation.lastNameMax') }),
+                .max(50, { error: t('auth.register.stepOne.validation.lastNameMax') }),
             email: z.email({ error: t('auth.register.stepOne.validation.emailInvalid') }),
             password: z
                 .string()
                 .min(8, { error: t('auth.register.stepOne.validation.passwordMin') })
                 .regex(/[A-Z]/, t('auth.register.stepOne.validation.passwordUppercase'))
+                .regex(/[a-z]/, t('auth.register.stepOne.validation.passwordLowercase'))
                 .regex(/[^A-Za-z0-9]/, t('auth.register.stepOne.validation.passwordSpecial'))
                 .regex(/\d/, t('auth.register.stepOne.validation.passwordNumber')),
             confirmPassword: z.string(),
@@ -87,7 +87,9 @@ const StepOne: React.FC<StepOneProps> = ({
 
     const form = useForm({
         defaultValues: {
-            ...stepOneData,
+            firstName: stepOneData.firstName ?? "",
+            lastName: stepOneData.lastName ?? "",
+            email: stepOneData.email ?? "",
             password: "",
             confirmPassword: "",
         },
@@ -95,24 +97,25 @@ const StepOne: React.FC<StepOneProps> = ({
             onChange: stepOneFormSchema,
         },
 
-        onSubmit: async (data) => {
+        onSubmit: async ({ value }) => {
             try {
-
-                const response = await personalInfo({ ...data.value, token });
-                onSuccess(response.data)
+                const { confirmPassword, ...payload } = value;
+                const response = await personalInfo({ ...payload, token });
+                onSuccess(response.data);
             } catch (error) {
-                showToast({ type: 'server', message: error instanceof Error ? error.message : t('auth.register.stepOne.toasts.unexpected') })
+                if (error instanceof PersonalInfoError) {
+                    const message = error.errors?.length ? error.errors.join('\n') : error.message;
+                    showToast({ type: 'validation', message });
+                    return;
+                }
+                showToast({ type: 'server', message: error instanceof Error ? error.message : t('auth.register.stepOne.toasts.unexpected') });
             }
-            // onSuccess(mockUserId);
         },
     });
 
     const values = useStore(form.store, (state) => state.values);
 
     useEffect(() => {
-        // remove password and confirmPassword from values
-        // and send the rest to onDataChanges
-        // so that it doesn't appear in url
         const { password, confirmPassword, ...rest } = values;
         onDataChanges(rest);
     }, [values]);

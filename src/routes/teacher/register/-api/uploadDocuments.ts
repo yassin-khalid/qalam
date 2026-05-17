@@ -6,7 +6,6 @@ type UploadDocumentsParams = | {
     isInSaudiArabia: boolean;
     identityType: number;
     documentNumber: string;
-    // issuingCountryCode: string;
     identityDocumentFile: File | null;
     certificates: {
         file: File | null;
@@ -14,7 +13,7 @@ type UploadDocumentsParams = | {
         issuer: string;
         issueDate: string;
     }[];
-}| {
+} | {
     type: 'foreign';
     token: string;
     isInSaudiArabia: boolean;
@@ -30,32 +29,48 @@ type UploadDocumentsParams = | {
     }[];
 }
 
+export interface UploadDocumentsSuccessResponse {
+    statusCode: string;
+    succeeded: true;
+    message: string;
+    data: string;
+    errors: null;
+    meta: null;
+}
 
-export async function uploadDocuments(params: UploadDocumentsParams){
+interface UploadDocumentsErrorResponse {
+    statusCode: number | string;
+    succeeded: false;
+    message: string;
+    data: null;
+    errors: string[] | null;
+    meta: null;
+}
+
+export class UploadDocumentsError extends Error {
+    statusCode: number | string;
+    errors: string[] | null;
+    constructor(error: UploadDocumentsErrorResponse) {
+        super(error.message ?? 'حدث خطأ ما');
+        this.name = 'UploadDocumentsError';
+        this.statusCode = error.statusCode;
+        this.errors = error.errors;
+    }
+}
+
+export async function uploadDocuments(params: UploadDocumentsParams): Promise<UploadDocumentsSuccessResponse> {
     const { token, type, ...rest } = params;
     const formData = objectToFormData(rest);
-    for (const [key, value] of formData.entries()) {
-  if (value instanceof File) {
-    console.log(`${key}:`, value.name, value.type, value.size, 'bytes');
-  } else {
-    console.log(`${key}:`, value);
-  }
-}
-    try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/Api/V1/Authentication/Teacher/UploadDocuments`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-            },
-            body: formData,
-        });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message ?? 'حدث خطأ ما');
-        }
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        throw error
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/Api/V1/Authentication/Teacher/UploadDocuments`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+    });
+    if (!response.ok) {
+        const error = await response.json() as UploadDocumentsErrorResponse;
+        throw new UploadDocumentsError(error);
     }
+    return await response.json() as UploadDocumentsSuccessResponse;
 }

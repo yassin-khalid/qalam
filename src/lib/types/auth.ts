@@ -7,6 +7,14 @@ export const teacherSchema = z.object({
     mobile: z.string().optional(),
 })
 
+export const registrationStepSchema = z.object({
+    currentStep: z.number(),
+    nextStep: z.number(),
+    nextStepName: z.string(),
+    isRegistrationComplete: z.boolean(),
+    message: z.string().nullable().optional(),
+})
+
 /**
  * Local storage schema for auth session
  */
@@ -16,6 +24,8 @@ export const authSessionSchema = z.object({
     token: z.string(),
     theme: z.enum(['light', 'dark']),
     locale: z.enum(['ar', 'en']).optional(),
+    phoneNumber: z.string().optional(),
+    registrationStep: registrationStepSchema.optional(),
 })
 
 export interface EmailPasswordCredentials {

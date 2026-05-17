@@ -12,9 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TestRouteRouteImport } from './routes/test/route'
 import { Route as LandingRouteRouteImport } from './routes/_landing/route'
 import { Route as TeacherSurveyRouteRouteImport } from './routes/teacher/survey/route'
+import { Route as TeacherReuploadRouteRouteImport } from './routes/teacher/reupload/route'
 import { Route as TeacherRegisterRouteRouteImport } from './routes/teacher/register/route'
 import { Route as TeacherOtpRouteRouteImport } from './routes/teacher/otp/route'
 import { Route as TeacherLoginRouteRouteImport } from './routes/teacher/login/route'
+import { Route as TeacherAwaitRouteRouteImport } from './routes/teacher/await/route'
 import { Route as TeacherAuthenticatedRouteRouteImport } from './routes/teacher/_authenticated/route'
 import { Route as LandingContactRouteRouteImport } from './routes/_landing/contact/route'
 import { Route as LandingIndexRouteRouteImport } from './routes/_landing/index/route'
@@ -35,6 +37,11 @@ const TeacherSurveyRouteRoute = TeacherSurveyRouteRouteImport.update({
   path: '/teacher/survey',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TeacherReuploadRouteRoute = TeacherReuploadRouteRouteImport.update({
+  id: '/teacher/reupload',
+  path: '/teacher/reupload',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TeacherRegisterRouteRoute = TeacherRegisterRouteRouteImport.update({
   id: '/teacher/register',
   path: '/teacher/register',
@@ -48,6 +55,11 @@ const TeacherOtpRouteRoute = TeacherOtpRouteRouteImport.update({
 const TeacherLoginRouteRoute = TeacherLoginRouteRouteImport.update({
   id: '/teacher/login',
   path: '/teacher/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeacherAwaitRouteRoute = TeacherAwaitRouteRouteImport.update({
+  id: '/teacher/await',
+  path: '/teacher/await',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TeacherAuthenticatedRouteRoute =
@@ -83,9 +95,11 @@ export interface FileRoutesByFullPath {
   '/test': typeof TestRouteRoute
   '/contact': typeof LandingContactRouteRoute
   '/teacher': typeof TeacherAuthenticatedRouteRouteWithChildren
+  '/teacher/await': typeof TeacherAwaitRouteRoute
   '/teacher/login': typeof TeacherLoginRouteRoute
   '/teacher/otp': typeof TeacherOtpRouteRoute
   '/teacher/register': typeof TeacherRegisterRouteRoute
+  '/teacher/reupload': typeof TeacherReuploadRouteRoute
   '/teacher/survey': typeof TeacherSurveyRouteRoute
   '/teacher/courses': typeof TeacherAuthenticatedCoursesRouteRouteWithChildren
   '/teacher/courses/new': typeof TeacherAuthenticatedCoursesNewRouteRoute
@@ -94,9 +108,11 @@ export interface FileRoutesByTo {
   '/test': typeof TestRouteRoute
   '/contact': typeof LandingContactRouteRoute
   '/teacher': typeof TeacherAuthenticatedRouteRouteWithChildren
+  '/teacher/await': typeof TeacherAwaitRouteRoute
   '/teacher/login': typeof TeacherLoginRouteRoute
   '/teacher/otp': typeof TeacherOtpRouteRoute
   '/teacher/register': typeof TeacherRegisterRouteRoute
+  '/teacher/reupload': typeof TeacherReuploadRouteRoute
   '/teacher/survey': typeof TeacherSurveyRouteRoute
   '/teacher/courses': typeof TeacherAuthenticatedCoursesRouteRouteWithChildren
   '/teacher/courses/new': typeof TeacherAuthenticatedCoursesNewRouteRoute
@@ -108,9 +124,11 @@ export interface FileRoutesById {
   '/_landing/': typeof LandingIndexRouteRoute
   '/_landing/contact': typeof LandingContactRouteRoute
   '/teacher/_authenticated': typeof TeacherAuthenticatedRouteRouteWithChildren
+  '/teacher/await': typeof TeacherAwaitRouteRoute
   '/teacher/login': typeof TeacherLoginRouteRoute
   '/teacher/otp': typeof TeacherOtpRouteRoute
   '/teacher/register': typeof TeacherRegisterRouteRoute
+  '/teacher/reupload': typeof TeacherReuploadRouteRoute
   '/teacher/survey': typeof TeacherSurveyRouteRoute
   '/teacher/_authenticated/courses': typeof TeacherAuthenticatedCoursesRouteRouteWithChildren
   '/teacher/_authenticated/courses/new': typeof TeacherAuthenticatedCoursesNewRouteRoute
@@ -121,9 +139,11 @@ export interface FileRouteTypes {
     | '/test'
     | '/contact'
     | '/teacher'
+    | '/teacher/await'
     | '/teacher/login'
     | '/teacher/otp'
     | '/teacher/register'
+    | '/teacher/reupload'
     | '/teacher/survey'
     | '/teacher/courses'
     | '/teacher/courses/new'
@@ -132,9 +152,11 @@ export interface FileRouteTypes {
     | '/test'
     | '/contact'
     | '/teacher'
+    | '/teacher/await'
     | '/teacher/login'
     | '/teacher/otp'
     | '/teacher/register'
+    | '/teacher/reupload'
     | '/teacher/survey'
     | '/teacher/courses'
     | '/teacher/courses/new'
@@ -145,9 +167,11 @@ export interface FileRouteTypes {
     | '/_landing/'
     | '/_landing/contact'
     | '/teacher/_authenticated'
+    | '/teacher/await'
     | '/teacher/login'
     | '/teacher/otp'
     | '/teacher/register'
+    | '/teacher/reupload'
     | '/teacher/survey'
     | '/teacher/_authenticated/courses'
     | '/teacher/_authenticated/courses/new'
@@ -157,9 +181,11 @@ export interface RootRouteChildren {
   LandingRouteRoute: typeof LandingRouteRouteWithChildren
   TestRouteRoute: typeof TestRouteRoute
   TeacherAuthenticatedRouteRoute: typeof TeacherAuthenticatedRouteRouteWithChildren
+  TeacherAwaitRouteRoute: typeof TeacherAwaitRouteRoute
   TeacherLoginRouteRoute: typeof TeacherLoginRouteRoute
   TeacherOtpRouteRoute: typeof TeacherOtpRouteRoute
   TeacherRegisterRouteRoute: typeof TeacherRegisterRouteRoute
+  TeacherReuploadRouteRoute: typeof TeacherReuploadRouteRoute
   TeacherSurveyRouteRoute: typeof TeacherSurveyRouteRoute
 }
 
@@ -186,6 +212,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeacherSurveyRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/teacher/reupload': {
+      id: '/teacher/reupload'
+      path: '/teacher/reupload'
+      fullPath: '/teacher/reupload'
+      preLoaderRoute: typeof TeacherReuploadRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/teacher/register': {
       id: '/teacher/register'
       path: '/teacher/register'
@@ -205,6 +238,13 @@ declare module '@tanstack/react-router' {
       path: '/teacher/login'
       fullPath: '/teacher/login'
       preLoaderRoute: typeof TeacherLoginRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/teacher/await': {
+      id: '/teacher/await'
+      path: '/teacher/await'
+      fullPath: '/teacher/await'
+      preLoaderRoute: typeof TeacherAwaitRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/teacher/_authenticated': {
@@ -293,9 +333,11 @@ const rootRouteChildren: RootRouteChildren = {
   LandingRouteRoute: LandingRouteRouteWithChildren,
   TestRouteRoute: TestRouteRoute,
   TeacherAuthenticatedRouteRoute: TeacherAuthenticatedRouteRouteWithChildren,
+  TeacherAwaitRouteRoute: TeacherAwaitRouteRoute,
   TeacherLoginRouteRoute: TeacherLoginRouteRoute,
   TeacherOtpRouteRoute: TeacherOtpRouteRoute,
   TeacherRegisterRouteRoute: TeacherRegisterRouteRoute,
+  TeacherReuploadRouteRoute: TeacherReuploadRouteRoute,
   TeacherSurveyRouteRoute: TeacherSurveyRouteRoute,
 }
 export const routeTree = rootRouteImport

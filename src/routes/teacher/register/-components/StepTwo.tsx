@@ -13,7 +13,8 @@ import { showToast } from "@/lib/utils/toast";
 import DatePicker from "@/lib/components/calendar/DatePicker";
 import { eq, useLiveQuery } from "@tanstack/react-db";
 import { localStorageCollection } from "@/lib/db/localStorageCollection";
-import { uploadDocuments } from "../-api/uploadDocuments";
+import { uploadDocuments, UploadDocumentsError } from "../-api/uploadDocuments";
+import { COUNTRIES } from "@/lib/constants/countries";
 import { NonSaudiIdentityTypesCollection, SaudiIdentityTypesCollection } from "../-db/collections/identityTypesCollection";
 import { useTranslation } from "react-i18next";
 import { useLocale } from "@/lib/hooks/useLocale";
@@ -55,7 +56,7 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
             isInSaudiArabia: stepTwoData.isInSaudiArabia ?? true,
             identityType: stepTwoData.identityType ?? 1,
             documentNumber: stepTwoData.documentNumber ?? "",
-            issuingCountryCode: "SA",
+            issuingCountryCode: "",
             identityDocumentFile: null as File | null,
             certificates: [] as { file: File | null; title: string; issuer: string; issueDate: string; }[],
         },
@@ -64,34 +65,32 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
         },
         onSubmit: async ({ value }) => {
             try {
-                console.log(value);
+                let response;
                 if (value.isInSaudiArabia) {
                     const { issuingCountryCode, ...rest } = value;
-                    const response = await uploadDocuments({
+                    response = await uploadDocuments({
                         type: "saudi",
                         ...rest,
                         token,
                     });
-                    console.log(response);
-                    onSuccess(response.data);
-                    showToast({
-                        type: "success",
-                        message: response.message ?? t('auth.register.stepTwo.toasts.uploadSuccess'),
-                    });
                 } else {
-                    const response = await uploadDocuments({
+                    response = await uploadDocuments({
                         type: "foreign",
                         ...value,
                         token,
                     });
-                    console.log(response);
-                    onSuccess(response.data);
-                    showToast({
-                        type: "success",
-                        message: response.message ?? t('auth.register.stepTwo.toasts.uploadSuccess'),
-                    });
                 }
+                onSuccess(value);
+                showToast({
+                    type: "success",
+                    message: response.message ?? t('auth.register.stepTwo.toasts.uploadSuccess'),
+                });
             } catch (error) {
+                if (error instanceof UploadDocumentsError) {
+                    const message = error.errors?.length ? error.errors.join('\n') : error.message;
+                    showToast({ type: "validation", message });
+                    return;
+                }
                 showToast({
                     type: "server",
                     message: error instanceof Error ? error.message : t('auth.register.stepTwo.toasts.unexpected'),
@@ -134,18 +133,24 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                             name="isInSaudiArabia"
                             children={(field) => {
                                 const isInSaudiArabia = field.state.value;
+                                const toggleResidency = (next: boolean) => {
+                                    if (next === isInSaudiArabia) return;
+                                    field.handleChange(next);
+                                    form.setFieldValue('issuingCountryCode', '');
+                                    form.setFieldValue('identityType', next ? 1 : 3);
+                                };
                                 return (
                                     <div className="flex gap-2 w-full md:w-auto">
                                         <button
                                             type="button"
-                                            onClick={() => field.handleChange(true)}
+                                            onClick={() => toggleResidency(true)}
                                             className={`flex-1 md:w-28 py-1.5 rounded-xl border-2 transition-all font-bold ${isInSaudiArabia ? "bg-[#00B5B5] border-[#00B5B5] text-white shadow-lg shadow-[#00B5B5]/20" : "border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 bg-white dark:bg-slate-800"}`}
                                         >
                                             {t('auth.register.stepTwo.yes')}
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => field.handleChange(false)}
+                                            onClick={() => toggleResidency(false)}
                                             className={`flex-1 md:w-28 py-1.5 rounded-xl border-2 transition-all font-bold ${!isInSaudiArabia ? "bg-[#00B5B5] border-[#00B5B5] text-white shadow-lg shadow-[#00B5B5]/20" : "border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 bg-white dark:bg-slate-800"}`}
                                         >
                                             {t('auth.register.stepTwo.no')}
@@ -262,6 +267,49 @@ const StepTwo: React.FC<StepTwoProps> = ({ onSuccess, stepTwoData, onDataChanges
                             />
                         </div>
                     </div>
+
+                    {/* Issuing Country (only for foreign users) */}
+                    {!form.state.values.isInSaudiArabia && (
+                        <div className="space-y-2">
+                            <label className="block text-start text-sm font-bold text-[#003049] dark:text-slate-200">
+                                {t('auth.register.stepTwo.issuingCountry')}
+                            </label>
+                            <div className="relative">
+                                <form.Field
+                                    name="issuingCountryCode"
+                                    children={(field) => {
+                                        const invalid =
+                                            field.state.meta.isTouched && !field.state.meta.isValid;
+                                        return (
+                                            <>
+                                                <select
+                                                    required
+                                                    value={field.state.value}
+                                                    onChange={(e) => field.handleChange(e.target.value)}
+                                                    className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-start text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#00B5B5] appearance-none cursor-pointer"
+                                                >
+                                                    <option value="">{t('auth.register.stepTwo.issuingCountryPlaceholder')}</option>
+                                                    {COUNTRIES.map((c) => (
+                                                        <option key={c.iso2} value={c.iso2}>
+                                                            {c.flag} {locale === 'ar' ? c.nameAr : c.nameEn}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <div className="absolute start-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#00B5B5]">
+                                                    <ChevronDownIcon className="w-4 h-4" />
+                                                </div>
+                                                {invalid && (
+                                                    <p className="text-red-500 text-sm mt-1 text-start">
+                                                        {field.state.meta.errors[0]?.message ?? ""}
+                                                    </p>
+                                                )}
+                                            </>
+                                        );
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     {/* Identity File Upload */}
                     <form.Field
