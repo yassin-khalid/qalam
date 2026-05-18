@@ -6,9 +6,11 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { showToast } from '@/lib/utils/toast';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '@/lib/hooks/useLocale';
+import QuranSubjectSelection from './QuranSubjectSelection';
 
 interface SubjectSelectionProps {
     domainId: number | null;
+    domainCode: string | null;
     groups: Group[];
     onSetGroups: (groups: Group[]) => void;
     onContinue: () => void;
@@ -26,7 +28,7 @@ const fetchFilterOptions = async (params: Record<string, any>, token: string) =>
         }
     }
 
-    const url = `${import.meta.env.VITE_API_URL}/filter-options?${query.toString()}`;
+    const url = `${import.meta.env.VITE_API_URL}/Api/V1/Education/filter-options?${query.toString()}`;
     try {
         const response = await fetch(url, {
             headers: {
@@ -43,7 +45,15 @@ const fetchFilterOptions = async (params: Record<string, any>, token: string) =>
     }
 };
 
-const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, onSetGroups, onContinue }) => {
+const SubjectSelection: React.FC<SubjectSelectionProps> = (props) => {
+    const isQuranDomain = props.domainCode?.toLowerCase() === 'quran';
+    if (isQuranDomain) {
+        return <QuranSubjectSelection domainId={props.domainId} onContinue={props.onContinue} />;
+    }
+    return <StandardSubjectSelection {...props} />;
+};
+
+const StandardSubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, domainCode, groups, onSetGroups, onContinue }) => {
     const [isAddingGroup, setIsAddingGroup] = useState(false);
     const [isAddingSubjects, setIsAddingSubjects] = useState(false);
     const [activeGroupIdx, setActiveGroupIdx] = useState<number | null>(null);
@@ -78,6 +88,25 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
     const [activeSubject, setActiveSubject] = useState<any>(null);
     const [selectedUnitIds, setSelectedUnitIds] = useState<number[]>([]);
     const [isFullSubject, setIsFullSubject] = useState(false);
+
+    // Existing server-side subjects (read-only preview for returning teachers).
+    const [existingSubjects, setExistingSubjects] = useState<any[]>([]);
+    useEffect(() => {
+        if (!token) return;
+        fetch(`${import.meta.env.VITE_API_URL}/Api/V1/Teacher/TeacherSubject`, {
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        })
+            .then(r => r.json())
+            .then(j => {
+                if (!j?.succeeded) return;
+                const filtered = (j.data ?? []).filter((s: any) =>
+                    !domainCode || typeof s.domainCode !== 'string' ||
+                    s.domainCode.toLowerCase() !== 'quran'
+                );
+                setExistingSubjects(filtered);
+            })
+            .catch(e => console.error('Existing subjects prefill failed:', e));
+    }, [token, domainCode]);
 
     useEffect(() => {
         if (isAddingGroup && domainId && editingGroupIdx === null) {
@@ -230,7 +259,7 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
             subjects: groups.flatMap(g => (g.subjects || []).map(s => {
                 const subObj: any = { subjectId: s.id, canTeachFullSubject: s.isFull };
                 if (!s.isFull && s.unitIds) {
-                    subObj.units = s.unitIds.map(uId => ({ unitId: uId, quranContentTypeId: 1, quranLevelId: null }));
+                    subObj.units = s.unitIds.map(uId => ({ unitId: uId }));
                 }
                 return subObj;
             }))
@@ -281,6 +310,29 @@ const SubjectSelection: React.FC<SubjectSelectionProps> = ({ domainId, groups, o
                 <h2 className="text-2xl font-bold text-primary dark:text-slate-100 mb-1">{t('survey.common.title')}</h2>
                 <h3 className="text-xl font-bold text-primary dark:text-slate-200 opacity-80 mt-2">{t('survey.subject.title')}</h3>
             </div>
+
+            {existingSubjects.length > 0 && (
+                <div className="mb-8 px-2">
+                    <div className="bg-green-50/40 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 rounded-2xl p-5">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-[10px] text-gray-400 dark:text-slate-500 uppercase tracking-wide">{t('survey.subject.savedCount', { count: existingSubjects.length })}</span>
+                            <h4 className="text-sm font-bold text-green-600 dark:text-green-400">{t('survey.subject.alreadyAddedTitle')}</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {existingSubjects.map((s: any) => (
+                                <div key={s.id} className="flex justify-between items-center bg-white dark:bg-slate-800/60 border border-green-100 dark:border-green-900/30 rounded-xl px-4 py-2.5">
+                                    <span className="text-[11px] text-gray-400 dark:text-slate-500">
+                                        {s.canTeachFullSubject
+                                            ? t('survey.subject.fullSubject')
+                                            : t('survey.subject.unitsCount', { count: (s.units ?? []).length })}
+                                    </span>
+                                    <span className="text-sm font-bold text-primary dark:text-slate-200">{isAr ? s.subjectNameAr : s.subjectNameEn ?? s.subjectNameAr}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="grow flex flex-col overflow-hidden">
                 {groups.length === 0 && !isAddingGroup ? (

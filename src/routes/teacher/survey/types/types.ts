@@ -115,6 +115,11 @@ export interface Exception {
   id: string;
   type: 'full_day' | 'period';
   date: string;
+  timeSlotId?: number;
   startTime?: string;
   endTime?: string;
+  reason?: string;
+  // Set when the exception is already persisted server-side. Used to call DELETE
+  // instead of just removing locally, and skipped on the POST-all-on-continue pass.
+  serverId?: number;
 }

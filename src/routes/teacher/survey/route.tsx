@@ -18,14 +18,15 @@ export const Route = createFileRoute('/teacher/survey')({
 function RouteComponent() {
     const [step, setStep] = useState<AppStep>(AppStep.DOMAIN_SELECTION);
     const [selectedDomainId, setSelectedDomainId] = useState<number | null>(null);
+    const [selectedDomainCode, setSelectedDomainCode] = useState<string | null>(null);
     const [groups, setGroups] = useState<Group[]>([]);
-    const [selectedDays, setSelectedDays] = useState<string[]>([]);
-    const [dayDetails, setDayDetails] = useState<Record<string, DayAvailability>>({});
+    const [selectedDays, setSelectedDays] = useState<number[]>([]);
+    const [dayDetails, setDayDetails] = useState<Record<number, DayAvailability>>({});
     const [exceptions, setExceptions] = useState<Exception[]>([]);
 
-    const handleSelectDomain = (id: number, name: string) => {
+    const handleSelectDomain = (id: number, code: string) => {
         setSelectedDomainId(id);
-        // setSelectedDomainName(name);
+        setSelectedDomainCode(code);
     };
 
 
@@ -48,6 +49,7 @@ function RouteComponent() {
                 {step === AppStep.SUBJECT_SELECTION && (
                     <SubjectSelection
                         domainId={selectedDomainId}
+                        domainCode={selectedDomainCode}
                         groups={groups}
                         onSetGroups={setGroups}
                         onContinue={() => setStep(AppStep.AVAILABILITY_SELECTION)}

@@ -10,7 +10,7 @@ import { useLocale } from '@/lib/hooks/useLocale';
 
 interface DomainSelectionProps {
     selectedDomainId: number | null;
-    onSelectDomain: (id: number, name: string) => void;
+    onSelectDomain: (id: number, code: string) => void;
     onContinue: () => void;
 }
 
@@ -81,7 +81,7 @@ const DomainSelection: React.FC<DomainSelectionProps> = ({
     //     fetchDomains();
     // }, [searchTerm, pageNumber, pageSize]);
 
-    const { data: domains, isFetching: loading, error } = useQuery({
+    const { data: domainsPage, isFetching: loading, error } = useQuery({
         queryKey: ['domains', pageNumber, pageSize, searchTerm],
         queryFn: async ({ queryKey: [_, pageNumber, pageSize, searchTerm] }) => {
             const response = await fetch(`${import.meta.env.VITE_API_URL}/Api/V1/Education/Domains?pageNumber=${pageNumber}&pageSize=${pageSize}&searchTerm=${searchTerm}`, {
@@ -93,9 +93,18 @@ const DomainSelection: React.FC<DomainSelectionProps> = ({
                 },
             });
             const json = await response.json();
-            return json?.data?.items as DomainFromServer[]
+            // The Domains endpoint returns data as a flat array; other paginated
+            // endpoints wrap items in data.items. Accept both shapes.
+            const items = (Array.isArray(json?.data) ? json.data : json?.data?.items ?? []) as DomainFromServer[];
+            const totalPages = Array.isArray(json?.data) ? 1 : (json?.data?.totalPages ?? 1);
+            return { items, totalPages };
         }
     });
+    const domains = domainsPage?.items;
+
+    useEffect(() => {
+        if (domainsPage?.totalPages != null) setTotalPages(domainsPage.totalPages);
+    }, [domainsPage?.totalPages]);
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(e.target.value);
@@ -105,7 +114,7 @@ const DomainSelection: React.FC<DomainSelectionProps> = ({
     const handleSelect = (id: number) => {
         const domain = domains?.find(d => d.id === id) || ALL_MOCK_ITEMS.find(d => d.id === id);
         if (domain) {
-            onSelectDomain(id, (domain as any).title || (domain as DomainFromServer).nameAr);
+            onSelectDomain(id, (domain as DomainFromServer).code ?? '');
         }
     };
 

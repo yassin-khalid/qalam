@@ -6,6 +6,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { localStorageCollection } from '@/lib/db/localStorageCollection';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '@/lib/hooks/useLocale';
+import { showToast } from '@/lib/utils/toast';
 
 interface ApiDay {
     id: number;
@@ -20,6 +21,17 @@ interface ApiTimeSlot {
     endTime: string;
     labelAr: string;
     labelEn: string;
+}
+
+interface WeeklyScheduleSlot {
+    id: number; // platform timeSlotId
+    startTime: string;
+    endTime: string;
+}
+
+interface WeeklyScheduleDay {
+    dayOfWeekId: number;
+    timeSlots: WeeklyScheduleSlot[];
 }
 
 const FALLBACK_DAYS: ApiDay[] = [
@@ -42,22 +54,25 @@ const FALLBACK_SLOTS: ApiTimeSlot[] = [
 ];
 
 interface AvailabilitySelectionProps {
-    selectedDays: string[];
-    dayDetails: Record<string, DayAvailability>;
-    onSetSelectedDays: (days: string[]) => void;
-    onSetDayDetails: (details: Record<string, DayAvailability>) => void;
+    selectedDays: number[];
+    dayDetails: Record<number, DayAvailability>;
+    onSetSelectedDays: (days: number[]) => void;
+    onSetDayDetails: (details: Record<number, DayAvailability>) => void;
     onContinue: () => void;
 }
+
+const formatTime = (timeStr: string) => timeStr.split(':').slice(0, 2).join(':');
 
 const AvailabilitySelection: React.FC<AvailabilitySelectionProps> = ({
     selectedDays, dayDetails, onSetSelectedDays, onSetDayDetails, onContinue
 }) => {
-    const [activeDay, setActiveDay] = useState<string | null>(null);
+    const [activeDay, setActiveDay] = useState<number | null>(null);
     const [isPickingTime, setIsPickingTime] = useState(false);
     const [availableDays, setAvailableDays] = useState<ApiDay[]>([]);
     const [availableTimeSlots, setAvailableTimeSlots] = useState<ApiTimeSlot[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [hasPrefilled, setHasPrefilled] = useState(false);
 
     const { data } = useLiveQuery(q => q.from({ session: localStorageCollection }))
     const token = data?.[0]?.token ?? "";
@@ -66,72 +81,96 @@ const AvailabilitySelection: React.FC<AvailabilitySelectionProps> = ({
     const isAr = locale === 'ar';
 
     useEffect(() => {
+        if (!token) return;
         const fetchData = async () => {
             setLoading(true);
-            const tryFetch = async (urls: string[]) => {
-                for (const url of urls) {
-                    try {
-                        const res = await fetch(url, {
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            }
-                        });
-                        if (res.ok) {
-                            const json = await res.json();
-                            if (json.succeeded) return json.data.items;
-                        }
-                    } catch (e) { }
-                }
+            const tryFetch = async (url: string) => {
+                try {
+                    const res = await fetch(url, {
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    });
+                    if (res.ok) {
+                        const json = await res.json();
+                        if (json.succeeded) return json.data;
+                    }
+                } catch (e) { /* swallow */ }
                 return null;
             };
-            const days = await tryFetch([`${import.meta.env.VITE_API_URL}/Api/V1/Teaching/DaysOfWeek`]);
-            setAvailableDays(days || FALLBACK_DAYS);
-            const slots = await tryFetch([`${import.meta.env.VITE_API_URL}/Api/V1/Teaching/TimeSlots`]);
-            setAvailableTimeSlots(slots || FALLBACK_SLOTS);
+
+            const [daysData, slotsData, availabilityData] = await Promise.all([
+                tryFetch(`${import.meta.env.VITE_API_URL}/Api/V1/Teaching/DaysOfWeek`),
+                tryFetch(`${import.meta.env.VITE_API_URL}/Api/V1/Teaching/TimeSlots`),
+                tryFetch(`${import.meta.env.VITE_API_URL}/Api/V1/Teacher/TeacherAvailability`),
+            ]);
+
+            setAvailableDays(daysData?.items ?? FALLBACK_DAYS);
+            setAvailableTimeSlots(slotsData?.items ?? FALLBACK_SLOTS);
+
+            // Prefill from any existing weekly schedule, but only on first load —
+            // we don't want to overwrite the user's edits if they navigate back into this step.
+            if (!hasPrefilled && availabilityData?.weeklySchedule?.length) {
+                const weekly: WeeklyScheduleDay[] = availabilityData.weeklySchedule;
+                const days = weekly.map(w => w.dayOfWeekId);
+                const details: Record<number, DayAvailability> = {};
+                for (const w of weekly) {
+                    details[w.dayOfWeekId] = {
+                        slots: w.timeSlots.map(s => ({
+                            id: String(s.id),
+                            startTime: formatTime(s.startTime),
+                            endTime: formatTime(s.endTime),
+                        })),
+                    };
+                }
+                onSetSelectedDays(days);
+                onSetDayDetails(details);
+            }
+            setHasPrefilled(true);
             setLoading(false);
         };
         fetchData();
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [token]);
 
-    const formatTime = (timeStr: string) => timeStr.split(':').slice(0, 2).join(':');
-
-    const toggleDay = (dayName: string) => {
-        if (selectedDays.includes(dayName)) {
-            onSetSelectedDays(selectedDays.filter(d => d !== dayName));
-            if (activeDay === dayName) setActiveDay(null);
+    const toggleDay = (dayId: number) => {
+        if (selectedDays.includes(dayId)) {
+            onSetSelectedDays(selectedDays.filter(d => d !== dayId));
+            if (activeDay === dayId) setActiveDay(null);
         } else {
-            onSetSelectedDays([...selectedDays, dayName]);
-            setActiveDay(dayName);
+            onSetSelectedDays([...selectedDays, dayId]);
+            setActiveDay(dayId);
         }
     };
 
-    const toggleTimeSlot = (day: string, slot: ApiTimeSlot) => {
-        const slots = dayDetails[day]?.slots || [];
+    const toggleTimeSlot = (dayId: number, slot: ApiTimeSlot) => {
+        const slots = dayDetails[dayId]?.slots || [];
+        const slotIdStr = String(slot.id);
+        const exists = slots.some(s => s.id === slotIdStr);
         const formattedStart = formatTime(slot.startTime);
         const formattedEnd = formatTime(slot.endTime);
-        const exists = slots.some(s => s.startTime === formattedStart && s.endTime === formattedEnd);
         const newSlots = exists
-            ? slots.filter(s => !(s.startTime === formattedStart && s.endTime === formattedEnd))
-            : [...slots, { id: String(slot.id), startTime: formattedStart, endTime: formattedEnd }];
-        onSetDayDetails({ ...dayDetails, [day]: { slots: newSlots } });
+            ? slots.filter(s => s.id !== slotIdStr)
+            : [...slots, { id: slotIdStr, startTime: formattedStart, endTime: formattedEnd }];
+        onSetDayDetails({ ...dayDetails, [dayId]: { slots: newSlots } });
     };
 
-    const removeSlot = (day: string, slotId: string) => {
-        const slots = dayDetails[day]?.slots || [];
-        onSetDayDetails({ ...dayDetails, [day]: { slots: slots.filter(s => s.id !== slotId) } });
+    const removeSlot = (dayId: number, slotId: string) => {
+        const slots = dayDetails[dayId]?.slots || [];
+        onSetDayDetails({ ...dayDetails, [dayId]: { slots: slots.filter(s => s.id !== slotId) } });
+    };
+
+    const dayLabel = (dayId: number): string => {
+        const d = availableDays.find(x => x.id === dayId);
+        if (!d) return String(dayId);
+        return isAr ? d.nameAr : d.nameEn;
     };
 
     const handleFinalContinue = async () => {
         setIsSubmitting(true);
         const daySchedules = selectedDays
-            .map(dayName => {
-                const day = availableDays.find(d => d.nameAr === dayName);
-                if (!day) return null;
-                const slotIds = (dayDetails[dayName]?.slots || []).map(s => Number(s.id));
-                return { dayOfWeekId: day.id, timeSlotIds: slotIds };
-            })
-            .filter((d): d is { dayOfWeekId: number; timeSlotIds: number[] } => d !== null);
+            .map(dayId => {
+                const slotIds = (dayDetails[dayId]?.slots || []).map(s => Number(s.id));
+                return { dayOfWeekId: dayId, timeSlotIds: slotIds };
+            });
 
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/Api/V1/Teacher/TeacherAvailability`, {
@@ -139,12 +178,23 @@ const AvailabilitySelection: React.FC<AvailabilitySelectionProps> = ({
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ daySchedules })
             });
-            if (!res.ok) throw new Error(`Server responded with ${res.status}`);
-            const json = await res.json();
-            if (!json.succeeded) throw new Error(json.message || 'Submission failed');
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok || !json.succeeded) {
+                showToast({
+                    type: 'server',
+                    title: t('survey.availability.toasts.saveErrorTitle'),
+                    message: json.message || t('survey.availability.toasts.saveErrorMessage'),
+                });
+                return;
+            }
             onContinue();
         } catch (error) {
             console.error("Availability submission failed:", error);
+            showToast({
+                type: 'server',
+                title: t('survey.availability.toasts.connectionErrorTitle'),
+                message: t('survey.availability.toasts.connectionErrorMessage'),
+            });
         } finally {
             setIsSubmitting(false);
         }
@@ -174,7 +224,7 @@ const AvailabilitySelection: React.FC<AvailabilitySelectionProps> = ({
                     </div>
                     <div className="grid grid-cols-2 gap-3 mb-8">
                         {availableDays.map(day => (
-                            <button key={day.id} onClick={() => toggleDay(day.nameAr)} className={`py-3.5 rounded-xl font-bold text-sm border transition-all ${selectedDays.includes(day.nameAr) ? 'bg-secondary text-white border-secondary shadow-md' : 'bg-blue-50/30 dark:bg-slate-800 text-secondary dark:text-slate-400 border-blue-100 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-slate-700'}`}>
+                            <button key={day.id} onClick={() => toggleDay(day.id)} className={`py-3.5 rounded-xl font-bold text-sm border transition-all ${selectedDays.includes(day.id) ? 'bg-secondary text-white border-secondary shadow-md' : 'bg-blue-50/30 dark:bg-slate-800 text-secondary dark:text-slate-400 border-blue-100 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-slate-700'}`}>
                                 {isAr ? day.nameAr : day.nameEn}
                             </button>
                         ))}
@@ -184,13 +234,12 @@ const AvailabilitySelection: React.FC<AvailabilitySelectionProps> = ({
                         {selectedDays.length === 0 ? (
                             <div className="text-center py-10 text-gray-300 dark:text-slate-700 text-xs italic">{t('survey.availability.pickDaysHint')}</div>
                         ) : (
-                            selectedDays.map(dayName => {
-                                const isActive = activeDay === dayName;
-                                const slotCount = dayDetails[dayName]?.slots.length || 0;
-                                const displayDay = isAr ? dayName : (availableDays.find(d => d.nameAr === dayName)?.nameEn ?? dayName);
+                            selectedDays.map(dayId => {
+                                const isActive = activeDay === dayId;
+                                const slotCount = dayDetails[dayId]?.slots.length || 0;
                                 return (
-                                    <button key={dayName} onClick={() => { setActiveDay(dayName); setIsPickingTime(false); }} className={`w-full flex justify-between items-center p-5 border rounded-2xl transition-all ${isActive ? 'border-secondary ring-1 ring-secondary/20 bg-blue-50/20 dark:bg-secondary/10' : 'border-blue-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-200 dark:hover:border-slate-600'}`}>
-                                        <span className={`text-primary dark:text-slate-200 font-bold text-base ${isActive ? 'text-secondary' : ''}`}>{displayDay}</span>
+                                    <button key={dayId} onClick={() => { setActiveDay(dayId); setIsPickingTime(false); }} className={`w-full flex justify-between items-center p-5 border rounded-2xl transition-all ${isActive ? 'border-secondary ring-1 ring-secondary/20 bg-blue-50/20 dark:bg-secondary/10' : 'border-blue-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-200 dark:hover:border-slate-600'}`}>
+                                        <span className={`text-primary dark:text-slate-200 font-bold text-base ${isActive ? 'text-secondary' : ''}`}>{dayLabel(dayId)}</span>
                                         <div className="flex items-center gap-2">
                                             {slotCount > 0 ? (
                                                 <span className="bg-blue-50 dark:bg-slate-900 text-secondary px-3 py-1 rounded-full text-[10px] font-bold border border-blue-100 dark:border-slate-700">{t('survey.availability.slotsCount', { count: slotCount })}</span>
@@ -205,12 +254,12 @@ const AvailabilitySelection: React.FC<AvailabilitySelectionProps> = ({
                     </div>
                 </div>
                 <div className="border border-secondary/20 dark:border-slate-800 rounded-[2rem] p-8 bg-white dark:bg-slate-800/20 overflow-y-auto shadow-sm">
-                    {activeDay ? (
+                    {activeDay != null ? (
                         <div className="h-full flex flex-col">
                             <div className="flex justify-between items-start mb-6">
                                 <button onClick={() => { setActiveDay(null); setIsPickingTime(false); }} className="text-gray-400 hover:text-primary"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
                                 <div className="text-start">
-                                    <h4 className="text-xl font-bold text-primary dark:text-slate-100">{t('survey.availability.dayTitle', { day: isAr ? activeDay : (availableDays.find(d => d.nameAr === activeDay)?.nameEn ?? activeDay) })}</h4>
+                                    <h4 className="text-xl font-bold text-primary dark:text-slate-100">{t('survey.availability.dayTitle', { day: dayLabel(activeDay) })}</h4>
                                     <p className="text-xs text-gray-400 dark:text-slate-500">{t('survey.availability.dayHint')}</p>
                                 </div>
                             </div>
@@ -243,7 +292,7 @@ const AvailabilitySelection: React.FC<AvailabilitySelectionProps> = ({
                                         {availableTimeSlots.map(slot => {
                                             const formattedStart = formatTime(slot.startTime);
                                             const formattedEnd = formatTime(slot.endTime);
-                                            const isSelected = dayDetails[activeDay]?.slots.some(s => s.startTime === formattedStart && s.endTime === formattedEnd);
+                                            const isSelected = dayDetails[activeDay]?.slots.some(s => s.id === String(slot.id));
                                             return (
                                                 <button key={slot.id} onClick={() => toggleTimeSlot(activeDay, slot)} className={`flex flex-col items-center p-4 border rounded-xl transition-all ${isSelected ? 'border-secondary bg-blue-50/50 dark:bg-secondary/10 shadow-sm' : 'border-gray-50 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-gray-200 dark:hover:border-slate-600'}`}>
                                                     <span className={`text-lg font-bold ${isSelected ? 'text-secondary' : 'text-primary dark:text-slate-200'}`}>{formattedStart}</span>

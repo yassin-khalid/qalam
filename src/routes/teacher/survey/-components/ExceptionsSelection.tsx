@@ -1,14 +1,36 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Exception } from '../types/types';
 import { useTranslation } from 'react-i18next';
+import { useLocale } from '@/lib/hooks/useLocale';
+import { useLiveQuery } from '@tanstack/react-db';
+import { localStorageCollection } from '@/lib/db/localStorageCollection';
+import { showToast } from '@/lib/utils/toast';
 
-const PRESET_TIME_SLOTS = [
-    { start: '08:00', end: '09:00' }, { start: '09:00', end: '10:00' }, { start: '10:00', end: '11:00' },
-    { start: '11:00', end: '12:00' }, { start: '12:00', end: '13:00' }, { start: '13:00', end: '14:00' },
-    { start: '14:00', end: '15:00' }, { start: '15:00', end: '16:00' }, { start: '16:00', end: '17:00' },
-    { start: '17:00', end: '18:00' }, { start: '18:00', end: '19:00' }, { start: '19:00', end: '20:00' }
-];
+interface WeeklySlot {
+    id: number;
+    availabilityId?: number;
+    startTime: string;
+    endTime: string;
+    labelAr?: string;
+    labelEn?: string;
+}
+
+interface WeeklyDay {
+    dayOfWeekId: number;
+    dayNameAr?: string;
+    dayNameEn?: string;
+    timeSlots: WeeklySlot[];
+}
+
+const formatTime = (s: string) => s.split(':').slice(0, 2).join(':');
+
+// Date string 'YYYY-MM-DD' → backend dayOfWeekId (1=Sun..7=Sat)
+const dayIdForDate = (dateStr: string): number => {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    return dt.getUTCDay() + 1;
+};
 
 interface ExceptionsSelectionProps {
     exceptions: Exception[];
@@ -16,19 +38,203 @@ interface ExceptionsSelectionProps {
     onContinue: () => void;
 }
 
+const EMPTY_DRAFT = (): Omit<Exception, 'id'> => ({
+    type: 'full_day',
+    date: new Date().toISOString().split('T')[0],
+    timeSlotId: undefined,
+    startTime: undefined,
+    endTime: undefined,
+    reason: '',
+});
+
 const ExceptionsSelection: React.FC<ExceptionsSelectionProps> = ({ exceptions, onSetExceptions, onContinue }) => {
-    const [isAdding, setIsAdding] = useState(false);
     const { t } = useTranslation('teacher');
-    const [draft, setDraft] = useState<Omit<Exception, 'id'>>({
-        type: 'full_day',
-        date: new Date().toISOString().split('T')[0],
-        startTime: '09:00',
-        endTime: '10:00'
-    });
+    const locale = useLocale();
+    const isAr = locale === 'ar';
+    const { data: sessionData } = useLiveQuery(q => q.from({ session: localStorageCollection }));
+    const token = sessionData?.[0]?.token ?? '';
+
+    const [weeklySchedule, setWeeklySchedule] = useState<WeeklyDay[]>([]);
+    const [loadingSchedule, setLoadingSchedule] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isAdding, setIsAdding] = useState(false);
+    const [draft, setDraft] = useState<Omit<Exception, 'id'>>(EMPTY_DRAFT);
+
+    const [hasPrefilled, setHasPrefilled] = useState(false);
+
+    useEffect(() => {
+        if (!token) return;
+        const load = async () => {
+            setLoadingSchedule(true);
+            try {
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/Api/V1/Teacher/TeacherAvailability`, {
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                });
+                if (res.ok) {
+                    const j = await res.json();
+                    if (j.succeeded) {
+                        setWeeklySchedule(j.data?.weeklySchedule ?? []);
+
+                        // Seed existing server-side exceptions into the visible list (only once).
+                        if (!hasPrefilled) {
+                            const serverExceptions = (j.data?.exceptions ?? []) as Array<{
+                                id: number;
+                                date: string;
+                                timeSlot?: { id: number; startTime: string; endTime: string };
+                                exceptionType?: string;
+                                reason?: string;
+                            }>;
+                            const prefilled: Exception[] = serverExceptions.map(e => ({
+                                id: `srv-${e.id}`,
+                                serverId: e.id,
+                                type: 'period',
+                                date: e.date,
+                                timeSlotId: e.timeSlot?.id,
+                                startTime: e.timeSlot ? formatTime(e.timeSlot.startTime) : undefined,
+                                endTime: e.timeSlot ? formatTime(e.timeSlot.endTime) : undefined,
+                                reason: e.reason || undefined,
+                            }));
+                            if (prefilled.length > 0) {
+                                onSetExceptions([...prefilled, ...exceptions.filter(x => !x.serverId)]);
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load weekly schedule:', e);
+            } finally {
+                setHasPrefilled(true);
+                setLoadingSchedule(false);
+            }
+        };
+        load();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [token]);
+
+    const slotsForDate = (date: string): WeeklySlot[] => {
+        const dayId = dayIdForDate(date);
+        return weeklySchedule.find(w => w.dayOfWeekId === dayId)?.timeSlots ?? [];
+    };
+
+    const availableSlots = slotsForDate(draft.date);
+
+    const pickSlot = (slot: WeeklySlot) => {
+        setDraft({
+            ...draft,
+            timeSlotId: slot.id,
+            startTime: formatTime(slot.startTime),
+            endTime: formatTime(slot.endTime),
+        });
+    };
+
+    const canAdd =
+        draft.type === 'full_day'
+            ? slotsForDate(draft.date).length > 0
+            : draft.timeSlotId != null;
 
     const handleAdd = () => {
-        onSetExceptions([...exceptions, { ...draft, id: (Date.now() + Math.random()).toString() }]);
+        if (!canAdd) return;
+        const newException: Exception = {
+            id: (Date.now() + Math.random()).toString(),
+            type: draft.type,
+            date: draft.date,
+            timeSlotId: draft.type === 'period' ? draft.timeSlotId : undefined,
+            startTime: draft.startTime,
+            endTime: draft.endTime,
+            reason: draft.reason?.trim() || undefined,
+        };
+        onSetExceptions([...exceptions, newException]);
         setIsAdding(false);
+        setDraft(EMPTY_DRAFT());
+    };
+
+    type ExceptionBody = { date: string; timeSlotId: number; exceptionType: 'Blocked'; reason?: string };
+
+    const buildPostBodies = (): ExceptionBody[] => {
+        const bodies: ExceptionBody[] = [];
+        for (const ex of exceptions) {
+            // Skip already-persisted exceptions — they came from GET.
+            if (ex.serverId != null) continue;
+            const base: Pick<ExceptionBody, 'exceptionType'> & { reason?: string } = {
+                exceptionType: 'Blocked',
+                ...(ex.reason ? { reason: ex.reason } : {}),
+            };
+            if (ex.type === 'full_day') {
+                for (const s of slotsForDate(ex.date)) {
+                    bodies.push({ ...base, date: ex.date, timeSlotId: s.id });
+                }
+            } else if (ex.timeSlotId != null) {
+                bodies.push({ ...base, date: ex.date, timeSlotId: ex.timeSlotId });
+            }
+        }
+        return bodies;
+    };
+
+    const removeException = async (ex: Exception) => {
+        if (ex.serverId != null) {
+            // Persisted: call DELETE then drop from local list on success.
+            try {
+                const res = await fetch(
+                    `${import.meta.env.VITE_API_URL}/Api/V1/Teacher/TeacherAvailability/exceptions/${ex.serverId}`,
+                    { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }
+                );
+                if (!res.ok) {
+                    showToast({
+                        type: 'server',
+                        title: t('survey.exceptions.toasts.saveErrorTitle'),
+                        message: t('survey.exceptions.toasts.saveErrorMessage', { count: 1 }),
+                    });
+                    return;
+                }
+            } catch (e) {
+                console.error('Exception DELETE failed:', ex, e);
+                showToast({
+                    type: 'server',
+                    title: t('survey.exceptions.toasts.saveErrorTitle'),
+                    message: t('survey.exceptions.toasts.saveErrorMessage', { count: 1 }),
+                });
+                return;
+            }
+        }
+        onSetExceptions(exceptions.filter(e => e.id !== ex.id));
+    };
+
+    const handleContinue = async () => {
+        const bodies = buildPostBodies();
+        if (bodies.length === 0) {
+            onContinue();
+            return;
+        }
+        setIsSubmitting(true);
+        let failed = 0;
+        for (const body of bodies) {
+            try {
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/Api/V1/Teacher/TeacherAvailability/exceptions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(body),
+                });
+                const j = await res.json().catch(() => ({}));
+                if (!res.ok || !j.succeeded) {
+                    // Treat "already exists" as soft success so retries are safe.
+                    const isDuplicate = typeof j.message === 'string' && j.message.toLowerCase().includes('already exists');
+                    if (!isDuplicate) failed++;
+                }
+            } catch (e) {
+                console.error('Exception POST failed:', body, e);
+                failed++;
+            }
+        }
+        setIsSubmitting(false);
+        if (failed > 0) {
+            showToast({
+                type: 'server',
+                title: t('survey.exceptions.toasts.saveErrorTitle'),
+                message: t('survey.exceptions.toasts.saveErrorMessage', { count: failed }),
+            });
+            return;
+        }
+        onContinue();
     };
 
     return (
@@ -58,7 +264,7 @@ const ExceptionsSelection: React.FC<ExceptionsSelectionProps> = ({ exceptions, o
 
                     <div className="flex justify-start">
                         <button
-                            onClick={() => setIsAdding(true)}
+                            onClick={() => { setDraft(EMPTY_DRAFT()); setIsAdding(true); }}
                             className="bg-primary text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/95 transition-all flex items-center gap-2"
                         >
                             <span>{t('survey.exceptions.addNew')}</span>
@@ -73,16 +279,24 @@ const ExceptionsSelection: React.FC<ExceptionsSelectionProps> = ({ exceptions, o
                             ) : (
                                 exceptions.map(ex => (
                                     <div key={ex.id} className="bg-white border border-gray-100 rounded-2xl p-4 flex justify-between items-center shadow-sm hover:border-secondary/20 transition-all">
-                                        <button onClick={() => onSetExceptions(exceptions.filter(e => e.id !== ex.id))} className="text-red-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-lg">
+                                        <button onClick={() => removeException(ex)} className="text-red-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-lg">
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                                         </button>
                                         <div className="text-start">
                                             <div className="flex items-center justify-start gap-2 mb-1">
                                                 <svg className={`w-4 h-4 ${ex.type === 'full_day' ? 'text-blue-400' : 'text-orange-400'}`} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" /></svg>
                                                 <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold border ${ex.type === 'full_day' ? 'bg-blue-50 text-blue-400 border-blue-100' : 'bg-orange-50 text-orange-400 border-orange-100'}`}>{ex.type === 'full_day' ? t('survey.exceptions.types.fullDay') : t('survey.exceptions.types.period')}</span>
+                                                {ex.serverId != null && (
+                                                    <span className="text-[9px] px-2 py-0.5 rounded-full font-bold border bg-green-50 text-green-500 border-green-100">{t('survey.exceptions.savedBadge')}</span>
+                                                )}
                                             </div>
                                             <p className="text-xs font-bold text-primary mb-1">{ex.date}</p>
-                                            {ex.type === 'period' && <p className="text-[10px] text-gray-400">{t('survey.exceptions.timeRange', { start: ex.startTime, end: ex.endTime })}</p>}
+                                            {ex.type === 'period' && ex.startTime && ex.endTime && (
+                                                <p className="text-[10px] text-gray-400">{t('survey.exceptions.timeRange', { start: ex.startTime, end: ex.endTime })}</p>
+                                            )}
+                                            {ex.reason && (
+                                                <p className="text-[10px] text-gray-500 mt-1 italic">“{ex.reason}”</p>
+                                            )}
                                         </div>
                                     </div>
                                 ))
@@ -111,7 +325,7 @@ const ExceptionsSelection: React.FC<ExceptionsSelectionProps> = ({ exceptions, o
                                     <input
                                         type="date"
                                         value={draft.date}
-                                        onChange={e => setDraft({ ...draft, date: e.target.value })}
+                                        onChange={e => setDraft({ ...draft, date: e.target.value, timeSlotId: undefined, startTime: undefined, endTime: undefined })}
                                         className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none text-start text-sm shadow-sm focus:border-secondary transition-all"
                                     />
                                 </div>
@@ -120,7 +334,7 @@ const ExceptionsSelection: React.FC<ExceptionsSelectionProps> = ({ exceptions, o
                                     <label className="block text-start text-xs font-bold text-primary mb-3">{t('survey.exceptions.typeLabel')}</label>
                                     <div className="space-y-3">
                                         <button
-                                            onClick={() => setDraft({ ...draft, type: 'full_day' })}
+                                            onClick={() => setDraft({ ...draft, type: 'full_day', timeSlotId: undefined, startTime: undefined, endTime: undefined })}
                                             className={`w-full p-4 border rounded-2xl flex justify-between items-center transition-all ${draft.type === 'full_day' ? 'border-secondary bg-secondary/5 ring-1 ring-secondary/20' : 'border-gray-100 hover:border-gray-200 bg-white'}`}
                                         >
                                             <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${draft.type === 'full_day' ? 'border-secondary' : 'border-gray-300'}`}>
@@ -150,26 +364,57 @@ const ExceptionsSelection: React.FC<ExceptionsSelectionProps> = ({ exceptions, o
                                 {draft.type === 'period' && (
                                     <div className="space-y-3 pt-2">
                                         <label className="block text-start text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wide">{t('survey.exceptions.choosePeriod')}</label>
-                                        <div className="grid grid-cols-2 gap-2 max-h-[150px] overflow-y-auto pe-1">
-                                            {PRESET_TIME_SLOTS.map(slot => (
-                                                <button
-                                                    key={slot.start}
-                                                    onClick={() => setDraft({ ...draft, startTime: slot.start, endTime: slot.end })}
-                                                    className={`p-3 border rounded-xl text-center transition-all ${draft.startTime === slot.start ? 'border-secondary bg-secondary/10 shadow-sm' : 'border-gray-50 hover:border-gray-100 bg-white'}`}
-                                                >
-                                                    <span className={`text-sm font-bold ${draft.startTime === slot.start ? 'text-secondary' : 'text-primary'}`}>{slot.start}</span>
-                                                    <span className="block text-[9px] text-gray-400">{t('survey.exceptions.slotTo', { end: slot.end })}</span>
-                                                </button>
-                                            ))}
-                                        </div>
+                                        {loadingSchedule ? (
+                                            <div className="text-center text-xs text-gray-300 py-6 animate-pulse">{t('survey.exceptions.loadingSlots')}</div>
+                                        ) : availableSlots.length === 0 ? (
+                                            <div className="text-center text-xs text-orange-400 py-6 bg-orange-50/40 border border-orange-100 rounded-xl">
+                                                {t('survey.exceptions.noWeeklySlotsForDay')}
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-2 gap-2 max-h-[150px] overflow-y-auto pe-1">
+                                                {availableSlots.map(slot => {
+                                                    const start = formatTime(slot.startTime);
+                                                    const end = formatTime(slot.endTime);
+                                                    const isPicked = draft.timeSlotId === slot.id;
+                                                    return (
+                                                        <button
+                                                            key={slot.id}
+                                                            onClick={() => pickSlot(slot)}
+                                                            className={`p-3 border rounded-xl text-center transition-all ${isPicked ? 'border-secondary bg-secondary/10 shadow-sm' : 'border-gray-50 hover:border-gray-100 bg-white'}`}
+                                                        >
+                                                            <span className={`text-sm font-bold ${isPicked ? 'text-secondary' : 'text-primary'}`}>{start}</span>
+                                                            <span className="block text-[9px] text-gray-400">{t('survey.exceptions.slotTo', { end })}</span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
+
+                                {draft.type === 'full_day' && !loadingSchedule && availableSlots.length === 0 && (
+                                    <div className="text-center text-xs text-orange-400 py-4 bg-orange-50/40 border border-orange-100 rounded-xl">
+                                        {t('survey.exceptions.noWeeklySlotsForDay')}
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="block text-start text-xs font-bold text-primary mb-2">{t('survey.exceptions.reasonLabel')}</label>
+                                    <input
+                                        type="text"
+                                        value={draft.reason ?? ''}
+                                        onChange={e => setDraft({ ...draft, reason: e.target.value })}
+                                        placeholder={t('survey.exceptions.reasonPlaceholder')}
+                                        className="w-full p-4 bg-gray-50 border border-gray-100 rounded-xl outline-none text-start text-sm shadow-sm focus:border-secondary transition-all"
+                                    />
+                                </div>
                             </div>
 
                             <div className="flex gap-4 mt-8 pt-6 border-t border-gray-100">
                                 <button
                                     onClick={handleAdd}
-                                    className="flex-[2] bg-primary text-white py-4 rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/95 transition-all"
+                                    disabled={!canAdd}
+                                    className={`flex-[2] py-4 rounded-xl font-bold shadow-lg transition-all ${canAdd ? 'bg-primary text-white shadow-primary/20 hover:bg-primary/95' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
                                 >
                                     {t('survey.exceptions.addException')}
                                 </button>
@@ -192,7 +437,7 @@ const ExceptionsSelection: React.FC<ExceptionsSelectionProps> = ({ exceptions, o
                             <h4 className="text-xl font-bold text-primary mb-2">{t('survey.exceptions.emptyPanelTitle')}</h4>
                             <p className="text-gray-400 text-xs leading-relaxed mb-10 px-6">{t('survey.exceptions.emptyPanelHint')}</p>
                             <button
-                                onClick={() => setIsAdding(true)}
+                                onClick={() => { setDraft(EMPTY_DRAFT()); setIsAdding(true); }}
                                 className="bg-primary text-white px-10 py-4 rounded-xl font-bold flex items-center gap-3 shadow-xl shadow-primary/20 hover:scale-105 transition-all"
                             >
                                 <span>{t('survey.exceptions.addNew')}</span>
@@ -203,13 +448,16 @@ const ExceptionsSelection: React.FC<ExceptionsSelectionProps> = ({ exceptions, o
             </div>
 
             <button
-                onClick={onContinue}
-                className="w-full py-5 rounded-[1.25rem] font-bold text-lg bg-primary text-white hover:bg-primary/95 transition-all shadow-xl shadow-primary/10 mt-4"
+                onClick={handleContinue}
+                disabled={isSubmitting}
+                className={`w-full py-5 rounded-[1.25rem] font-bold text-lg transition-all shadow-xl shadow-primary/10 mt-4 flex items-center justify-center gap-3 ${isSubmitting ? 'bg-primary/70 text-white cursor-not-allowed' : 'bg-primary text-white hover:bg-primary/95'}`}
             >
-                {t('survey.common.continue')}
+                {isSubmitting && <div className="animate-spin h-5 w-5 border-3 border-white/30 border-t-white rounded-full"></div>}
+                <span>{isSubmitting ? t('survey.common.saving') : t('survey.common.continue')}</span>
             </button>
         </div>
     );
 };
 
 export default ExceptionsSelection;
+
