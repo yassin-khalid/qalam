@@ -1,5 +1,5 @@
 import QalamLogo from "@/lib/components/QalamLogo";
-import React, { useState } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import StepOne from '../-components/StepOne'
 import StepPhone from '../-components/StepPhone'
@@ -9,13 +9,16 @@ import Stepper from "./Stepper";
 import { StepOneDataOmitPassword } from "../-types/StepOneData";
 import { VerifyOtpSuccessResponseData } from "../-types/VerifyOtpSuccessResponseData";
 import { PersonalInfoSuccessResponseData } from "../-api/personalInfo";
+import { SendOtpResponseData } from "../-api/sendOtp";
 import { StepTwoData } from "../-types/StepTwoData";
+import { useAuth } from "@/lib/contexts/auth";
 
 interface RegisterFormProps {
     step: number;
     authSubStep: 'phone' | 'otp' | 'none';
-    onPhoneRegistered: (phone: string) => void;
+    onPhoneRegistered: (phone: string, data: SendOtpResponseData) => void;
     phoneNumber?: string;
+    maskedDestination?: string;
     onBackToPhoneStep: () => void;
     onOtpSuccess: (data: VerifyOtpSuccessResponseData) => void;
     onPhoneChanges: (phone: string) => void;
@@ -28,11 +31,12 @@ interface RegisterFormProps {
     onPersonalInfoSuccess: (data: PersonalInfoSuccessResponseData) => void;
 }
 
-const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneRegistered, phoneNumber, onBackToPhoneStep, onOtpSuccess, onPhoneChanges, onStepOneDataChanges, stepOneData, onNoTokenFound, onPersonalInfoSuccess, stepTwoData, onStepTwoDataChanges, onStepTwoSuccess }) => {
+const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneRegistered, phoneNumber, maskedDestination, onBackToPhoneStep, onOtpSuccess, onPhoneChanges, onStepOneDataChanges, stepOneData, onNoTokenFound, onPersonalInfoSuccess, stepTwoData, onStepTwoDataChanges, onStepTwoSuccess }) => {
     const { t } = useTranslation('teacher');
+    const auth = useAuth();
 
-    const handlePhoneSuccess = (phone: string) => {
-        onPhoneRegistered(phone)
+    const handlePhoneSuccess = (phone: string, data: SendOtpResponseData) => {
+        onPhoneRegistered(phone, data)
     };
 
     const handleOTPSuccess = (data: VerifyOtpSuccessResponseData) => {
@@ -78,10 +82,25 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneR
             {/* Form Body */}
             <div className="px-4 md:px-10 pb-8">
                 {step === 0 && authSubStep !== 'none' && (
-                    authSubStep === 'phone' ? (
+                    auth.isLoading ? (
+                        <div className="flex items-center justify-center py-16">
+                            <div className="w-8 h-8 border-3 border-[#00B5B5] border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                    ) : auth.error || !auth.config ? (
+                        <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+                            <p className="text-red-500 text-sm">{t('auth.register.configError.message')}</p>
+                            <button
+                                type="button"
+                                onClick={auth.refetch}
+                                className="px-6 py-2 bg-[#003049] dark:bg-[#00B5B5] text-white rounded-xl font-bold hover:opacity-95 transition-all"
+                            >
+                                {t('auth.register.configError.retry')}
+                            </button>
+                        </div>
+                    ) : authSubStep === 'phone' ? (
                         <StepPhone onSuccess={handlePhoneSuccess} onPhoneChanges={onPhoneChanges} phoneNumber={phoneNumber} />
                     ) : (
-                        <StepOTP phoneNumber={`${phoneNumber}`} onSuccess={handleOTPSuccess} onBack={handleBack} />
+                        <StepOTP phoneNumber={`${phoneNumber}`} maskedDestination={maskedDestination} onSuccess={handleOTPSuccess} onBack={handleBack} />
                     )
                 )}
                 {step === 1 && (

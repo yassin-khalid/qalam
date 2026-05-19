@@ -1,26 +1,33 @@
-import React, { useState, useEffect, useRef } from "react";
-// import toast from 'react-hot-toast';
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { verifyOtp, VerifyOtpError } from "../-api/verifyOtp";
 import { VerifyOtpSuccessResponseData } from "../-types/VerifyOtpSuccessResponseData";
 import { showToast } from "@/lib/utils/toast";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "@/lib/contexts/auth";
 
 interface StepOTPProps {
   onSuccess: (data: VerifyOtpSuccessResponseData) => void;
   onBack: () => void;
   phoneNumber: string;
+  maskedDestination?: string;
 }
 
 const StepOTP: React.FC<StepOTPProps> = ({
   onSuccess,
   onBack,
   phoneNumber,
+  maskedDestination,
 }) => {
-  const [otp, setOtp] = useState(["", "", "", ""]);
-  const [timer, setTimer] = useState(299); // 4:59 in seconds
+  const { t, i18n } = useTranslation('teacher');
+  const { config } = useAuth();
+  const otpLength = config!.otp.length;
+  const expirySeconds = config!.otp.expirySeconds;
+  const teacherConfig = config!.teacher;
+
+  const [otp, setOtp] = useState<string[]>(() => Array(otpLength).fill(""));
+  const [timer, setTimer] = useState(expirySeconds);
   const [loading, setLoading] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const { t } = useTranslation('teacher');
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -35,13 +42,20 @@ const StepOTP: React.FC<StepOTPProps> = ({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const otpHint = useMemo(
+    () => (i18n.language === 'ar' ? teacherConfig.otpHintAr : teacherConfig.otpHintEn),
+    [i18n.language, teacherConfig.otpHintAr, teacherConfig.otpHintEn],
+  );
+
+  const destinationDisplay = maskedDestination ?? phoneNumber;
+
   const handleChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
     const newOtp = [...otp];
     newOtp[index] = value.slice(-1);
     setOtp(newOtp);
 
-    if (value && index < 3) {
+    if (value && index < otpLength - 1) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -55,21 +69,18 @@ const StepOTP: React.FC<StepOTPProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (otp.join("").length < 4) return;
+    if (otp.join("").length < otpLength) return;
 
     setLoading(true);
     try {
       const result = await verifyOtp({ otpCode: otp.join(""), phoneNumber });
-      console.log({ result });
       onSuccess(result.data);
-      // toast.success(result.message)
       showToast({
         type: "success",
         message: result.message ?? t('auth.register.otpStep.toasts.success'),
       });
     } catch (error) {
       if (error instanceof VerifyOtpError) {
-        console.log({ error });
         showToast({ type: "validation", message: error.message });
         return;
       }
@@ -88,8 +99,8 @@ const StepOTP: React.FC<StepOTPProps> = ({
         <h2 className="text-xl font-bold text-[#003049] dark:text-slate-100">
           {t('auth.register.otpStep.title')}
         </h2>
+        <p className="text-sm text-gray-500 dark:text-slate-400">{otpHint}</p>
         <div className="text-sm text-gray-500 dark:text-slate-400">
-          {t('auth.register.otpStep.subtitle')}
           <div className="flex items-center justify-center gap-2">
             <button
               onClick={onBack}
@@ -101,7 +112,7 @@ const StepOTP: React.FC<StepOTPProps> = ({
               className="font-bold text-[#003049] dark:text-slate-200 mt-1"
               dir="ltr"
             >
-              {phoneNumber}
+              {destinationDisplay}
             </div>
           </div>
         </div>
@@ -112,8 +123,6 @@ const StepOTP: React.FC<StepOTPProps> = ({
           {otp.map((digit, idx) => (
             <input
               key={idx}
-              // Fixed: Wrap the assignment in curly braces to ensure the ref callback returns void.
-              // Implicit returns in arrow functions for refs can cause TypeScript errors if the return value is an element.
               ref={(el) => {
                 inputRefs.current[idx] = el;
               }}
@@ -139,7 +148,7 @@ const StepOTP: React.FC<StepOTPProps> = ({
           </div>
           <button
             type="button"
-            onClick={() => setTimer(299)}
+            onClick={() => setTimer(expirySeconds)}
             className="text-[#00B5B5] font-bold text-sm hover:underline"
           >
             {t('auth.register.otpStep.resend')}
@@ -148,7 +157,7 @@ const StepOTP: React.FC<StepOTPProps> = ({
 
         <button
           type="submit"
-          disabled={loading || otp.join("").length < 4}
+          disabled={loading || otp.join("").length < otpLength}
           className="w-full bg-[#003049] dark:bg-[#00B5B5] text-white py-3 rounded-xl font-bold hover:opacity-95 transition-all shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {loading ? (

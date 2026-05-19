@@ -1,22 +1,18 @@
 
 import React, { useState, useMemo } from 'react';
 import { useForm } from '@tanstack/react-form';
-import { PhoneIcon } from 'lucide-react';
+import { MailIcon, PhoneIcon } from 'lucide-react';
 import z from 'zod';
-import { sendOtp, SendOtpError } from '../-api/sendOtp';
+import { sendOtp, SendOtpError, SendOtpResponseData } from '../-api/sendOtp';
 import { showToast } from '@/lib/utils/toast';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/lib/contexts/auth';
 
 interface CountryCode {
     code: string;
     name: string;
     flag: string;
 }
-
-type registerPhoneSchemaType = { phoneNumber: string };
-type registerPhoneSchemaErrors = {
-    [K in keyof registerPhoneSchemaType]: string;
-};
 
 const COUNTRIES: CountryCode[] = [
     { code: '+966', name: 'المملكة العربية السعودية', flag: '🇸🇦' },
@@ -42,7 +38,7 @@ const COUNTRIES: CountryCode[] = [
 ];
 
 interface StepPhoneProps {
-    onSuccess: (phone: string) => void;
+    onSuccess: (phone: string, data: SendOtpResponseData) => void;
     onPhoneChanges: (phone: string) => void;
     phoneNumber?: string;
 }
@@ -51,15 +47,38 @@ const StepPhone: React.FC<StepPhoneProps> = ({ onSuccess, onPhoneChanges, phoneN
     const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
     const [showPicker, setShowPicker] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [errors, setErrors] = useState<registerPhoneSchemaErrors>({ phoneNumber: '' });
     const { t } = useTranslation('teacher');
+    const { config } = useAuth();
+    const teacherConfig = config!.teacher;
 
-    const registerPhoneSchema = useMemo(() => z.object({
-        phoneNumber: z.string()
-            .min(9, { error: t('auth.register.phone.validation.minLength') })
-            .max(15, { error: t('auth.register.phone.validation.maxLength') })
-            .refine(val => !Number.isNaN(Number(val)), { error: t('auth.register.phone.validation.mustBeNumeric') })
-    }), [t]);
+    const registerPhoneSchema = useMemo(() => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return z.object({
+            phoneNumber: z.string(),
+            email: z.string(),
+        }).superRefine((val, ctx) => {
+            if (teacherConfig.showPhoneField) {
+                const required = teacherConfig.phoneRequired;
+                const hasValue = val.phoneNumber.length > 0;
+                if (required || hasValue) {
+                    if (val.phoneNumber.length < 9) {
+                        ctx.addIssue({ code: 'custom', path: ['phoneNumber'], message: t('auth.register.phone.validation.minLength') });
+                    } else if (val.phoneNumber.length > 15) {
+                        ctx.addIssue({ code: 'custom', path: ['phoneNumber'], message: t('auth.register.phone.validation.maxLength') });
+                    } else if (Number.isNaN(Number(val.phoneNumber))) {
+                        ctx.addIssue({ code: 'custom', path: ['phoneNumber'], message: t('auth.register.phone.validation.mustBeNumeric') });
+                    }
+                }
+            }
+            if (teacherConfig.showEmailField) {
+                const required = teacherConfig.emailRequired;
+                const hasValue = val.email.length > 0;
+                if ((required || hasValue) && !emailRegex.test(val.email)) {
+                    ctx.addIssue({ code: 'custom', path: ['email'], message: t('auth.register.phone.validation.emailInvalid') });
+                }
+            }
+        });
+    }, [t, teacherConfig.showPhoneField, teacherConfig.phoneRequired, teacherConfig.showEmailField, teacherConfig.emailRequired]);
 
     const filteredCountries = useMemo(() => {
         return COUNTRIES.filter(c =>
@@ -70,15 +89,19 @@ const StepPhone: React.FC<StepPhoneProps> = ({ onSuccess, onPhoneChanges, phoneN
     const form = useForm({
         defaultValues: {
             phoneNumber: phoneNumber ?? '',
+            email: '',
         },
         validators: {
             onChange: registerPhoneSchema,
         },
-        onSubmit: async ({ value: { phoneNumber } }) => {
+        onSubmit: async ({ value }) => {
             try {
-
-                const response = await sendOtp({ phoneNumber, countryCode: selectedCountry.code });
-                onSuccess(phoneNumber)
+                const response = await sendOtp({
+                    phoneNumber: value.phoneNumber,
+                    countryCode: selectedCountry.code,
+                    ...(teacherConfig.showEmailField && value.email ? { email: value.email } : {}),
+                });
+                onSuccess(value.phoneNumber, response.data);
                 showToast({ type: 'success', message: response.message ?? t('auth.register.phone.toasts.otpSent') })
             } catch (error) {
                 if (error instanceof SendOtpError) {
@@ -98,102 +121,135 @@ const StepPhone: React.FC<StepPhoneProps> = ({ onSuccess, onPhoneChanges, phoneN
                 form.handleSubmit();
             }}
                 className="w-full space-y-4">
-                <div className="space-y-2">
-                    <label className="block text-start text-lg font-bold text-[#003049] dark:text-slate-100 ps-1">
-                        {t('auth.register.phone.label')}
-                    </label>
-                    <div className="relative" dir="ltr">
-                        {/* Country Picker Button */}
-                        <button
-                            type="button"
-                            onClick={() => setShowPicker(!showPicker)}
-                            className="absolute right-0 top-0 h-[64px] w-[100px] flex items-center justify-center border-l border-gray-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors rounded-r-xl z-20"
-                        >
-                            <div className="flex flex-col items-center leading-none gap-1">
-                                <span className="text-[#003049] dark:text-slate-200 font-bold text-lg">{selectedCountry.code}</span>
-                                <span className="text-[10px] text-gray-500 dark:text-slate-400">{selectedCountry.flag}</span>
+                {teacherConfig.showPhoneField && (
+                    <div className="space-y-2">
+                        <label className="block text-start text-lg font-bold text-[#003049] dark:text-slate-100 ps-1">
+                            {t('auth.register.phone.label')}
+                        </label>
+                        <div className="relative" dir="ltr">
+                            <button
+                                type="button"
+                                onClick={() => setShowPicker(!showPicker)}
+                                className="absolute right-0 top-0 h-[64px] w-[100px] flex items-center justify-center border-l border-gray-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors rounded-r-xl z-20"
+                            >
+                                <div className="flex flex-col items-center leading-none gap-1">
+                                    <span className="text-[#003049] dark:text-slate-200 font-bold text-lg">{selectedCountry.code}</span>
+                                    <span className="text-[10px] text-gray-500 dark:text-slate-400">{selectedCountry.flag}</span>
+                                </div>
+                            </button>
+
+                            <form.Field name="phoneNumber" children={(field) => {
+                                const invalid = field.state.meta.isTouched && !field.state.meta.isValid;
+
+                                return <>
+                                    <div className="relative h-[64px]">
+                                        <input
+                                            type="tel"
+                                            required={teacherConfig.phoneRequired}
+                                            value={field.state.value}
+                                            onChange={e => {
+                                                field.handleChange(e.target.value);
+                                                onPhoneChanges(e.target.value);
+                                            }}
+                                            placeholder={t('auth.register.phone.placeholder')}
+                                            className={`w-full h-full pl-12 pr-[110px] bg-white dark:bg-slate-900 border-2 rounded-xl text-left text-xl text-slate-900 dark:text-white focus:outline-none focus:ring-4 transition-all placeholder:text-gray-300 dark:placeholder:text-slate-700 ${!invalid ? 'border-[#00B5B5] focus:ring-[#00B5B5]/10' : 'border-red-500 dark:border-red-500 focus:ring-red-500/10'
+                                                }`}
+                                        />
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-600 pointer-events-none">
+                                            <PhoneIcon />
+                                        </div>
+                                    </div>
+
+                                    {invalid && (
+                                        <p className="text-red-500 text-sm mt-1 text-right">
+                                            {field.state.meta.errors[0]?.message ?? ''}
+                                        </p>
+                                    )}
+                                </>
+                            }}></form.Field>
+                        </div>
+
+                        {showPicker && (
+                            <div className="absolute right-0 top-[70px] w-full max-h-[400px] flex flex-col bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] z-100 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+                                <div className="p-3 border-b border-gray-100 dark:border-slate-700 shrink-0 bg-white dark:bg-slate-800">
+                                    <input
+                                        type="text"
+                                        placeholder={t('auth.register.phone.searchCountry')}
+                                        className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-900 border-none rounded-lg text-start text-sm outline-none focus:ring-1 focus:ring-[#00B5B5]"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                                <div className="overflow-y-auto custom-scrollbar flex-1">
+                                    {filteredCountries.length > 0 ? (
+                                        filteredCountries.map((c) => (
+                                            <button
+                                                key={c.code}
+                                                type="button"
+                                                onClick={() => {
+                                                    setSelectedCountry(c);
+                                                    setShowPicker(false);
+                                                    setSearchTerm('');
+                                                }}
+                                                className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-b border-gray-50 dark:border-slate-700 last:border-0"
+                                            >
+                                                <span className="font-bold text-[#003049] dark:text-slate-200" dir="ltr">{c.code}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-gray-600 dark:text-slate-300">{c.name}</span>
+                                                    <span className="text-lg">{c.flag}</span>
+                                                </div>
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <div className="p-8 text-center text-gray-400 text-sm">{t('auth.register.phone.noResults')}</div>
+                                    )}
+                                </div>
                             </div>
-                        </button>
+                        )}
 
-                        <form.Field name="phoneNumber" children={(field) => {
+                        <p className="text-start text-gray-400 dark:text-slate-500 text-sm mt-2">
+                            {t('auth.register.phone.hint')}
+                        </p>
+                    </div>
+                )}
+
+                {teacherConfig.showEmailField && (
+                    <div className="space-y-2">
+                        <label className="block text-start text-lg font-bold text-[#003049] dark:text-slate-100 ps-1">
+                            {t('auth.register.phone.emailLabel')}
+                            {!teacherConfig.emailRequired && (
+                                <span className="text-sm font-normal text-gray-400 ms-2">
+                                    {t('auth.register.phone.emailOptional')}
+                                </span>
+                            )}
+                        </label>
+                        <form.Field name="email" children={(field) => {
                             const invalid = field.state.meta.isTouched && !field.state.meta.isValid;
-
                             return <>
                                 <div className="relative h-[64px]">
                                     <input
-                                        type="tel"
-                                        required
+                                        type="email"
+                                        required={teacherConfig.emailRequired}
                                         value={field.state.value}
-                                        onChange={e => {
-                                            field.handleChange(e.target.value);
-                                            onPhoneChanges(e.target.value);
-                                        }}
-                                        placeholder={t('auth.register.phone.placeholder')}
-                                        className={`w-full h-full pl-12 pr-[110px] bg-white dark:bg-slate-900 border-2 rounded-xl text-left text-xl text-slate-900 dark:text-white focus:outline-none focus:ring-4 transition-all placeholder:text-gray-300 dark:placeholder:text-slate-700 ${!invalid ? 'border-[#00B5B5] focus:ring-[#00B5B5]/10' : 'border-red-500 dark:border-red-500 focus:ring-red-500/10'
+                                        onChange={e => field.handleChange(e.target.value)}
+                                        placeholder={t('auth.register.phone.emailPlaceholder')}
+                                        className={`w-full h-full ps-12 pe-4 bg-white dark:bg-slate-900 border-2 rounded-xl text-start text-lg text-slate-900 dark:text-white focus:outline-none focus:ring-4 transition-all placeholder:text-gray-300 dark:placeholder:text-slate-700 ${!invalid ? 'border-[#00B5B5] focus:ring-[#00B5B5]/10' : 'border-red-500 dark:border-red-500 focus:ring-red-500/10'
                                             }`}
+                                        dir="ltr"
                                     />
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-600 pointer-events-none">
-                                        <PhoneIcon />
+                                    <div className="absolute start-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-600 pointer-events-none">
+                                        <MailIcon />
                                     </div>
                                 </div>
-
                                 {invalid && (
                                     <p className="text-red-500 text-sm mt-1 text-right">
                                         {field.state.meta.errors[0]?.message ?? ''}
                                     </p>
                                 )}
-                                {errors.phoneNumber && (
-                                    <p className="text-red-500 text-sm mt-1 text-right">
-                                        {errors.phoneNumber}
-                                    </p>
-                                )}
                             </>
                         }}></form.Field>
                     </div>
-
-                    {/* Country Selection Dropdown */}
-                    {showPicker && (
-                        <div className="absolute right-0 top-[70px] w-full max-h-[400px] flex flex-col bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] z-100 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
-                            <div className="p-3 border-b border-gray-100 dark:border-slate-700 shrink-0 bg-white dark:bg-slate-800">
-                                <input
-                                    type="text"
-                                    placeholder={t('auth.register.phone.searchCountry')}
-                                    className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-900 border-none rounded-lg text-start text-sm outline-none focus:ring-1 focus:ring-[#00B5B5]"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                            </div>
-                            <div className="overflow-y-auto custom-scrollbar flex-1">
-                                {filteredCountries.length > 0 ? (
-                                    filteredCountries.map((c) => (
-                                        <button
-                                            key={c.code}
-                                            type="button"
-                                            onClick={() => {
-                                                setSelectedCountry(c);
-                                                setShowPicker(false);
-                                                setSearchTerm('');
-                                            }}
-                                            className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-b border-gray-50 dark:border-slate-700 last:border-0"
-                                        >
-                                            <span className="font-bold text-[#003049] dark:text-slate-200" dir="ltr">{c.code}</span>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm text-gray-600 dark:text-slate-300">{c.name}</span>
-                                                <span className="text-lg">{c.flag}</span>
-                                            </div>
-                                        </button>
-                                    ))
-                                ) : (
-                                    <div className="p-8 text-center text-gray-400 text-sm">{t('auth.register.phone.noResults')}</div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    <p className="text-start text-gray-400 dark:text-slate-500 text-sm mt-2">
-                        {t('auth.register.phone.hint')}
-                    </p>
-                </div>
+                )}
 
                 <form.Subscribe selector={state => [state.canSubmit, state.isSubmitting, state.isFormValid]} children={([canSubmit, isSubmitting, isFormValid]) => {
                     return <>

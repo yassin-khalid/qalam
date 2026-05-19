@@ -15,6 +15,7 @@ import { upsertSession } from "@/lib/utils/sessionHelpers";
 import { StepTwoData, StepTwoDataOmitIssuingCountryCodeAndIdentityDocumentFileAndCertificates } from "./-types/StepTwoData";
 import { RegistrationStep, VerifyOtpSuccessResponseData } from "./-types/VerifyOtpSuccessResponseData";
 import { PersonalInfoSuccessResponseData } from "./-api/personalInfo";
+import { SendOtpResponseData } from "./-api/sendOtp";
 import { nextStepToNavigateOptions } from "@/lib/utils/teacherAuthRouting";
 
 const stepOneDataSchema = z.object({
@@ -37,6 +38,7 @@ const searchParams = {
     "none",
   ] as const).withDefault("none"),
   phoneNumber: parseAsString.withDefault(""),
+  maskedDestination: parseAsString.withDefault(""),
   stepOneData: parseAsJson(stepOneDataSchema).withDefault({
     firstName: "",
     lastName: "",
@@ -70,7 +72,7 @@ function persistRegistrationStep(step: RegistrationStep) {
 
 function RouteComponent() {
   const navigate = useNavigate();
-  const [{ step, authSubStep, phoneNumber, stepOneData, stepTwoData }, setSearchParams] =
+  const [{ step, authSubStep, phoneNumber, maskedDestination, stepOneData, stepTwoData }, setSearchParams] =
     useQueryStates(searchParams);
 
   const handlePhoneChanges = (phone: string) => {
@@ -89,11 +91,11 @@ function RouteComponent() {
   const handleNoTokenFound = () => {
     navigate({ to: '/teacher/register', search: { step: 0, authSubStep: 'phone' } })
   }
-  const handlePhoneRegistered = (phoneNumber: string) => {
+  const handlePhoneRegistered = (phoneNumber: string, data: SendOtpResponseData) => {
     upsertSession({ phoneNumber });
     navigate({
       to: "/teacher/register",
-      search: { step: 0, authSubStep: "otp", phoneNumber },
+      search: { step: 0, authSubStep: "otp", phoneNumber, maskedDestination: data.maskedDestination },
     });
   }
   const handleBackToPhoneStep = () => navigate({
@@ -132,6 +134,7 @@ function RouteComponent() {
               step={step}
               authSubStep={authSubStep}
               phoneNumber={phoneNumber ?? undefined}
+              maskedDestination={maskedDestination ?? undefined}
               onPhoneRegistered={handlePhoneRegistered}
               onBackToPhoneStep={handleBackToPhoneStep}
               onOtpSuccess={handleOtpSuccess}

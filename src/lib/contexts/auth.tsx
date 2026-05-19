@@ -1,110 +1,52 @@
-import { createContext, useEffect, useState } from "react";
-import { LoginCredentials } from "../types/auth";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { AuthConfig, authConfigSchema } from "../types/auth";
 
-export interface Teacher {
-    id: string;
-    name: string;
-    email: string;
-    mobile?: string;
-}
-export type LoginMethod = 'email' | 'mobile';
-
-export interface AuthConfig {
-    availableLoginMethods: LoginMethod[];
-    requiresOtp: boolean;
-    otpLength?: number;
+interface AuthContextValue {
+    config: AuthConfig | null;
+    isLoading: boolean;
+    error: Error | null;
+    refetch: () => void;
 }
 
-
-
-
-export interface AuthContextType {
-    isAuthenticated: boolean,
-    teacher: Teacher | null,
-    authConfig: AuthConfig | null,
-    isLoadingConfig: boolean,
-    requestOTP: (phone: string) => Promise<void>,
-    login: (credentials: LoginCredentials) => Promise<void>,
-    logout: () => void,
-    canLoginWith: (method: LoginMethod) => boolean,
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [teacher, setTeacher] = useState<Teacher | null>(null);
-    const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
-    const [isLoadingConfig, setIsLoadingConfig] = useState(false);
+    const [config, setConfig] = useState<AuthConfig | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<Error | null>(null);
 
-    useEffect(() => {
-        fetchAuthConfig();
+    const fetchConfig = useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/Api/V1/Authentication/Config`,
+            );
+            if (!response.ok) {
+                throw new Error(`Auth config request failed (${response.status})`);
+            }
+            const json = (await response.json()) as { data: unknown };
+            setConfig(authConfigSchema.parse(json.data));
+        } catch (err) {
+            setError(err instanceof Error ? err : new Error("Failed to load auth config"));
+        } finally {
+            setIsLoading(false);
+        }
     }, []);
 
-    const fetchAuthConfig = async () => {
-        try {
-            setIsLoadingConfig(true);
-            const response = await fetch('/api/auth/config');
-            const data = await response.json() as AuthConfig;
-            setAuthConfig({ availableLoginMethods: ['mobile'], requiresOtp: true, otpLength: 6 });
-        } catch (error) {
-            console.error('Error fetching auth config:', error as Error);
-            setAuthConfig({ availableLoginMethods: ['email'], requiresOtp: false });
-        } finally {
-            setIsLoadingConfig(false);
-        }
-    }
+    useEffect(() => {
+        void fetchConfig();
+    }, [fetchConfig]);
 
-    const login = async (credentials: LoginCredentials) => {
-        if (credentials.type === 'email') {
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                body: JSON.stringify(credentials),
-            });
-            const data = await response.json() as Teacher;
-            setTeacher(data);
-            localStorage.setItem('teacher', JSON.stringify(data));
-            localStorage.setItem('token', response.headers.get('Authorization') ?? '');
-        }
-        else if (credentials.type === 'mobile') {
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                body: JSON.stringify(credentials),
-            });
-            const data = await response.json() as Teacher;
-            setTeacher(data);
-            localStorage.setItem('teacher', JSON.stringify(data));
-            localStorage.setItem('token', response.headers.get('Authorization') ?? '');
-        }
-        else {
-            throw new Error('Invalid login credentials');
-        }
-    }
+    return (
+        <AuthContext.Provider value={{ config, isLoading, error, refetch: () => void fetchConfig() }}>
+            {children}
+        </AuthContext.Provider>
+    );
+}
 
-    const logout = () => {
-        setTeacher(null);
-        localStorage.removeItem('teacher');
-        localStorage.removeItem('token');
-    }
-
-    const canLoginWith = (method: LoginMethod) => {
-        return authConfig?.availableLoginMethods.includes(method) ?? false;
-    }
-
-    const requestOTP = async (phone: string) => {
-        if (!authConfig?.requiresOtp) {
-            throw new Error('OTP is not required for this login method');
-        }
-    }
-
-    const value: AuthContextType = {
-        isAuthenticated: !!teacher && !!localStorage.getItem('token'),
-        teacher,
-        authConfig,
-        isLoadingConfig,
-        requestOTP,
-        login,
-        logout,
-        canLoginWith,
-    }
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+export function useAuth() {
+    const ctx = useContext(AuthContext);
+    if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
+    return ctx;
 }

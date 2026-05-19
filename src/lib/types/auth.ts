@@ -44,3 +44,25 @@ export type LoginCredentials = EmailPasswordCredentials | MobileOTPCredentials;
 
 export type AuthSession = z.infer<typeof authSessionSchema>;
 export type Teacher = z.infer<typeof teacherSchema>;
+
+export const personaConfigSchema = z.object({
+    loginMethod: z.string(),
+    otpDelivery: z.enum(['Email', 'Sms']),
+    showPhoneField: z.boolean(),
+    showEmailField: z.boolean(),
+    phoneRequired: z.boolean(),
+    emailRequired: z.boolean(),
+    otpHintEn: z.string(),
+    otpHintAr: z.string(),
+});
+
+export const authConfigSchema = z.object({
+    teacher: personaConfigSchema,
+    otp: z.object({
+        length: z.number().int().positive(),
+        expirySeconds: z.number().int().positive(),
+    }),
+});
+
+export type PersonaConfig = z.infer<typeof personaConfigSchema>;
+export type AuthConfig = z.infer<typeof authConfigSchema>;

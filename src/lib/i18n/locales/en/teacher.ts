@@ -267,6 +267,9 @@ export default {
       phone: {
         label: "Mobile number",
         placeholder: "5xxxxxxxx",
+        emailLabel: "Email address",
+        emailPlaceholder: "example@email.com",
+        emailOptional: "(optional)",
         searchCountry: "Search country or code...",
         noResults: "No results",
         hint: "Your phone number will be used to sign in or create a new account",
@@ -276,10 +279,15 @@ export default {
           minLength: "Phone number must be at least 9 digits",
           maxLength: "Phone number must be at most 15 digits",
           mustBeNumeric: "Phone number must be numeric",
+          emailInvalid: "Please enter a valid email address",
         },
         toasts: {
           otpSent: "Verification code sent successfully",
         },
+      },
+      configError: {
+        message: "Couldn't load sign-in settings. Please try again.",
+        retry: "Retry",
       },
       otpStep: {
         title: "Verify your mobile number",

@@ -267,6 +267,9 @@ export default {
       phone: {
         label: "رقم الجوال",
         placeholder: "5xxxxxxxx",
+        emailLabel: "البريد الإلكتروني",
+        emailPlaceholder: "example@email.com",
+        emailOptional: "(اختياري)",
         searchCountry: "ابحث عن الدولة أو الرمز...",
         noResults: "لا توجد نتائج",
         hint: "سيتم استخدام رقم الهاتف لتسجيل الدخول أو إنشاء حساب جديد",
@@ -276,10 +279,15 @@ export default {
           minLength: "رقم الهاتف يجب أن يكون على الأقل 9 أرقام",
           maxLength: "رقم الهاتف يجب أن يكون على الأكثر 15 أرقام",
           mustBeNumeric: "رقم الهاتف يجب أن يكون أرقاماً",
+          emailInvalid: "يرجى إدخال بريد إلكتروني صحيح",
         },
         toasts: {
           otpSent: "تم إرسال رمز التحقق بنجاح",
         },
+      },
+      configError: {
+        message: "تعذر تحميل إعدادات تسجيل الدخول. يرجى المحاولة مرة أخرى.",
+        retry: "إعادة المحاولة",
       },
       otpStep: {
         title: "تحقق من رقم جوالك",

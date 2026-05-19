@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../hooks/useTheme';
 import { useLocale } from '../hooks/useLocale';
 import { LOCALE_DIRECTION } from '../i18n';
+import { AuthProvider } from '../contexts/auth';
 
 export function ClientRoot({ children }: { children: React.ReactNode }) {
     const theme = useTheme()
@@ -28,5 +29,5 @@ export function ClientRoot({ children }: { children: React.ReactNode }) {
         }
     }, [locale, i18n]);
 
-    return <>{children}</>;
+    return <AuthProvider>{children}</AuthProvider>;
 }

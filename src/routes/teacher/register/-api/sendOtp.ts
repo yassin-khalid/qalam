@@ -1,6 +1,13 @@
 interface SendOtpParams {
     phoneNumber: string;
     countryCode: string;
+    email?: string;
+}
+
+export interface SendOtpResponseData {
+    otpSentTo: 'email' | 'sms';
+    maskedDestination: string;
+    isNewUser: boolean;
 }
 
 type SendOtpBadRequestResponse = {
@@ -16,7 +23,7 @@ type SendOtpSuccessResponse = {
   statusCode: 200,
   succeeded: true,
   message: string,
-  data: null,
+  data: SendOtpResponseData,
   errors: null,
   meta: null
 }
@@ -49,7 +56,7 @@ export class SendOtpError extends Error {
 
 export async function sendOtp(params: SendOtpParams): Promise<SendOtpSuccessResponse> {
     try {
-        
+
     const response = await fetch(`${import.meta.env.VITE_API_URL}/Api/V1/Authentication/Teacher/LoginOrRegister`, {
         method: 'POST',
         headers: {
