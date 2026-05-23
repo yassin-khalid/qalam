@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
     ChevronLeft,
     Save,
@@ -16,13 +16,28 @@ import {
     Star,
     SaudiRiyal,
     Plus,
-    Trash2,
     ListOrdered,
-    Check,
-    StickyNote
 } from 'lucide-react';
 
+import {
+    DndContext,
+    KeyboardSensor,
+    PointerSensor,
+    closestCenter,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    SortableContext,
+    arrayMove,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+
 import { SubjectSelector } from './-components/SubjectSelector';
+import { PublishValidationDialog, type PublishIssue } from './-components/PublishValidationDialog';
+import { SortableSessionRow } from './-components/SortableSessionRow';
 import { teachingModeQueryOptions } from './-queries/teachingModeQueryOptions';
 import { sessionTypesQueryOptions } from './-queries/sessionTypesQueryOptions';
 import { subjectsQueryOptions } from './-queries/subjectsQueryOptions';
@@ -34,10 +49,41 @@ import { useTranslation } from 'react-i18next';
 import { useLocale } from '@/lib/hooks/useLocale';
 import { LOCALE_DIRECTION } from '@/lib/i18n';
 
+const sessionAttachmentSchema = z.object({
+    id: z.string(),
+    fileName: z.string(),
+    fileType: z.enum(['pdf', 'image', 'video', 'doc', 'other']),
+    sizeBytes: z.number(),
+})
+export type SessionAttachment = z.infer<typeof sessionAttachmentSchema>
+
+const sessionHomeworkSchema = z.object({
+    id: z.string(),
+    title: z.string(),
+    description: z.string().nullable(),
+    // Relative offset because the absolute due date is unknown until the
+    // course is scheduled per enrollment.
+    dueOffsetDays: z.number().nullable(),
+})
+export type SessionHomeworkItem = z.infer<typeof sessionHomeworkSchema>
+
 const sessionItemSchema = z.object({
+    // Client-generated id used as the stable key for drag-and-drop reorder.
+    // Persisted in URL state so the order survives reload.
+    id: z.string(),
     durationMinutes: z.number(),
     title: z.string().nullable(),
-    notes: z.string().nullable()
+    notes: z.string().nullable(),
+    // BRD §4.1 — Fixed course sessions also carry academic scope. These are
+    // optional today (backend doesn't accept them yet) but already persist in
+    // the URL state so the wizard survives reload.
+    description: z.string().nullable(),
+    unitId: z.number().nullable(),
+    unitName: z.string().nullable(),
+    lessonId: z.number().nullable(),
+    lessonName: z.string().nullable(),
+    attachments: z.array(sessionAttachmentSchema),
+    homework: z.array(sessionHomeworkSchema),
 })
 
 type SessionItem = z.infer<typeof sessionItemSchema>
@@ -99,12 +145,13 @@ function RouteComponent() {
     const { teachingModes, sessionTypes, subjects } = Route.useLoaderData()
     const [{ courseData }, setCourseData] = useQueryStates(searchParams)
     const [editingIndex, setEditingIndex] = useState<number | null>(null)
+    const [publishOpen, setPublishOpen] = useState(false)
     const { t } = useTranslation('teacher')
     const locale = useLocale()
     const isAr = locale === 'ar'
 
-    console.log({ courseData })
-
+    const newSessionId = () =>
+        `sess-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
     const navigate = useNavigate()
     const queryClient = useQueryClient()
@@ -156,7 +203,19 @@ function RouteComponent() {
             const defaultDuration = Number(prev.courseData.sessionDurationMinutes) || 60
             const next = [
                 ...prev.courseData.sessions,
-                { durationMinutes: defaultDuration, title: null, notes: null },
+                {
+                    id: newSessionId(),
+                    durationMinutes: defaultDuration,
+                    title: null,
+                    notes: null,
+                    description: null,
+                    unitId: null,
+                    unitName: null,
+                    lessonId: null,
+                    lessonName: null,
+                    attachments: [],
+                    homework: [],
+                },
             ]
             return {
                 ...prev,
@@ -178,6 +237,51 @@ function RouteComponent() {
             if (prev === null) return null
             if (prev === index) return null
             if (prev > index) return prev - 1
+            return prev
+        })
+    }
+
+    const dndSensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    )
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event
+        if (!over || active.id === over.id) return
+        setCourseData((prev) => {
+            const current = prev.courseData.sessions
+            const from = current.findIndex((s) => s.id === active.id)
+            const to = current.findIndex((s) => s.id === over.id)
+            if (from < 0 || to < 0) return prev
+            const next = arrayMove(current, from, to)
+            return { ...prev, courseData: { ...prev.courseData, sessions: next } }
+        })
+        setEditingIndex((prev) => {
+            // Editing is disabled during drag, but in case the editor was open
+            // on a different row, recompute the pointer relative to the swap.
+            if (prev === null) return null
+            return prev
+        })
+    }
+
+    const moveSession = (index: number, direction: -1 | 1) => {
+        setCourseData((prev) => {
+            const current = prev.courseData.sessions
+            const target = index + direction
+            if (target < 0 || target >= current.length) return prev
+            const next = current.slice()
+            ;[next[index], next[target]] = [next[target], next[index]]
+            return {
+                ...prev,
+                courseData: { ...prev.courseData, sessions: next },
+            }
+        })
+        // Keep the editing focus on the moved row so the user keeps working on it.
+        setEditingIndex((prev) => {
+            if (prev === null) return null
+            if (prev === index) return index + direction
+            if (prev === index + direction) return index
             return prev
         })
     }
@@ -210,7 +314,7 @@ function RouteComponent() {
 
     const updateSession = (
         index: number,
-        patch: Partial<{ durationMinutes: number; title: string | null; notes: string | null }>,
+        patch: Partial<SessionItem>,
     ) => {
         setCourseData((prev) => {
             const next = prev.courseData.sessions.map((s, i) => i === index ? { ...s, ...patch } : s)
@@ -228,9 +332,17 @@ function RouteComponent() {
                 next = [
                     ...current,
                     ...Array.from({ length: newCount - current.length }, () => ({
+                        id: newSessionId(),
                         durationMinutes: defaultDuration,
                         title: null as string | null,
                         notes: null as string | null,
+                        description: null as string | null,
+                        unitId: null as number | null,
+                        unitName: null as string | null,
+                        lessonId: null as number | null,
+                        lessonName: null as string | null,
+                        attachments: [] as SessionAttachment[],
+                        homework: [] as SessionHomeworkItem[],
                     })),
                 ]
             } else if (newCount < current.length) {
@@ -246,7 +358,68 @@ function RouteComponent() {
         setEditingIndex((prev) => (prev !== null && prev >= newCount ? null : prev))
     }
 
-    const { mutateAsync: createCourse } = useMutation({
+    const publishIssues = useMemo<PublishIssue[]>(() => {
+        const out: PublishIssue[] = []
+        if (!courseData.title.trim()) {
+            out.push({ code: 'title', severity: 'error', message: t('courses.new.publish.issues.title') })
+        }
+        if (!courseData.description.trim()) {
+            out.push({ code: 'description', severity: 'error', message: t('courses.new.publish.issues.description') })
+        }
+        if (!courseData.teacherSubjectId) {
+            out.push({ code: 'subject', severity: 'error', message: t('courses.new.publish.issues.subject') })
+        }
+        if (Number(courseData.price) <= 0) {
+            out.push({ code: 'price', severity: 'error', message: t('courses.new.publish.issues.price') })
+        }
+        if (!courseData.isFlexible) {
+            if (!Number(courseData.sessionDurationMinutes) || Number(courseData.sessionDurationMinutes) <= 0) {
+                out.push({ code: 'duration', severity: 'error', message: t('courses.new.publish.issues.duration') })
+            }
+            if (courseData.sessionsCount <= 0) {
+                out.push({ code: 'sessionsCount', severity: 'error', message: t('courses.new.publish.issues.sessionsCount') })
+            }
+            if (courseData.sessions.length !== courseData.sessionsCount) {
+                out.push({
+                    code: 'sessions-mismatch',
+                    severity: 'error',
+                    message: t('courses.new.publish.issues.sessionsMismatch', {
+                        expected: courseData.sessionsCount,
+                        actual: courseData.sessions.length,
+                    }),
+                })
+            }
+            courseData.sessions.forEach((s, idx) => {
+                if (!Number(s.durationMinutes) || Number(s.durationMinutes) <= 0) {
+                    out.push({
+                        code: `session-${idx}-duration`,
+                        severity: 'error',
+                        message: t('courses.new.publish.issues.sessionDuration', { number: idx + 1 }),
+                    })
+                }
+                if (!s.title?.trim()) {
+                    out.push({
+                        code: `session-${idx}-title`,
+                        severity: 'warning',
+                        message: t('courses.new.publish.issues.sessionTitle', { number: idx + 1 }),
+                    })
+                }
+                if (!s.unitId) {
+                    out.push({
+                        code: `session-${idx}-unit`,
+                        severity: 'warning',
+                        message: t('courses.new.publish.issues.sessionUnit', { number: idx + 1 }),
+                    })
+                }
+            })
+        }
+        if (!isIndividual && (courseData.maxStudents === null || courseData.maxStudents < 2)) {
+            out.push({ code: 'max-students', severity: 'error', message: t('courses.new.publish.issues.maxStudents') })
+        }
+        return out
+    }, [courseData, isIndividual, t])
+
+    const { mutateAsync: createCourse, isPending: isPublishPending } = useMutation({
         mutationFn: async () => {
             const token = localStorage.getItem('token')
             if (!token) {
@@ -332,7 +505,7 @@ function RouteComponent() {
                 <div className="flex items-center gap-4">
 
                     <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 text-slate-400 dark:text-slate-500 text-sm font-medium">
+                        <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-sm font-medium">
                             <button onClick={() => { navigate({ to: '/teacher' }) }} className="hover:text-teal-600 transition-colors">{t('courses.new.breadcrumbs.dashboard')}</button>
                             {isAr ? <ChevronLeft size={16} /> : <ChevronLeft size={16} className="rotate-180" />}
                             <button onClick={() => { navigate({ to: '/teacher/courses' }) }} className="hover:text-teal-600 transition-colors">{t('courses.new.breadcrumbs.courses')}</button>
@@ -362,7 +535,7 @@ function RouteComponent() {
                                 {t('courses.new.actions.saveDraft')}
                             </button>
                             <button
-                                onClick={async () => { await createCourse() }}
+                                onClick={() => setPublishOpen(true)}
                                 className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-secondary text-white text-sm font-semibold hover:bg-secondary/80 transition-all shadow-md shadow-teal-500/20"
                             >
                                 <Send size={16} />
@@ -385,7 +558,7 @@ function RouteComponent() {
                             </div>
                             <div>
                                 <h2 className="text-lg font-bold text-slate-800 dark:text-white">{t('courses.new.sections.basic.title')}</h2>
-                                <p className="text-xs text-slate-400 font-medium">{t('courses.new.sections.basic.subtitle')}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t('courses.new.sections.basic.subtitle')}</p>
                             </div>
                         </div>
 
@@ -398,13 +571,13 @@ function RouteComponent() {
                                     type="text"
                                     maxLength={200}
                                     placeholder={t('courses.new.sections.basic.titlePlaceholder')}
-                                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-start text-sm"
+                                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-start text-sm"
                                     value={courseData.title}
                                     onChange={(e) => {
                                         setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, title: e.target.value } }))
                                     }}
                                 />
-                                <div className="text-end text-slate-400 dark:text-slate-500 text-sm">{courseData.title.length} / 200</div>
+                                <div className="text-end text-slate-500 dark:text-slate-400 text-sm">{courseData.title.length} / 200</div>
                             </div>
 
                             <div className="space-y-2">
@@ -415,15 +588,15 @@ function RouteComponent() {
                                     placeholder={t('courses.new.sections.basic.descriptionPlaceholder')}
                                     rows={4}
                                     maxLength={2000}
-                                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-start resize-none text-sm"
+                                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-start resize-none text-sm"
                                     value={courseData.description}
                                     onChange={(e) => {
                                         setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, description: e.target.value } }))
                                     }}
                                 />
                                 <div className="flex justify-between text-xs">
-                                    <span className="text-slate-400 dark:text-slate-500">{t('courses.new.sections.basic.descriptionHelp')}</span>
-                                    <span className="text-slate-400 dark:text-slate-500">{courseData.description.length} / 2000</span>
+                                    <span className="text-slate-500 dark:text-slate-400">{t('courses.new.sections.basic.descriptionHelp')}</span>
+                                    <span className="text-slate-500 dark:text-slate-400">{courseData.description.length} / 2000</span>
                                 </div>
                             </div>
                         </div>
@@ -437,7 +610,7 @@ function RouteComponent() {
                             </div>
                             <div>
                                 <h2 className="text-lg font-bold text-slate-800 dark:text-white">{t('courses.new.sections.subject.title')}</h2>
-                                <p className="text-xs text-slate-400 font-medium">{t('courses.new.sections.subject.subtitle')}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t('courses.new.sections.subject.subtitle')}</p>
                             </div>
                         </div>
 
@@ -467,7 +640,7 @@ function RouteComponent() {
                             </div>
                             <div>
                                 <h2 className="text-lg font-bold text-slate-800 dark:text-white">{t('courses.new.sections.sessions.title')}</h2>
-                                <p className="text-xs text-slate-400 font-medium">{t('courses.new.sections.sessions.subtitle')}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t('courses.new.sections.sessions.subtitle')}</p>
                             </div>
                         </div>
 
@@ -533,7 +706,7 @@ function RouteComponent() {
                                                     type="number"
                                                     min={0}
                                                     placeholder={t('courses.new.sections.sessions.sessionsCountPlaceholder')}
-                                                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all text-sm"
+                                                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all text-sm"
                                                     value={Number(courseData.sessionsCount)}
                                                     onChange={(e) => syncSessionsCount(Number(e.target.value))}
                                                 />
@@ -546,7 +719,7 @@ function RouteComponent() {
                                                     type="number"
                                                     min={1}
                                                     placeholder={t('courses.new.sections.sessions.sessionDurationPlaceholder')}
-                                                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all text-sm"
+                                                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all text-sm"
                                                     value={Number(courseData.sessionDurationMinutes)}
                                                     onChange={(e) => setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, sessionDurationMinutes: e.target.value } }))}
                                                 />
@@ -570,131 +743,35 @@ function RouteComponent() {
                                             </div>
 
                                             {courseData.sessions.length === 0 ? (
-                                                <div className="p-4 text-center text-slate-400 dark:text-slate-500 text-sm font-medium rounded-lg border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-950/40">
+                                                <div className="p-4 text-center text-slate-500 dark:text-slate-400 text-sm font-medium rounded-lg border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-950/40">
                                                     {t('courses.new.sections.sessions.emptyHint')}
                                                 </div>
                                             ) : (
-                                                <div className="space-y-2.5">
-                                                    {courseData.sessions.map((session, idx) => (
-                                                        editingIndex === idx ? (
-                                                            <div
-                                                                key={idx}
-                                                                className="p-3 rounded-lg border border-teal-300 dark:border-secondary/60 bg-slate-50 dark:bg-slate-950 space-y-2.5 ring-2 ring-teal-500/10 dark:ring-secondary/20"
-                                                            >
-                                                                <div className="flex items-center justify-between">
-                                                                    <h5 className="text-sm font-bold text-primary dark:text-secondary">
-                                                                        {t('courses.new.sections.sessions.sessionLabel', { number: idx + 1 })}
-                                                                    </h5>
-                                                                    <div className="flex items-center gap-1">
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => confirmSession(idx)}
-                                                                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary dark:bg-secondary text-white hover:opacity-85 transition-all"
-                                                                            title={t('courses.new.sections.sessions.saveSession')}
-                                                                        >
-                                                                            <Check size={14} /> {t('courses.new.sections.sessions.saveSession')}
-                                                                        </button>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => removeSession(idx)}
-                                                                            className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 p-1.5 rounded-lg transition-all"
-                                                                            title={t('courses.new.sections.sessions.deleteSession')}
-                                                                        >
-                                                                            <Trash2 size={14} />
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                                                                    <div className="space-y-1.5">
-                                                                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                                                                            {t('courses.new.sections.sessions.fieldDuration')} <span className="text-red-500">*</span>
-                                                                        </label>
-                                                                        <input
-                                                                            type="number"
-                                                                            min={1}
-                                                                            value={session.durationMinutes}
-                                                                            onChange={(e) => updateSession(idx, { durationMinutes: Number(e.target.value) })}
-                                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-sm"
-                                                                        />
-                                                                    </div>
-                                                                    <div className="space-y-1.5">
-                                                                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400">{t('courses.new.sections.sessions.fieldTitle')}</label>
-                                                                        <input
-                                                                            type="text"
-                                                                            maxLength={150}
-                                                                            value={session.title ?? ''}
-                                                                            onChange={(e) => updateSession(idx, { title: e.target.value || null })}
-                                                                            placeholder={t('courses.new.sections.sessions.fieldTitlePlaceholder')}
-                                                                            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-start text-sm"
-                                                                        />
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className="space-y-1.5">
-                                                                    <label className="text-xs font-bold text-slate-600 dark:text-slate-400">{t('courses.new.sections.sessions.fieldNotes')}</label>
-                                                                    <textarea
-                                                                        rows={2}
-                                                                        maxLength={500}
-                                                                        value={session.notes ?? ''}
-                                                                        onChange={(e) => updateSession(idx, { notes: e.target.value || null })}
-                                                                        placeholder={t('courses.new.sections.sessions.fieldNotesPlaceholder')}
-                                                                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-start resize-none text-sm"
-                                                                    />
-                                                                    <div className="text-end text-[11px] text-slate-400 dark:text-slate-500">{(session.notes ?? '').length} / 500</div>
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <div
-                                                                key={idx}
-                                                                className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 transition-all"
-                                                            >
-                                                                <div className="flex items-start justify-between gap-3">
-                                                                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                                                                        <div className="w-7 h-7 shrink-0 rounded-lg bg-primary/10 dark:bg-secondary/15 flex items-center justify-center text-primary dark:text-secondary text-xs font-black">
-                                                                            {idx + 1}
-                                                                        </div>
-                                                                        <div className="min-w-0 flex-1 space-y-1">
-                                                                            <h5 className="text-sm font-bold text-slate-800 dark:text-white truncate">
-                                                                                {session.title?.trim() || t('courses.new.sections.sessions.sessionLabel', { number: idx + 1 })}
-                                                                            </h5>
-                                                                            <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                                                                                <span className="flex items-center gap-1">
-                                                                                    <Clock size={12} className="text-teal-600" />
-                                                                                    {t('courses.new.sections.sessions.durationMinutes', { count: session.durationMinutes })}
-                                                                                </span>
-                                                                                {session.notes?.trim() && (
-                                                                                    <span className="flex items-center gap-1 truncate">
-                                                                                        <StickyNote size={12} className="text-slate-400 shrink-0" />
-                                                                                        <span className="truncate">{session.notes}</span>
-                                                                                    </span>
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-1 shrink-0">
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => startEditSession(idx)}
-                                                                            className="text-primary dark:text-secondary hover:bg-primary/5 dark:hover:bg-secondary/10 p-1.5 rounded-lg transition-all"
-                                                                            title={t('courses.new.sections.sessions.editSession')}
-                                                                        >
-                                                                            <Pencil size={14} />
-                                                                        </button>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => removeSession(idx)}
-                                                                            className="text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 p-1.5 rounded-lg transition-all"
-                                                                            title={t('courses.new.sections.sessions.deleteSession')}
-                                                                        >
-                                                                            <Trash2 size={14} />
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        )
-                                                    ))}
-                                                </div>
+                                                <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                                    <SortableContext
+                                                        items={courseData.sessions.map((s) => s.id)}
+                                                        strategy={verticalListSortingStrategy}
+                                                    >
+                                                        <div className="space-y-2.5">
+                                                            {courseData.sessions.map((session, idx) => (
+                                                                <SortableSessionRow
+                                                                    key={session.id}
+                                                                    session={session}
+                                                                    idx={idx}
+                                                                    isEditing={editingIndex === idx}
+                                                                    isLast={idx === courseData.sessions.length - 1}
+                                                                    teacherSubjectId={courseData.teacherSubjectId}
+                                                                    onConfirm={() => confirmSession(idx)}
+                                                                    onRemove={() => removeSession(idx)}
+                                                                    onStartEdit={() => startEditSession(idx)}
+                                                                    onMoveUp={() => moveSession(idx, -1)}
+                                                                    onMoveDown={() => moveSession(idx, 1)}
+                                                                    onUpdate={(patch) => updateSession(idx, patch)}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    </SortableContext>
+                                                </DndContext>
                                             )}
                                         </div>
                                     </motion.div>
@@ -709,14 +786,14 @@ function RouteComponent() {
                                     min={2}
                                     placeholder={t('courses.new.sections.sessions.maxStudentsPlaceholder')}
                                     disabled={isIndividual}
-                                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                     value={courseData.maxStudents ?? ''}
                                     onChange={(e) => setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, maxStudents: e.target.value === '' ? null : Number(e.target.value) } }))}
                                 />
                                 {isIndividual ? (
-                                    <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">{t('courses.new.sections.sessions.individualHint')}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t('courses.new.sections.sessions.individualHint')}</p>
                                 ) : (
-                                    <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">{t('courses.new.sections.sessions.groupHint')}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t('courses.new.sections.sessions.groupHint')}</p>
                                 )}
                             </div>
                         </div>
@@ -730,7 +807,7 @@ function RouteComponent() {
                             </div>
                             <div>
                                 <h2 className="text-lg font-bold text-slate-800 dark:text-white">{t('courses.new.sections.pricing.title')}</h2>
-                                <p className="text-xs text-slate-400 font-medium">{t('courses.new.sections.pricing.subtitle')}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t('courses.new.sections.pricing.subtitle')}</p>
                             </div>
                         </div>
 
@@ -743,7 +820,7 @@ function RouteComponent() {
                                     <input
                                         type="number"
                                         placeholder={t('courses.new.sections.pricing.pricePlaceholder')}
-                                        className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all text-end text-sm"
+                                        className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all text-end text-sm"
                                         value={Number(courseData.price)}
                                         onChange={(e) => setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, price: e.target.value } }))}
                                     />
@@ -760,7 +837,7 @@ function RouteComponent() {
                             <div className="flex items-center justify-between pt-3">
                                 <div>
                                     <h4 className="text-sm font-bold text-slate-800 dark:text-white">{t('courses.new.sections.pricing.includeInPackages')}</h4>
-                                    <p className="text-xs text-slate-400 font-medium">{t('courses.new.sections.pricing.includeInPackagesHint')}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t('courses.new.sections.pricing.includeInPackagesHint')}</p>
                                 </div>
                                 <button
                                     onClick={() => setCourseData((prev) => ({ ...prev, courseData: { ...prev.courseData, canIncludeInPackages: !prev.courseData.canIncludeInPackages } }))}
@@ -790,7 +867,7 @@ function RouteComponent() {
                                                 {courseData.title || t('courses.new.preview.placeholderTitle')}
                                             </h4>
                                             <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-sm text-slate-400 font-medium">{t('courses.new.preview.teacherName')}</span>
+                                                <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">{t('courses.new.preview.teacherName')}</span>
                                                 <div className="flex items-center gap-1 text-amber-500 text-sm font-bold">
                                                     <Star size={12} fill="currentColor" />
                                                     <span className="leading-none">4.8</span>
@@ -840,6 +917,17 @@ function RouteComponent() {
                     </div>
                 </div>
             </div>
+
+            <PublishValidationDialog
+                open={publishOpen}
+                issues={publishIssues}
+                isPending={isPublishPending}
+                onClose={() => setPublishOpen(false)}
+                onConfirm={async () => {
+                    await createCourse()
+                    setPublishOpen(false)
+                }}
+            />
         </div>
     );
 };

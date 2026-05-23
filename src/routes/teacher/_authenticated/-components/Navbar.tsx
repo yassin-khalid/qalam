@@ -1,17 +1,25 @@
-import React, { useState } from 'react';
-import { Bell, Menu, Moon, Sun } from 'lucide-react';
+import React from 'react';
+import { Menu, Moon, Sun } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/hooks/useTheme';
 import { updateTheme } from '@/lib/utils/sessionHelpers';
 import { useTranslation } from 'react-i18next';
+import { useLocale } from '@/lib/hooks/useLocale';
 import LanguageToggleButton from '@/lib/components/LanguageToggleButton';
+import { NotificationsDropdown } from './NotificationsDropdown';
 
-export const Navbar: React.FC = () => {
+interface NavbarProps {
+    /** Open the mobile sidebar drawer. Hidden on md+. */
+    onMobileMenu?: () => void
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ onMobileMenu }) => {
     const theme = useTheme()
     const isDarkMode = theme === 'dark'
     const { t } = useTranslation('teacher');
-
-    const [hasNotification, setHasNotification] = useState(true);
+    const locale = useLocale();
+    const isRtl = locale === 'ar';
+    const toggleOffset = isDarkMode ? (isRtl ? -22 : 22) : 0;
 
     return (
         <nav className="sticky top-0 z-40 shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-gray-100 dark:border-slate-800 transition-colors">
@@ -25,15 +33,7 @@ export const Navbar: React.FC = () => {
                         </div>
 
                         {/* Notification */}
-                        <button
-                            className="relative p-2 text-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-full transition-all"
-                            onClick={() => setHasNotification(false)}
-                        >
-                            <Bell size={20} strokeWidth={2} />
-                            {hasNotification && (
-                                <span className="absolute top-1.5 end-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
-                            )}
-                        </button>
+                        <NotificationsDropdown />
 
                         {/* Theme Toggle */}
                         <div className="flex items-center">
@@ -43,7 +43,7 @@ export const Navbar: React.FC = () => {
                                 aria-label={isDarkMode ? t('dashboard.navbar.toggleLightAria') : t('dashboard.navbar.toggleDarkAria')}
                             >
                                 <motion.div
-                                    animate={{ x: isDarkMode ? -22 : 0 }}
+                                    animate={{ x: toggleOffset }}
                                     transition={{ type: "spring", stiffness: 500, damping: 35 }}
                                     className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white shadow-sm border border-slate-200/80 dark:border-slate-500/50"
                                 >
@@ -60,9 +60,14 @@ export const Navbar: React.FC = () => {
                         <LanguageToggleButton className="flex items-center justify-center gap-2 text-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 px-3 py-1.5 rounded-md transition-all" />
                     </div>
 
-                    {/* End: Menu */}
-                    <div className="flex items-center">
-                        <button className="p-2 text-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg transition-all">
+                    {/* End: Menu — only visible on mobile, toggles the sidebar drawer */}
+                    <div className="flex items-center md:hidden">
+                        <button
+                            type="button"
+                            onClick={onMobileMenu}
+                            aria-label={t('dashboard.sidebar.expandAria')}
+                            className="p-2 text-slate-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:focus-visible:ring-secondary/40"
+                        >
                             <Menu size={28} strokeWidth={1.5} />
                         </button>
                     </div>

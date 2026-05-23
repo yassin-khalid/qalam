@@ -152,7 +152,7 @@ export const EnrollmentRequestsModal: React.FC<EnrollmentRequestsModalProps> = (
                             )}
 
                             {!listQuery.isLoading && items.length === 0 && (
-                                <div className="text-center py-10 text-sm text-slate-400">
+                                <div className="text-center py-10 text-sm text-slate-500 dark:text-slate-400">
                                     {t('courses.enrollment.empty')}
                                 </div>
                             )}
@@ -309,7 +309,7 @@ const RequestRow: React.FC<RequestRowProps> = ({
                                 {item.requestedByUserName ?? t('courses.enrollment.defaultStudent')}
                             </h4>
                         </div>
-                        <p className="text-xs text-slate-400">{relativeTime(item.createdAt, locale, t)}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{relativeTime(item.createdAt, locale, t)}</p>
                     </div>
                 </div>
 
@@ -349,7 +349,7 @@ const RequestRow: React.FC<RequestRowProps> = ({
 
 const RowStat: React.FC<{ icon?: React.ReactNode; label: string; value: string }> = ({ icon, label, value }) => (
     <div className="bg-slate-50 dark:bg-slate-800/40 rounded-lg px-3 py-2">
-        <div className="flex items-center justify-start gap-1 text-[11px] text-slate-400 mb-0.5">
+        <div className="flex items-center justify-start gap-1 text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">
             {icon}
             <span>{label}</span>
         </div>
@@ -399,7 +399,7 @@ const RequestDetailPanel: React.FC<{ id: number; token: string }> = ({ id, token
                                 key={s.sessionNumber}
                                 className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg px-3 py-2 flex items-center justify-between gap-3"
                             >
-                                <span className="text-xs text-slate-400 shrink-0">{s.durationMinutes} {t('courses.enrollment.details.durationMin')}</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">{s.durationMinutes} {t('courses.enrollment.details.durationMin')}</span>
                                 <div className="flex-1 min-w-0 text-start">
                                     <div className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">
                                         {t('courses.enrollment.details.sessionLine', { number: s.sessionNumber })}{s.title ? ` — ${s.title}` : ''}
@@ -459,7 +459,7 @@ const RequestDetailPanel: React.FC<{ id: number; token: string }> = ({ id, token
                                 className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg px-3 py-2"
                             >
                                 <div className="flex items-center justify-between mb-1">
-                                    <span className="text-xs text-slate-400">{s.durationMinutes} {t('courses.enrollment.details.durationMin')}</span>
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">{s.durationMinutes} {t('courses.enrollment.details.durationMin')}</span>
                                     <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
                                         {t('courses.enrollment.details.sessionLine', { number: s.sessionNumber })}{s.title ? ` — ${s.title}` : ''}
                                     </span>

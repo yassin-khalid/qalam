@@ -1,10 +1,8 @@
 
 import React from 'react';
-// import { ViewType } from '../types';
 import { getRouter } from '@/router';
 import { Link, LinkProps } from '@tanstack/react-router';
-import QalamLogo from '@/lib/components/QalamLogo';
-import { BarChart, Bell, Box, Calendar, ChevronLeft, ChevronRight, Grid, HelpCircle, LucideIcon, Settings, Truck } from 'lucide-react';
+import { Bell, Box, Calendar, CalendarClock, ChevronLeft, ChevronRight, Grid, Inbox, Library, LucideIcon, Wallet } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '@/lib/hooks/useLocale';
 
@@ -44,27 +42,37 @@ const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, linkProps, isColla
 );
 
 interface SidebarProps {
-    // currentView: ViewType;
-    // onViewChange: (view: ViewType) => void;
     isCollapsed: boolean;
     onToggle: () => void;
     onTitleChange: (title: string) => void;
+    /**
+     * Called when a nav item is clicked on a small screen — the parent
+     * uses this to dismiss the off-canvas drawer.
+     */
+    onMobileClose?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, onTitleChange }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, onTitleChange, onMobileClose }) => {
     const { t } = useTranslation('teacher');
     const locale = useLocale();
+    const handleNavClick = (label: string) => {
+        onTitleChange(label)
+        onMobileClose?.()
+    }
     const isRtl = locale === 'ar';
     const ExpandIcon = isRtl ? ChevronRight : ChevronLeft;
     const CollapseIcon = isRtl ? ChevronLeft : ChevronRight;
     return (
-        <aside className={`sidebar-transition h-screen px-1.5 flex flex-col sticky top-0 shrink-0 z-40 ${isCollapsed ? 'w-24' : 'w-80'}`}>
+        <aside aria-label={t('dashboard.sidebar.dashboard')} className={`sidebar-transition h-screen px-1.5 flex flex-col sticky top-0 shrink-0 z-40 ${isCollapsed ? 'w-24' : 'w-80'}`}>
             <div className="bg-primary dark:bg-secondary h-full rounded-lg flex flex-col text-white shadow-2xl relative transition-colors duration-300">
 
-                {/* Toggle Button */}
+                {/* Desktop-only collapse/expand toggle */}
                 <button
+                    type="button"
                     onClick={onToggle}
-                    className="absolute -start-3 top-10 w-8 h-8 bg-primary dark:bg-white border border-white/20 rounded-full flex items-center justify-center text-white dark:text-secondary hover:scale-110 transition-transform z-50 shadow-md"
+                    aria-label={isCollapsed ? t('dashboard.sidebar.expandAria') : t('dashboard.sidebar.collapseAria')}
+                    aria-expanded={!isCollapsed}
+                    className="hidden md:flex absolute -start-3 top-10 w-8 h-8 bg-primary dark:bg-white border border-white/20 rounded-full items-center justify-center text-white dark:text-secondary hover:scale-110 transition-transform z-50 shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-primary dark:focus-visible:ring-offset-white"
                 >
                     {isCollapsed ? <ExpandIcon className="w-4 h-4" /> : <CollapseIcon className="w-4 h-4" />}
                 </button>
@@ -81,17 +89,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, onTitle
 
                 {/* Navigation */}
                 <nav className="flex-1 px-3 py-2 sidebar-scroll overflow-y-auto space-y-1">
-                    <NavItem isCollapsed={isCollapsed} icon={Grid} label={t('dashboard.sidebar.dashboard')} linkProps={{ to: '/teacher/dashboard', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange(t('dashboard.sidebar.dashboard'))} />
-                    <NavItem isCollapsed={isCollapsed} icon={Box} label={t('dashboard.sidebar.courses')} linkProps={{ to: '/teacher/courses', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange(t('dashboard.sidebar.courses'))} />
-                    <NavItem isCollapsed={isCollapsed} icon={Calendar} label={t('dashboard.sidebar.calendar')} linkProps={{ to: '/teacher/calendar', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange(t('dashboard.sidebar.calendar'))} />
-                    <NavItem isCollapsed={isCollapsed} icon={Truck} label={t('dashboard.sidebar.suppliers')} linkProps={{ to: '/teacher/suppliers', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange(t('dashboard.sidebar.suppliers'))} />
-                    <NavItem isCollapsed={isCollapsed} icon={BarChart} label={t('dashboard.sidebar.reports')} linkProps={{ to: '/teacher/reports', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange(t('dashboard.sidebar.reports'))} />
+                    <NavItem isCollapsed={isCollapsed} icon={Grid} label={t('dashboard.sidebar.dashboard')} linkProps={{ to: '/teacher/dashboard', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => handleNavClick(t('dashboard.sidebar.dashboard'))} />
+                    <NavItem isCollapsed={isCollapsed} icon={Box} label={t('dashboard.sidebar.courses')} linkProps={{ to: '/teacher/courses', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => handleNavClick(t('dashboard.sidebar.courses'))} />
+                    <NavItem isCollapsed={isCollapsed} icon={Inbox} label={t('dashboard.sidebar.studentRequests')} linkProps={{ to: '/teacher/requests', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} hasDot onClick={() => handleNavClick(t('dashboard.sidebar.studentRequests'))} />
+                    <NavItem isCollapsed={isCollapsed} icon={CalendarClock} label={t('dashboard.sidebar.sessions')} linkProps={{ to: '/teacher/sessions', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => handleNavClick(t('dashboard.sidebar.sessions'))} />
+                    <NavItem isCollapsed={isCollapsed} icon={Calendar} label={t('dashboard.sidebar.calendar')} linkProps={{ to: '/teacher/calendar', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => handleNavClick(t('dashboard.sidebar.calendar'))} />
+                    <NavItem isCollapsed={isCollapsed} icon={Library} label={t('dashboard.sidebar.content')} linkProps={{ to: '/teacher/content', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => handleNavClick(t('dashboard.sidebar.content'))} />
+                    <NavItem isCollapsed={isCollapsed} icon={Wallet} label={t('dashboard.sidebar.finance')} linkProps={{ to: '/teacher/finance', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => handleNavClick(t('dashboard.sidebar.finance'))} />
 
                     <div className="my-6 border-t border-white/10 mx-6"></div>
 
-                    <NavItem isCollapsed={isCollapsed} icon={Bell} label={t('dashboard.sidebar.notifications')} linkProps={{ to: '/teacher/notifications', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} hasDot onClick={() => onTitleChange(t('dashboard.sidebar.notifications'))} />
-                    <NavItem isCollapsed={isCollapsed} icon={Settings} label={t('dashboard.sidebar.settings')} linkProps={{ to: '/teacher/settings', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange(t('dashboard.sidebar.settings'))} />
-                    <NavItem isCollapsed={isCollapsed} icon={HelpCircle} label={t('dashboard.sidebar.support')} linkProps={{ to: '/teacher/support', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => onTitleChange(t('dashboard.sidebar.support'))} />
+                    <NavItem isCollapsed={isCollapsed} icon={Bell} label={t('dashboard.sidebar.notifications')} linkProps={{ to: '/teacher/notifications', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} hasDot onClick={() => handleNavClick(t('dashboard.sidebar.notifications'))} />
                 </nav>
 
                 {/* User Profile */}

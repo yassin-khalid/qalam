@@ -31,7 +31,7 @@ export const SubjectSelector: React.FC<SubjectSelectorProps> = ({ selectedSubjec
                 <input
                     type="text"
                     placeholder={t('courses.new.sections.subject.searchPlaceholder')}
-                    className="w-full pe-10 ps-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary transition-all text-start text-sm"
+                    className="w-full pe-10 ps-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary/20 focus:border-primary dark:focus:border-secondary transition-all text-start text-sm"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -64,7 +64,7 @@ export const SubjectSelector: React.FC<SubjectSelectorProps> = ({ selectedSubjec
                                             }`}>
                                             {isAr ? subject.subjectNameAr : subject.subjectNameEn}
                                         </h4>
-                                        <p className="text-slate-400 dark:text-slate-500 font-semibold text-xs mt-0.5 truncate">{isAr ? subject.subjectNameEn : subject.subjectNameAr}</p>
+                                        <p className="text-slate-500 dark:text-slate-400 font-semibold text-xs mt-0.5 truncate">{isAr ? subject.subjectNameEn : subject.subjectNameAr}</p>
                                     </div>
                                 </div>
 

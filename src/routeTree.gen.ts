@@ -19,8 +19,19 @@ import { Route as TeacherAwaitRouteRouteImport } from './routes/teacher/await/ro
 import { Route as TeacherAuthenticatedRouteRouteImport } from './routes/teacher/_authenticated/route'
 import { Route as LandingContactRouteRouteImport } from './routes/_landing/contact/route'
 import { Route as LandingIndexRouteRouteImport } from './routes/_landing/index/route'
+import { Route as TeacherAuthenticatedSessionsRouteRouteImport } from './routes/teacher/_authenticated/sessions/route'
+import { Route as TeacherAuthenticatedRequestsRouteRouteImport } from './routes/teacher/_authenticated/requests/route'
+import { Route as TeacherAuthenticatedNotificationsRouteRouteImport } from './routes/teacher/_authenticated/notifications/route'
+import { Route as TeacherAuthenticatedFinanceRouteRouteImport } from './routes/teacher/_authenticated/finance/route'
+import { Route as TeacherAuthenticatedDashboardRouteRouteImport } from './routes/teacher/_authenticated/dashboard/route'
 import { Route as TeacherAuthenticatedCoursesRouteRouteImport } from './routes/teacher/_authenticated/courses/route'
+import { Route as TeacherAuthenticatedContentRouteRouteImport } from './routes/teacher/_authenticated/content/route'
+import { Route as TeacherAuthenticatedCalendarRouteRouteImport } from './routes/teacher/_authenticated/calendar/route'
+import { Route as TeacherAuthenticatedIndexRouteRouteImport } from './routes/teacher/_authenticated/index/route'
+import { Route as TeacherAuthenticatedSessionsSessionIdRouteRouteImport } from './routes/teacher/_authenticated/sessions/$sessionId/route'
+import { Route as TeacherAuthenticatedRequestsRequestIdRouteRouteImport } from './routes/teacher/_authenticated/requests/$requestId/route'
 import { Route as TeacherAuthenticatedCoursesNewRouteRouteImport } from './routes/teacher/_authenticated/courses/new/route'
+import { Route as TeacherAuthenticatedCoursesCourseIdRouteRouteImport } from './routes/teacher/_authenticated/courses/$courseId/route'
 
 const TestRouteRoute = TestRouteRouteImport.update({
   id: '/test',
@@ -72,11 +83,71 @@ const LandingIndexRouteRoute = LandingIndexRouteRouteImport.update({
   path: '',
   getParentRoute: () => LandingRouteRoute,
 } as any)
+const TeacherAuthenticatedSessionsRouteRoute =
+  TeacherAuthenticatedSessionsRouteRouteImport.update({
+    id: '/sessions',
+    path: '/sessions',
+    getParentRoute: () => TeacherAuthenticatedRouteRoute,
+  } as any)
+const TeacherAuthenticatedRequestsRouteRoute =
+  TeacherAuthenticatedRequestsRouteRouteImport.update({
+    id: '/requests',
+    path: '/requests',
+    getParentRoute: () => TeacherAuthenticatedRouteRoute,
+  } as any)
+const TeacherAuthenticatedNotificationsRouteRoute =
+  TeacherAuthenticatedNotificationsRouteRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => TeacherAuthenticatedRouteRoute,
+  } as any)
+const TeacherAuthenticatedFinanceRouteRoute =
+  TeacherAuthenticatedFinanceRouteRouteImport.update({
+    id: '/finance',
+    path: '/finance',
+    getParentRoute: () => TeacherAuthenticatedRouteRoute,
+  } as any)
+const TeacherAuthenticatedDashboardRouteRoute =
+  TeacherAuthenticatedDashboardRouteRouteImport.update({
+    id: '/dashboard',
+    path: '/dashboard',
+    getParentRoute: () => TeacherAuthenticatedRouteRoute,
+  } as any)
 const TeacherAuthenticatedCoursesRouteRoute =
   TeacherAuthenticatedCoursesRouteRouteImport.update({
     id: '/courses',
     path: '/courses',
     getParentRoute: () => TeacherAuthenticatedRouteRoute,
+  } as any)
+const TeacherAuthenticatedContentRouteRoute =
+  TeacherAuthenticatedContentRouteRouteImport.update({
+    id: '/content',
+    path: '/content',
+    getParentRoute: () => TeacherAuthenticatedRouteRoute,
+  } as any)
+const TeacherAuthenticatedCalendarRouteRoute =
+  TeacherAuthenticatedCalendarRouteRouteImport.update({
+    id: '/calendar',
+    path: '/calendar',
+    getParentRoute: () => TeacherAuthenticatedRouteRoute,
+  } as any)
+const TeacherAuthenticatedIndexRouteRoute =
+  TeacherAuthenticatedIndexRouteRouteImport.update({
+    id: '/',
+    path: '',
+    getParentRoute: () => TeacherAuthenticatedRouteRoute,
+  } as any)
+const TeacherAuthenticatedSessionsSessionIdRouteRoute =
+  TeacherAuthenticatedSessionsSessionIdRouteRouteImport.update({
+    id: '/$sessionId',
+    path: '/$sessionId',
+    getParentRoute: () => TeacherAuthenticatedSessionsRouteRoute,
+  } as any)
+const TeacherAuthenticatedRequestsRequestIdRouteRoute =
+  TeacherAuthenticatedRequestsRequestIdRouteRouteImport.update({
+    id: '/$requestId',
+    path: '/$requestId',
+    getParentRoute: () => TeacherAuthenticatedRequestsRouteRoute,
   } as any)
 const TeacherAuthenticatedCoursesNewRouteRoute =
   TeacherAuthenticatedCoursesNewRouteRouteImport.update({
@@ -84,30 +155,56 @@ const TeacherAuthenticatedCoursesNewRouteRoute =
     path: '/new',
     getParentRoute: () => TeacherAuthenticatedCoursesRouteRoute,
   } as any)
+const TeacherAuthenticatedCoursesCourseIdRouteRoute =
+  TeacherAuthenticatedCoursesCourseIdRouteRouteImport.update({
+    id: '/$courseId',
+    path: '/$courseId',
+    getParentRoute: () => TeacherAuthenticatedCoursesRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/test': typeof TestRouteRoute
   '/contact': typeof LandingContactRouteRoute
-  '/teacher': typeof TeacherAuthenticatedRouteRouteWithChildren
+  '/teacher': typeof TeacherAuthenticatedIndexRouteRoute
   '/teacher/await': typeof TeacherAwaitRouteRoute
   '/teacher/login': typeof TeacherLoginRouteRoute
   '/teacher/register': typeof TeacherRegisterRouteRoute
   '/teacher/reupload': typeof TeacherReuploadRouteRoute
   '/teacher/survey': typeof TeacherSurveyRouteRoute
+  '/teacher/calendar': typeof TeacherAuthenticatedCalendarRouteRoute
+  '/teacher/content': typeof TeacherAuthenticatedContentRouteRoute
   '/teacher/courses': typeof TeacherAuthenticatedCoursesRouteRouteWithChildren
+  '/teacher/dashboard': typeof TeacherAuthenticatedDashboardRouteRoute
+  '/teacher/finance': typeof TeacherAuthenticatedFinanceRouteRoute
+  '/teacher/notifications': typeof TeacherAuthenticatedNotificationsRouteRoute
+  '/teacher/requests': typeof TeacherAuthenticatedRequestsRouteRouteWithChildren
+  '/teacher/sessions': typeof TeacherAuthenticatedSessionsRouteRouteWithChildren
+  '/teacher/courses/$courseId': typeof TeacherAuthenticatedCoursesCourseIdRouteRoute
   '/teacher/courses/new': typeof TeacherAuthenticatedCoursesNewRouteRoute
+  '/teacher/requests/$requestId': typeof TeacherAuthenticatedRequestsRequestIdRouteRoute
+  '/teacher/sessions/$sessionId': typeof TeacherAuthenticatedSessionsSessionIdRouteRoute
 }
 export interface FileRoutesByTo {
   '/test': typeof TestRouteRoute
   '/contact': typeof LandingContactRouteRoute
-  '/teacher': typeof TeacherAuthenticatedRouteRouteWithChildren
+  '/teacher': typeof TeacherAuthenticatedIndexRouteRoute
   '/teacher/await': typeof TeacherAwaitRouteRoute
   '/teacher/login': typeof TeacherLoginRouteRoute
   '/teacher/register': typeof TeacherRegisterRouteRoute
   '/teacher/reupload': typeof TeacherReuploadRouteRoute
   '/teacher/survey': typeof TeacherSurveyRouteRoute
+  '/teacher/calendar': typeof TeacherAuthenticatedCalendarRouteRoute
+  '/teacher/content': typeof TeacherAuthenticatedContentRouteRoute
   '/teacher/courses': typeof TeacherAuthenticatedCoursesRouteRouteWithChildren
+  '/teacher/dashboard': typeof TeacherAuthenticatedDashboardRouteRoute
+  '/teacher/finance': typeof TeacherAuthenticatedFinanceRouteRoute
+  '/teacher/notifications': typeof TeacherAuthenticatedNotificationsRouteRoute
+  '/teacher/requests': typeof TeacherAuthenticatedRequestsRouteRouteWithChildren
+  '/teacher/sessions': typeof TeacherAuthenticatedSessionsRouteRouteWithChildren
+  '/teacher/courses/$courseId': typeof TeacherAuthenticatedCoursesCourseIdRouteRoute
   '/teacher/courses/new': typeof TeacherAuthenticatedCoursesNewRouteRoute
+  '/teacher/requests/$requestId': typeof TeacherAuthenticatedRequestsRequestIdRouteRoute
+  '/teacher/sessions/$sessionId': typeof TeacherAuthenticatedSessionsSessionIdRouteRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -121,8 +218,19 @@ export interface FileRoutesById {
   '/teacher/register': typeof TeacherRegisterRouteRoute
   '/teacher/reupload': typeof TeacherReuploadRouteRoute
   '/teacher/survey': typeof TeacherSurveyRouteRoute
+  '/teacher/_authenticated/': typeof TeacherAuthenticatedIndexRouteRoute
+  '/teacher/_authenticated/calendar': typeof TeacherAuthenticatedCalendarRouteRoute
+  '/teacher/_authenticated/content': typeof TeacherAuthenticatedContentRouteRoute
   '/teacher/_authenticated/courses': typeof TeacherAuthenticatedCoursesRouteRouteWithChildren
+  '/teacher/_authenticated/dashboard': typeof TeacherAuthenticatedDashboardRouteRoute
+  '/teacher/_authenticated/finance': typeof TeacherAuthenticatedFinanceRouteRoute
+  '/teacher/_authenticated/notifications': typeof TeacherAuthenticatedNotificationsRouteRoute
+  '/teacher/_authenticated/requests': typeof TeacherAuthenticatedRequestsRouteRouteWithChildren
+  '/teacher/_authenticated/sessions': typeof TeacherAuthenticatedSessionsRouteRouteWithChildren
+  '/teacher/_authenticated/courses/$courseId': typeof TeacherAuthenticatedCoursesCourseIdRouteRoute
   '/teacher/_authenticated/courses/new': typeof TeacherAuthenticatedCoursesNewRouteRoute
+  '/teacher/_authenticated/requests/$requestId': typeof TeacherAuthenticatedRequestsRequestIdRouteRoute
+  '/teacher/_authenticated/sessions/$sessionId': typeof TeacherAuthenticatedSessionsSessionIdRouteRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -135,8 +243,18 @@ export interface FileRouteTypes {
     | '/teacher/register'
     | '/teacher/reupload'
     | '/teacher/survey'
+    | '/teacher/calendar'
+    | '/teacher/content'
     | '/teacher/courses'
+    | '/teacher/dashboard'
+    | '/teacher/finance'
+    | '/teacher/notifications'
+    | '/teacher/requests'
+    | '/teacher/sessions'
+    | '/teacher/courses/$courseId'
     | '/teacher/courses/new'
+    | '/teacher/requests/$requestId'
+    | '/teacher/sessions/$sessionId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/test'
@@ -147,8 +265,18 @@ export interface FileRouteTypes {
     | '/teacher/register'
     | '/teacher/reupload'
     | '/teacher/survey'
+    | '/teacher/calendar'
+    | '/teacher/content'
     | '/teacher/courses'
+    | '/teacher/dashboard'
+    | '/teacher/finance'
+    | '/teacher/notifications'
+    | '/teacher/requests'
+    | '/teacher/sessions'
+    | '/teacher/courses/$courseId'
     | '/teacher/courses/new'
+    | '/teacher/requests/$requestId'
+    | '/teacher/sessions/$sessionId'
   id:
     | '__root__'
     | '/_landing'
@@ -161,8 +289,19 @@ export interface FileRouteTypes {
     | '/teacher/register'
     | '/teacher/reupload'
     | '/teacher/survey'
+    | '/teacher/_authenticated/'
+    | '/teacher/_authenticated/calendar'
+    | '/teacher/_authenticated/content'
     | '/teacher/_authenticated/courses'
+    | '/teacher/_authenticated/dashboard'
+    | '/teacher/_authenticated/finance'
+    | '/teacher/_authenticated/notifications'
+    | '/teacher/_authenticated/requests'
+    | '/teacher/_authenticated/sessions'
+    | '/teacher/_authenticated/courses/$courseId'
     | '/teacher/_authenticated/courses/new'
+    | '/teacher/_authenticated/requests/$requestId'
+    | '/teacher/_authenticated/sessions/$sessionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -248,6 +387,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LandingIndexRouteRouteImport
       parentRoute: typeof LandingRouteRoute
     }
+    '/teacher/_authenticated/sessions': {
+      id: '/teacher/_authenticated/sessions'
+      path: '/sessions'
+      fullPath: '/teacher/sessions'
+      preLoaderRoute: typeof TeacherAuthenticatedSessionsRouteRouteImport
+      parentRoute: typeof TeacherAuthenticatedRouteRoute
+    }
+    '/teacher/_authenticated/requests': {
+      id: '/teacher/_authenticated/requests'
+      path: '/requests'
+      fullPath: '/teacher/requests'
+      preLoaderRoute: typeof TeacherAuthenticatedRequestsRouteRouteImport
+      parentRoute: typeof TeacherAuthenticatedRouteRoute
+    }
+    '/teacher/_authenticated/notifications': {
+      id: '/teacher/_authenticated/notifications'
+      path: '/notifications'
+      fullPath: '/teacher/notifications'
+      preLoaderRoute: typeof TeacherAuthenticatedNotificationsRouteRouteImport
+      parentRoute: typeof TeacherAuthenticatedRouteRoute
+    }
+    '/teacher/_authenticated/finance': {
+      id: '/teacher/_authenticated/finance'
+      path: '/finance'
+      fullPath: '/teacher/finance'
+      preLoaderRoute: typeof TeacherAuthenticatedFinanceRouteRouteImport
+      parentRoute: typeof TeacherAuthenticatedRouteRoute
+    }
+    '/teacher/_authenticated/dashboard': {
+      id: '/teacher/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/teacher/dashboard'
+      preLoaderRoute: typeof TeacherAuthenticatedDashboardRouteRouteImport
+      parentRoute: typeof TeacherAuthenticatedRouteRoute
+    }
     '/teacher/_authenticated/courses': {
       id: '/teacher/_authenticated/courses'
       path: '/courses'
@@ -255,11 +429,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeacherAuthenticatedCoursesRouteRouteImport
       parentRoute: typeof TeacherAuthenticatedRouteRoute
     }
+    '/teacher/_authenticated/content': {
+      id: '/teacher/_authenticated/content'
+      path: '/content'
+      fullPath: '/teacher/content'
+      preLoaderRoute: typeof TeacherAuthenticatedContentRouteRouteImport
+      parentRoute: typeof TeacherAuthenticatedRouteRoute
+    }
+    '/teacher/_authenticated/calendar': {
+      id: '/teacher/_authenticated/calendar'
+      path: '/calendar'
+      fullPath: '/teacher/calendar'
+      preLoaderRoute: typeof TeacherAuthenticatedCalendarRouteRouteImport
+      parentRoute: typeof TeacherAuthenticatedRouteRoute
+    }
+    '/teacher/_authenticated/': {
+      id: '/teacher/_authenticated/'
+      path: ''
+      fullPath: '/teacher'
+      preLoaderRoute: typeof TeacherAuthenticatedIndexRouteRouteImport
+      parentRoute: typeof TeacherAuthenticatedRouteRoute
+    }
+    '/teacher/_authenticated/sessions/$sessionId': {
+      id: '/teacher/_authenticated/sessions/$sessionId'
+      path: '/$sessionId'
+      fullPath: '/teacher/sessions/$sessionId'
+      preLoaderRoute: typeof TeacherAuthenticatedSessionsSessionIdRouteRouteImport
+      parentRoute: typeof TeacherAuthenticatedSessionsRouteRoute
+    }
+    '/teacher/_authenticated/requests/$requestId': {
+      id: '/teacher/_authenticated/requests/$requestId'
+      path: '/$requestId'
+      fullPath: '/teacher/requests/$requestId'
+      preLoaderRoute: typeof TeacherAuthenticatedRequestsRequestIdRouteRouteImport
+      parentRoute: typeof TeacherAuthenticatedRequestsRouteRoute
+    }
     '/teacher/_authenticated/courses/new': {
       id: '/teacher/_authenticated/courses/new'
       path: '/new'
       fullPath: '/teacher/courses/new'
       preLoaderRoute: typeof TeacherAuthenticatedCoursesNewRouteRouteImport
+      parentRoute: typeof TeacherAuthenticatedCoursesRouteRoute
+    }
+    '/teacher/_authenticated/courses/$courseId': {
+      id: '/teacher/_authenticated/courses/$courseId'
+      path: '/$courseId'
+      fullPath: '/teacher/courses/$courseId'
+      preLoaderRoute: typeof TeacherAuthenticatedCoursesCourseIdRouteRouteImport
       parentRoute: typeof TeacherAuthenticatedCoursesRouteRoute
     }
   }
@@ -280,11 +496,14 @@ const LandingRouteRouteWithChildren = LandingRouteRoute._addFileChildren(
 )
 
 interface TeacherAuthenticatedCoursesRouteRouteChildren {
+  TeacherAuthenticatedCoursesCourseIdRouteRoute: typeof TeacherAuthenticatedCoursesCourseIdRouteRoute
   TeacherAuthenticatedCoursesNewRouteRoute: typeof TeacherAuthenticatedCoursesNewRouteRoute
 }
 
 const TeacherAuthenticatedCoursesRouteRouteChildren: TeacherAuthenticatedCoursesRouteRouteChildren =
   {
+    TeacherAuthenticatedCoursesCourseIdRouteRoute:
+      TeacherAuthenticatedCoursesCourseIdRouteRoute,
     TeacherAuthenticatedCoursesNewRouteRoute:
       TeacherAuthenticatedCoursesNewRouteRoute,
   }
@@ -294,14 +513,67 @@ const TeacherAuthenticatedCoursesRouteRouteWithChildren =
     TeacherAuthenticatedCoursesRouteRouteChildren,
   )
 
+interface TeacherAuthenticatedRequestsRouteRouteChildren {
+  TeacherAuthenticatedRequestsRequestIdRouteRoute: typeof TeacherAuthenticatedRequestsRequestIdRouteRoute
+}
+
+const TeacherAuthenticatedRequestsRouteRouteChildren: TeacherAuthenticatedRequestsRouteRouteChildren =
+  {
+    TeacherAuthenticatedRequestsRequestIdRouteRoute:
+      TeacherAuthenticatedRequestsRequestIdRouteRoute,
+  }
+
+const TeacherAuthenticatedRequestsRouteRouteWithChildren =
+  TeacherAuthenticatedRequestsRouteRoute._addFileChildren(
+    TeacherAuthenticatedRequestsRouteRouteChildren,
+  )
+
+interface TeacherAuthenticatedSessionsRouteRouteChildren {
+  TeacherAuthenticatedSessionsSessionIdRouteRoute: typeof TeacherAuthenticatedSessionsSessionIdRouteRoute
+}
+
+const TeacherAuthenticatedSessionsRouteRouteChildren: TeacherAuthenticatedSessionsRouteRouteChildren =
+  {
+    TeacherAuthenticatedSessionsSessionIdRouteRoute:
+      TeacherAuthenticatedSessionsSessionIdRouteRoute,
+  }
+
+const TeacherAuthenticatedSessionsRouteRouteWithChildren =
+  TeacherAuthenticatedSessionsRouteRoute._addFileChildren(
+    TeacherAuthenticatedSessionsRouteRouteChildren,
+  )
+
 interface TeacherAuthenticatedRouteRouteChildren {
+  TeacherAuthenticatedIndexRouteRoute: typeof TeacherAuthenticatedIndexRouteRoute
+  TeacherAuthenticatedCalendarRouteRoute: typeof TeacherAuthenticatedCalendarRouteRoute
+  TeacherAuthenticatedContentRouteRoute: typeof TeacherAuthenticatedContentRouteRoute
   TeacherAuthenticatedCoursesRouteRoute: typeof TeacherAuthenticatedCoursesRouteRouteWithChildren
+  TeacherAuthenticatedDashboardRouteRoute: typeof TeacherAuthenticatedDashboardRouteRoute
+  TeacherAuthenticatedFinanceRouteRoute: typeof TeacherAuthenticatedFinanceRouteRoute
+  TeacherAuthenticatedNotificationsRouteRoute: typeof TeacherAuthenticatedNotificationsRouteRoute
+  TeacherAuthenticatedRequestsRouteRoute: typeof TeacherAuthenticatedRequestsRouteRouteWithChildren
+  TeacherAuthenticatedSessionsRouteRoute: typeof TeacherAuthenticatedSessionsRouteRouteWithChildren
 }
 
 const TeacherAuthenticatedRouteRouteChildren: TeacherAuthenticatedRouteRouteChildren =
   {
+    TeacherAuthenticatedIndexRouteRoute: TeacherAuthenticatedIndexRouteRoute,
+    TeacherAuthenticatedCalendarRouteRoute:
+      TeacherAuthenticatedCalendarRouteRoute,
+    TeacherAuthenticatedContentRouteRoute:
+      TeacherAuthenticatedContentRouteRoute,
     TeacherAuthenticatedCoursesRouteRoute:
       TeacherAuthenticatedCoursesRouteRouteWithChildren,
+    TeacherAuthenticatedDashboardRouteRoute:
+      TeacherAuthenticatedDashboardRouteRoute,
+    TeacherAuthenticatedFinanceRouteRoute:
+      TeacherAuthenticatedFinanceRouteRoute,
+    TeacherAuthenticatedNotificationsRouteRoute:
+      TeacherAuthenticatedNotificationsRouteRoute,
+    TeacherAuthenticatedRequestsRouteRoute:
+      TeacherAuthenticatedRequestsRouteRouteWithChildren,
+    TeacherAuthenticatedSessionsRouteRoute:
+      TeacherAuthenticatedSessionsRouteRouteWithChildren,
   }
 
 const TeacherAuthenticatedRouteRouteWithChildren =

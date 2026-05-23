@@ -71,9 +71,21 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
                         sessionsCount: detail.sessions?.length ?? detail.sessionsCount ?? 0,
                         sessionDurationMinutes: detail.sessionDurationMinutes != null ? String(detail.sessionDurationMinutes) : '',
                         sessions: (detail.sessions ?? []).map(s => ({
+                            // Generate a client-side id for drag-and-drop; the
+                            // backend will get a stable id once it ships.
+                            id: `sess-srv-${s.id}`,
                             durationMinutes: s.durationMinutes,
                             title: s.title,
                             notes: s.notes,
+                            // Backend doesn't return these yet; the wizard schema
+                            // requires them so default to null on load.
+                            description: null,
+                            unitId: null,
+                            unitName: null,
+                            lessonId: null,
+                            lessonName: null,
+                            attachments: [],
+                            homework: [],
                         })),
                         price: detail.price != null ? String(detail.price) : '0',
                         maxStudents: detail.maxStudents ?? null,
@@ -206,7 +218,9 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
                     </button>
                     <button
                         type="button"
-                        className="p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                        onClick={() => navigate({ to: '/teacher/courses/$courseId', params: { courseId: course.id } })}
+                        aria-label={t('common.viewDetailsAria', { name: course.title })}
+                        className="p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 text-slate-400 hover:text-primary dark:hover:text-secondary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:focus-visible:ring-secondary/40"
                     >
                         <Eye size={18} />
                     </button>
@@ -214,7 +228,8 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
                         type="button"
                         onClick={handleEdit}
                         disabled={isLoadingEdit}
-                        className="p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label={t('common.editAria', { name: course.title })}
+                        className="p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:focus-visible:ring-secondary/40"
                     >
                         <Edit3 size={18} className={isLoadingEdit ? 'animate-pulse' : ''} />
                     </button>
@@ -222,7 +237,8 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, index }) => {
                         type="button"
                         onClick={() => setIsDeleteOpen(true)}
                         disabled={isDeleting}
-                        className="p-2.5 rounded-xl border border-red-50 dark:border-red-900/20 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label={t('common.deleteAria', { name: course.title })}
+                        className="p-2.5 rounded-xl border border-red-50 dark:border-red-900/20 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
                     >
                         <Trash2 size={18} />
                     </button>

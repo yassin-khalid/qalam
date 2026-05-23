@@ -22,7 +22,7 @@ const StatCard: React.FC<StatCardProps> = ({
                 </span>
             </div>
             <div className="space-y-1">
-                <h3 className="text-slate-400 dark:text-slate-500 text-sm font-medium">{label}</h3>
+                <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium">{label}</h3>
                 <p className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">{value}</p>
             </div>
         </div>
