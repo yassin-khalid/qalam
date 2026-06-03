@@ -1,15 +1,17 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, SlidersHorizontal } from 'lucide-react'
-import type { InboxFilters } from '../-types/types'
+import type { InboxFilters, SubjectFacet } from '../-types/types'
 
 interface InboxFiltersBarProps {
     filters: InboxFilters
+    subjects: SubjectFacet[]
     onChange: (next: InboxFilters) => void
 }
 
-export const InboxFiltersBar: React.FC<InboxFiltersBarProps> = ({ filters, onChange }) => {
-    const { t } = useTranslation('teacher')
+export const InboxFiltersBar: React.FC<InboxFiltersBarProps> = ({ filters, subjects, onChange }) => {
+    const { t, i18n } = useTranslation('teacher')
+    const isAr = i18n.language === 'ar'
 
     const update = <K extends keyof InboxFilters>(key: K, value: InboxFilters[K]) =>
         onChange({ ...filters, [key]: value })
@@ -29,6 +31,16 @@ export const InboxFiltersBar: React.FC<InboxFiltersBarProps> = ({ filters, onCha
 
             <div className="flex gap-2 flex-wrap">
                 <select
+                    value={filters.subject}
+                    onChange={(e) => update('subject', e.target.value)}
+                    className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                >
+                    <option value="all">{t('requests.inbox.filters.subjectAll')}</option>
+                    {subjects.map((s) => (
+                        <option key={s.key} value={s.key}>{isAr ? s.labelAr : s.labelEn}</option>
+                    ))}
+                </select>
+                <select
                     value={filters.teachingMode}
                     onChange={(e) => update('teachingMode', e.target.value as InboxFilters['teachingMode'])}
                     className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20"
@@ -45,6 +57,15 @@ export const InboxFiltersBar: React.FC<InboxFiltersBarProps> = ({ filters, onCha
                     <option value="all">{t('requests.inbox.filters.sessionTypeAll')}</option>
                     <option value="Individual">{t('requests.inbox.filters.sessionTypeIndividual')}</option>
                     <option value="Group">{t('requests.inbox.filters.sessionTypeGroup')}</option>
+                </select>
+                <select
+                    value={filters.dateWindow}
+                    onChange={(e) => update('dateWindow', e.target.value as InboxFilters['dateWindow'])}
+                    className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                >
+                    <option value="all">{t('requests.inbox.filters.dateAll')}</option>
+                    <option value="next7">{t('requests.inbox.filters.dateNext7')}</option>
+                    <option value="next30">{t('requests.inbox.filters.dateNext30')}</option>
                 </select>
                 <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
                     <SlidersHorizontal size={14} className="text-slate-400" />

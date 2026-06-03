@@ -276,6 +276,34 @@ export const sessionsMockApi = {
         return JSON.parse(JSON.stringify(s))
     },
 
+    // Link an existing Content Library file into this session (BRD §7 Screen 7).
+    // The library entry is copied as a session file tagged with its source id so
+    // we can show a "Linked" state and avoid duplicates.
+    async linkLibraryFile(
+        sessionId: number,
+        input: { libraryId: string; fileName: string; fileType: SessionFile['fileType']; sizeBytes: number },
+    ): Promise<SessionDetail> {
+        await sleep(280)
+        const s = SESSIONS.find((x) => x.id === sessionId)
+        if (!s) throw new Error('mockErrors.sessionNotFound')
+        if (s.files.some((f) => f.sourceLibraryId === input.libraryId)) {
+            throw new Error('mockErrors.alreadyLinked')
+        }
+        s.files = [
+            ...s.files,
+            {
+                id: newId('sf', { current: fileSeq++ }),
+                fileName: input.fileName,
+                fileType: input.fileType,
+                sizeBytes: input.sizeBytes,
+                uploadedAt: new Date().toISOString(),
+                uploadedByTeacher: true,
+                sourceLibraryId: input.libraryId,
+            },
+        ]
+        return JSON.parse(JSON.stringify(s))
+    },
+
     async deleteFile(sessionId: number, fileId: string): Promise<SessionDetail> {
         await sleep(180)
         const s = SESSIONS.find((x) => x.id === sessionId)

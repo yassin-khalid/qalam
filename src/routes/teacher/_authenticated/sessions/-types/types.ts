@@ -26,6 +26,9 @@ export interface SessionFile {
     sizeBytes: number
     uploadedAt: string // ISO
     uploadedByTeacher: boolean
+    // Set when the file was linked from the teacher's Content Library rather than
+    // uploaded directly (BRD §7 Screen 7 — "link content from Content Library").
+    sourceLibraryId?: string | null
 }
 
 export interface SessionHomework {
@@ -77,6 +80,7 @@ export type SessionDetailTab =
     | 'info'
     | 'meeting'
     | 'files'
+    | 'library'
     | 'homework'
     | 'notes'
     | 'attendance'

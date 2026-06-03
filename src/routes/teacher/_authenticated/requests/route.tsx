@@ -22,6 +22,8 @@ const searchParams = {
     search: parseAsString.withDefault(''),
     mode: parseAsStringLiteral(['all', 'Online', 'InPerson'] as const).withDefault('all'),
     type: parseAsStringLiteral(['all', 'Individual', 'Group'] as const).withDefault('all'),
+    subject: parseAsString.withDefault('all'),
+    date: parseAsStringLiteral(['all', 'next7', 'next30'] as const).withDefault('all'),
     sort: parseAsStringLiteral(['newest', 'urgent', 'fewest-offers'] as const).withDefault('newest'),
 }
 
@@ -43,6 +45,8 @@ function RouteComponent() {
         search: params.search ?? '',
         teachingMode: (params.mode ?? 'all') as InboxFilters['teachingMode'],
         sessionType: (params.type ?? 'all') as InboxFilters['sessionType'],
+        subject: params.subject ?? 'all',
+        dateWindow: (params.date ?? 'all') as InboxFilters['dateWindow'],
         sort: (params.sort ?? 'newest') as InboxFilters['sort'],
     }
     const tab = (params.tab ?? 'new') as RequestInboxTab
@@ -79,11 +83,14 @@ function RouteComponent() {
             <div className="mb-5">
                 <InboxFiltersBar
                     filters={filters}
+                    subjects={inboxQuery.data?.subjects ?? []}
                     onChange={(next) =>
                         setParams({
                             search: next.search as any,
                             mode: next.teachingMode as any,
                             type: next.sessionType as any,
+                            subject: next.subject as any,
+                            date: next.dateWindow,
                             sort: next.sort,
                         })
                     }

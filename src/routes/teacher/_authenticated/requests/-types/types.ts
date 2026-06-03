@@ -92,6 +92,17 @@ export interface SessionRequestDetail extends SessionRequestListItem {
     participants: RequestParticipant[]
     quranContentTypeLabel?: string
     quranLevelLabel?: string
+    // Optional platform-suggested price band for this request. When present, the
+    // teacher's total offer must fall within [min, max] (BRD §7 Screen 4).
+    priceRange?: { min: number; max: number } | null
+}
+
+// One conflict between a request's preferred session time and a slot the teacher
+// has already committed to elsewhere (BRD §7 Screen 4 — "no conflict with
+// previously-scheduled sessions").
+export interface ScheduleConflict {
+    sessionNumber: number
+    conflictsWith: string // human label of the busy session
 }
 
 export interface PerSessionOfferResponse {
@@ -127,10 +138,17 @@ export type RequestInboxTab =
     | 'accepted'
     | 'rejected'
 
+// Preferred-date window the teacher can filter by. Matches requests that have
+// at least one preferred session date falling inside the window from "now".
+export type DateWindow = 'all' | 'next7' | 'next30'
+
 export interface InboxFilters {
     search: string
     teachingMode: TeachingMode | 'all'
     sessionType: SessionType | 'all'
+    // 'all' or a subject key (we use subjectNameEn as the stable key).
+    subject: string
+    dateWindow: DateWindow
     sort: 'newest' | 'urgent' | 'fewest-offers'
 }
 
@@ -140,6 +158,20 @@ export interface InboxCounts {
     negotiating: number
     accepted: number
     rejected: number
+}
+
+// Distinct subjects the teacher receives requests for — used to populate the
+// "filter by subject" dropdown (BRD §7 Screen 2).
+export interface SubjectFacet {
+    key: string // subjectNameEn
+    labelAr: string
+    labelEn: string
+}
+
+export interface InboxResult {
+    items: SessionRequestListItem[]
+    counts: InboxCounts
+    subjects: SubjectFacet[]
 }
 
 // ----- Chat ------------------------------------------------------------------

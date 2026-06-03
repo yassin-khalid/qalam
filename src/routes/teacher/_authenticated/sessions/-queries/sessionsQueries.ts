@@ -30,6 +30,11 @@ export const uploadSessionFile = (
 export const deleteSessionFile = (sessionId: number, fileId: string) =>
     sessionsMockApi.deleteFile(sessionId, fileId)
 
+export const linkLibraryFile = (
+    sessionId: number,
+    input: { libraryId: string; fileName: string; fileType: SessionFile['fileType']; sizeBytes: number },
+) => sessionsMockApi.linkLibraryFile(sessionId, input)
+
 export const addSessionHomework = (
     sessionId: number,
     input: { title: string; description: string | null; dueAt: string | null },

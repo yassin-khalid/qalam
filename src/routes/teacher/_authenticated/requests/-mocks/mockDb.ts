@@ -9,13 +9,16 @@ import type {
     ChatMessage,
     ChatThreadMeta,
     InboxCounts,
+    InboxResult,
     PerSessionOfferResponse,
     RequestInboxTab,
     RequestedSession,
+    ScheduleConflict,
     SessionOffer,
     SessionOfferStatus,
     SessionRequestDetail,
     SessionRequestListItem,
+    SubjectFacet,
 } from '../-types/types'
 
 // The "currently logged-in teacher" we pretend to be.
@@ -95,6 +98,7 @@ const REQUESTS: RawRequest[] = [
         expiresAt: hoursAhead(24 * 7 - 3),
         attachmentsCount: 1,
         offersCount: 2,
+        priceRange: { min: 600, max: 1200 },
         descriptionForTeacher:
             'أريد تأسيس قوي للرياضيات قبل اختبار التحصيلي. تركيز على حل المسائل وليس فقط النظري.',
         sessions: buildSessions(6, ['الجبر', 'الجبر', 'الهندسة', 'المثلثات', 'مراجعة', 'اختبار تجريبي'], [60, 60, 90, 60, 60, 90], 4),
@@ -155,6 +159,7 @@ const REQUESTS: RawRequest[] = [
         expiresAt: hoursAhead(24 * 6),
         attachmentsCount: 2,
         offersCount: 5,
+        priceRange: { min: 900, max: 1600 },
         descriptionForTeacher: 'نريد التركيز على التحدث ونطق صحيح وتجنّب التدريس النظري.',
         sessions: buildSessions(8, ['Tenses', 'Speaking', 'Tenses', 'Speaking', 'Vocabulary', 'Speaking', 'Mock test', 'Review'], [90, 90, 90, 90, 90, 90, 90, 90], 7),
         attachments: [
@@ -463,6 +468,47 @@ const emitTyping = (threadId: string, meta: ChatThreadMeta) => {
     for (const fn of subs) fn(meta)
 }
 
+// ----- teacher's existing schedule (for conflict detection) ------------------
+// Slots the current teacher has already committed to (mirrors the sessions
+// module's upcoming sessions). On the real backend this comes from the
+// teacher's ScheduledSessions / availability. Datetimes are aligned with a few
+// requests' preferred sessions so the conflict check produces a realistic hit.
+
+interface BusySlot {
+    startsAt: string // ISO
+    durationMinutes: number
+    label: string
+}
+
+const TEACHER_BUSY: BusySlot[] = [
+    { startsAt: daysAhead(4, 17), durationMinutes: 60, label: 'جلسة مجدولة سابقاً' },
+    { startsAt: daysAhead(7, 17), durationMinutes: 90, label: 'جلسة مجدولة سابقاً' },
+]
+
+const overlaps = (startA: number, durA: number, startB: number, durB: number) =>
+    startA < startB + durB * 60_000 && startB < startA + durA * 60_000
+
+// Returns the conflicts between a request's preferred session times and the
+// teacher's already-committed slots. If `onlySessionNumbers` is given, only
+// those sessions are checked (used to validate accepted slots on submit).
+const conflictsForRequest = (
+    requestId: number,
+    onlySessionNumbers?: number[],
+): ScheduleConflict[] => {
+    const r = REQUESTS.find((x) => x.id === requestId)
+    if (!r) return []
+    const out: ScheduleConflict[] = []
+    for (const s of r.sessions) {
+        if (onlySessionNumbers && !onlySessionNumbers.includes(s.sessionNumber)) continue
+        const start = new Date(s.preferredDate).getTime()
+        const hit = TEACHER_BUSY.find((b) =>
+            overlaps(start, s.durationMinutes, new Date(b.startsAt).getTime(), b.durationMinutes),
+        )
+        if (hit) out.push({ sessionNumber: s.sessionNumber, conflictsWith: hit.label })
+    }
+    return out
+}
+
 // ----- read helpers ----------------------------------------------------------
 
 const offerForTeacherOnRequest = (requestId: number, teacherId: number) =>
@@ -524,10 +570,29 @@ export const mockApi = {
 
     async listInbox(
         tab: RequestInboxTab,
-        filters: { search: string; teachingMode: 'Online' | 'InPerson' | 'all'; sessionType: 'Individual' | 'Group' | 'all'; sort: 'newest' | 'urgent' | 'fewest-offers' },
-    ): Promise<{ items: SessionRequestListItem[]; counts: InboxCounts }> {
+        filters: {
+            search: string
+            teachingMode: 'Online' | 'InPerson' | 'all'
+            sessionType: 'Individual' | 'Group' | 'all'
+            subject: string
+            dateWindow: 'all' | 'next7' | 'next30'
+            sort: 'newest' | 'urgent' | 'fewest-offers'
+        },
+    ): Promise<InboxResult> {
         await sleep(220)
         const inTab = REQUESTS.filter((r) => requestBelongsInTab(r, tab, CURRENT_TEACHER_ID))
+
+        // Date window: a request matches if any preferred session date falls
+        // within `days` from now. NOW is the fixed mock clock.
+        const windowDays = filters.dateWindow === 'next7' ? 7 : filters.dateWindow === 'next30' ? 30 : null
+        const windowEnd = windowDays === null ? null : NOW + windowDays * 86_400_000
+        const matchesDateWindow = (r: SessionRequestDetail) => {
+            if (windowEnd === null) return true
+            return r.sessions.some((s) => {
+                const t = new Date(s.preferredDate).getTime()
+                return t >= NOW && t <= windowEnd
+            })
+        }
 
         const filtered = inTab.filter((r) => {
             const q = filters.search.trim().toLowerCase()
@@ -538,7 +603,8 @@ export const mockApi = {
                 r.unitNames.some((u) => u.toLowerCase().includes(q))
             const matchesMode = filters.teachingMode === 'all' || r.teachingMode === filters.teachingMode
             const matchesType = filters.sessionType === 'all' || r.sessionType === filters.sessionType
-            return matchesSearch && matchesMode && matchesType
+            const matchesSubject = filters.subject === 'all' || r.subjectNameEn === filters.subject
+            return matchesSearch && matchesMode && matchesType && matchesSubject && matchesDateWindow(r)
         })
 
         const sorted = [...filtered].sort((a, b) => {
@@ -560,7 +626,21 @@ export const mockApi = {
             rejected: REQUESTS.filter((r) => requestBelongsInTab(r, 'rejected', CURRENT_TEACHER_ID)).length,
         }
 
-        return { items: sorted.map(toListItem), counts }
+        // Distinct subjects across ALL of the teacher's requests (tab-independent)
+        // so the subject filter stays stable as tabs/filters change.
+        const subjectMap = new Map<string, SubjectFacet>()
+        for (const r of REQUESTS) {
+            if (!subjectMap.has(r.subjectNameEn)) {
+                subjectMap.set(r.subjectNameEn, {
+                    key: r.subjectNameEn,
+                    labelAr: r.subjectNameAr,
+                    labelEn: r.subjectNameEn,
+                })
+            }
+        }
+        const subjects = [...subjectMap.values()].sort((a, b) => a.labelEn.localeCompare(b.labelEn))
+
+        return { items: sorted.map(toListItem), counts, subjects }
     },
 
     async getRequest(requestId: number): Promise<SessionRequestDetail> {
@@ -576,6 +656,12 @@ export const mockApi = {
         return o ? JSON.parse(JSON.stringify(o)) : null
     },
 
+    // Preferred sessions that clash with the teacher's already-committed slots.
+    async getScheduleConflicts(requestId: number): Promise<ScheduleConflict[]> {
+        await sleep(120)
+        return conflictsForRequest(requestId)
+    },
+
     async submitOffer(input: {
         requestId: number
         totalPrice: number
@@ -587,6 +673,21 @@ export const mockApi = {
         await sleep(450)
         // Throw translation keys; the UI translates them via t().
         if (input.totalPrice <= 0) throw new Error('mockErrors.priceMustBePositive')
+
+        // BRD §7 Screen 4 — server-side checks before accepting the offer.
+        const request = REQUESTS.find((x) => x.id === input.requestId)
+        if (request?.priceRange) {
+            const { min, max } = request.priceRange
+            if (input.totalPrice < min || input.totalPrice > max) {
+                throw new Error('mockErrors.priceOutOfRange')
+            }
+        }
+        const acceptedSessionNumbers = input.perSessionResponses
+            .filter((r) => r.accept)
+            .map((r) => r.sessionNumber)
+        if (conflictsForRequest(input.requestId, acceptedSessionNumbers).length > 0) {
+            throw new Error('mockErrors.offerScheduleConflict')
+        }
 
         const existing = offerForTeacherOnRequest(input.requestId, CURRENT_TEACHER_ID)
         if (existing) {

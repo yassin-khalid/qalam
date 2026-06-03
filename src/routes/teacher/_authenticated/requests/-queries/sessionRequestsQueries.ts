@@ -25,6 +25,8 @@ export const inboxQueryOptions = (tab: RequestInboxTab, filters: InboxFilters) =
                 search: filters.search,
                 teachingMode: filters.teachingMode,
                 sessionType: filters.sessionType,
+                subject: filters.subject,
+                dateWindow: filters.dateWindow,
                 sort: filters.sort,
             }),
     })
@@ -39,6 +41,12 @@ export const myOfferForRequestQueryOptions = (requestId: number) =>
     queryOptions({
         queryKey: ['session-offers', 'mine', requestId] as const,
         queryFn: () => mockApi.getMyOfferForRequest(requestId),
+    })
+
+export const scheduleConflictsQueryOptions = (requestId: number) =>
+    queryOptions({
+        queryKey: ['session-requests', 'conflicts', requestId] as const,
+        queryFn: () => mockApi.getScheduleConflicts(requestId),
     })
 
 export interface SubmitOfferInput {

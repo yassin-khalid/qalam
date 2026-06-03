@@ -38,7 +38,7 @@ function RouteComponent() {
     const financeQuery = useQuery(financeSummaryQueryOptions())
     const upcomingQuery = useQuery(sessionsListQueryOptions('upcoming'))
     const newRequestsQuery = useQuery(
-        inboxQueryOptions('new', { search: '', teachingMode: 'all', sessionType: 'all', sort: 'newest' }),
+        inboxQueryOptions('new', { search: '', teachingMode: 'all', sessionType: 'all', subject: 'all', dateWindow: 'all', sort: 'newest' }),
     )
     const unreadNotificationsQuery = useQuery(notificationsListQueryOptions('unread'))
 

@@ -22,6 +22,7 @@ import { TabsBar } from './-components/TabsBar'
 import { InfoTab } from './-components/InfoTab'
 import { MeetingTab } from './-components/MeetingTab'
 import { FilesTab } from './-components/FilesTab'
+import { LibraryTab } from './-components/LibraryTab'
 import { HomeworkTab } from './-components/HomeworkTab'
 import { NotesTab } from './-components/NotesTab'
 import { AttendanceTab } from './-components/AttendanceTab'
@@ -35,6 +36,7 @@ const searchParams = {
         'info',
         'meeting',
         'files',
+        'library',
         'homework',
         'notes',
         'attendance',
@@ -170,6 +172,7 @@ function RouteComponent() {
                 {tab === 'info' && <InfoTab session={session} />}
                 {tab === 'meeting' && <MeetingTab session={session} />}
                 {tab === 'files' && <FilesTab session={session} />}
+                {tab === 'library' && <LibraryTab session={session} />}
                 {tab === 'homework' && <HomeworkTab session={session} />}
                 {tab === 'notes' && <NotesTab session={session} />}
                 {tab === 'attendance' && <AttendanceTab session={session} />}

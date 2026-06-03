@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
     X,
     SaudiRiyal,
@@ -11,6 +11,7 @@ import {
     Calendar as CalendarIcon,
     Clock,
     Info,
+    AlertTriangle,
 } from 'lucide-react'
 
 import { LOCALE_DIRECTION } from '@/lib/i18n'
@@ -18,6 +19,7 @@ import { useLocale } from '@/lib/hooks/useLocale'
 import { showToast } from '@/lib/utils/toast'
 
 import {
+    scheduleConflictsQueryOptions,
     submitOffer,
     type SubmitOfferInput,
 } from '../../-queries/sessionRequestsQueries'
@@ -103,6 +105,20 @@ export const SubmitOfferModal: React.FC<SubmitOfferModalProps> = ({
         return Number.isFinite(t) ? t : 0
     }, [pricingMode, totalPrice, perSessionPrice, request.sessionsCount])
 
+    // Schedule conflicts (BRD §7 Screen 4) — preferred sessions that clash with
+    // the teacher's already-committed slots. Only fetched while the modal is open.
+    const conflictsQuery = useQuery({ ...scheduleConflictsQueryOptions(request.id), enabled: open })
+    const conflictSessionNumbers = useMemo(
+        () => new Set((conflictsQuery.data ?? []).map((c) => c.sessionNumber)),
+        [conflictsQuery.data],
+    )
+    // A blocking conflict is one on a session the teacher has agreed to keep as-is.
+    const hasBlockingConflict = rows.some((r) => r.accept && conflictSessionNumbers.has(r.sessionNumber))
+
+    const priceRange = request.priceRange ?? null
+    const priceOutOfRange =
+        !!priceRange && calculatedTotal > 0 && (calculatedTotal < priceRange.min || calculatedTotal > priceRange.max)
+
     const mutation = useMutation({
         mutationFn: (input: SubmitOfferInput) => submitOffer(input),
         onSuccess: () => {
@@ -128,11 +144,25 @@ export const SubmitOfferModal: React.FC<SubmitOfferModalProps> = ({
             showToast({ type: 'validation', message: t('requests.submitOffer.errors.positivePrice') })
             return
         }
+        if (priceOutOfRange && priceRange) {
+            showToast({
+                type: 'validation',
+                message: t('requests.submitOffer.errors.priceOutOfRange', {
+                    min: priceRange.min,
+                    max: priceRange.max,
+                }),
+            })
+            return
+        }
         const missingAlternative = rows.some(
             (r) => !r.accept && (!r.alternativeDate || !r.alternativeTimeSlotLabel),
         )
         if (missingAlternative) {
             showToast({ type: 'validation', message: t('requests.submitOffer.errors.missingAlternative') })
+            return
+        }
+        if (hasBlockingConflict) {
+            showToast({ type: 'validation', message: t('requests.submitOffer.errors.scheduleConflict') })
             return
         }
         const perSessionResponses: PerSessionOfferResponse[] = rows.map((r) => ({
@@ -235,6 +265,23 @@ export const SubmitOfferModal: React.FC<SubmitOfferModalProps> = ({
                                         </div>
                                     </div>
                                 )}
+
+                                {priceRange && (
+                                    <p
+                                        className={`text-xs font-medium flex items-center gap-1.5 ${priceOutOfRange
+                                            ? 'text-rose-600 dark:text-rose-400'
+                                            : 'text-slate-500 dark:text-slate-400'
+                                            }`}
+                                    >
+                                        {priceOutOfRange && <AlertTriangle size={12} />}
+                                        {t(
+                                            priceOutOfRange
+                                                ? 'requests.submitOffer.priceOutOfRangeHint'
+                                                : 'requests.submitOffer.priceRangeHint',
+                                            { min: priceRange.min, max: priceRange.max },
+                                        )}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Validity */}
@@ -326,6 +373,19 @@ export const SubmitOfferModal: React.FC<SubmitOfferModalProps> = ({
                                                     </div>
                                                 </div>
 
+                                                {conflictSessionNumbers.has(row.sessionNumber) && (
+                                                    <div className="flex items-start gap-1.5 text-[11px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/20 rounded-lg px-2.5 py-1.5">
+                                                        <AlertTriangle size={13} className="shrink-0 mt-px" />
+                                                        <span>
+                                                            {t(
+                                                                row.accept
+                                                                    ? 'requests.submitOffer.conflictBlocking'
+                                                                    : 'requests.submitOffer.conflictResolved',
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                )}
+
                                                 {!row.accept && (
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-2 border-t border-amber-200/40 dark:border-amber-900/30">
                                                         <div>
@@ -414,7 +474,7 @@ export const SubmitOfferModal: React.FC<SubmitOfferModalProps> = ({
                             <button
                                 type="button"
                                 onClick={handleSubmit}
-                                disabled={mutation.isPending}
+                                disabled={mutation.isPending || hasBlockingConflict || priceOutOfRange}
                                 className="px-5 py-2.5 rounded-lg bg-secondary text-white text-sm font-bold hover:bg-primary transition shadow-md shadow-secondary/20 flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                             >
                                 {mutation.isPending && <Loader2 size={14} className="animate-spin" />}
