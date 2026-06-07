@@ -14,14 +14,11 @@ import {
 import {
     getTeacherDocumentsStatus,
     reuploadDocument,
-    TeacherDocumentReview,
+    RequirementStatus,
     TeacherDocumentsError,
 } from "../register/-api/teacherDocuments";
-import {
-    DocumentVerificationStatus,
-    TeacherDocumentType,
-} from "../register/-types/IdentityData";
 import { showToast } from "@/lib/utils/toast";
+import { useLocale } from "@/lib/hooks/useLocale";
 
 export const Route = createFileRoute("/teacher/reupload")({
     ssr: false,
@@ -39,13 +36,14 @@ export const Route = createFileRoute("/teacher/reupload")({
 
 function ReuploadRoute() {
     const { t } = useTranslation("teacher");
+    const locale = useLocale();
     const navigate = useNavigate();
     const { data: sessionData } = useLiveQuery((q) =>
         q.from({ session: localStorageCollection })
     );
     const token = sessionData?.[0]?.token ?? "";
 
-    const [documents, setDocuments] = useState<TeacherDocumentReview[]>([]);
+    const [documents, setDocuments] = useState<RequirementStatus[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploadingId, setUploadingId] = useState<number | null>(null);
 
@@ -53,12 +51,12 @@ function ReuploadRoute() {
         if (!token) return;
         setLoading(true);
         try {
-            const docs = await getTeacherDocumentsStatus(token);
-            setDocuments(docs);
-            const stillRejected = docs.some(
-                (d) => d.status === DocumentVerificationStatus.REJECTED
+            const status = await getTeacherDocumentsStatus(token);
+            setDocuments(status.requirements);
+            const stillRejected = status.requirements.some(
+                (r) => r.verificationStatus === "Rejected"
             );
-            if (!stillRejected && docs.length > 0) {
+            if (!stillRejected && status.requirements.length > 0) {
                 // All cleared; send the teacher back to the await screen — admin will re-review.
                 navigate({ to: "/teacher/await" });
             }
@@ -82,16 +80,19 @@ function ReuploadRoute() {
     const rejectedDocuments = useMemo(
         () =>
             documents.filter(
-                (d) => d.status === DocumentVerificationStatus.REJECTED
+                (r) =>
+                    r.verificationStatus === "Rejected" &&
+                    r.teacherDocumentId != null
             ),
         [documents]
     );
 
-    const handleReupload = async (doc: TeacherDocumentReview, file: File) => {
-        setUploadingId(doc.documentId);
+    const handleReupload = async (doc: RequirementStatus, file: File) => {
+        if (doc.teacherDocumentId == null) return;
+        setUploadingId(doc.teacherDocumentId);
         try {
             const result = await reuploadDocument({
-                documentId: doc.documentId,
+                teacherDocumentId: doc.teacherDocumentId,
                 file,
                 token,
             });
@@ -120,11 +121,13 @@ function ReuploadRoute() {
         }
     };
 
-    const documentTypeLabel = (typeId: number): string => {
-        switch (typeId) {
-            case TeacherDocumentType.IDENTITY_DOCUMENT:
+    const requirementLabel = (doc: RequirementStatus): string => {
+        const apiLabel = locale === "ar" ? doc.nameAr : doc.nameEn;
+        if (apiLabel) return apiLabel;
+        switch (doc.code) {
+            case "identity_document":
                 return t("auth.reupload.types.identityDocument");
-            case TeacherDocumentType.CERTIFICATE:
+            case "certificate":
                 return t("auth.reupload.types.certificate");
             default:
                 return t("auth.reupload.types.other");
@@ -160,11 +163,11 @@ function ReuploadRoute() {
                     ) : (
                         <div className="space-y-4">
                             {rejectedDocuments.map((doc) => {
-                                const isUploading = uploadingId === doc.documentId;
-                                const inputId = `reupload-${doc.documentId}`;
+                                const isUploading = uploadingId === doc.teacherDocumentId;
+                                const inputId = `reupload-${doc.teacherDocumentId}`;
                                 return (
                                     <div
-                                        key={doc.documentId}
+                                        key={doc.teacherDocumentId ?? doc.code}
                                         className="border-2 border-red-100 dark:border-red-900/40 bg-red-50/30 dark:bg-red-900/10 rounded-2xl p-5"
                                     >
                                         <div className="flex items-start justify-between gap-3 mb-3">
@@ -174,13 +177,8 @@ function ReuploadRoute() {
                                                 </div>
                                                 <div className="text-start">
                                                     <h3 className="font-bold text-[#003049] dark:text-slate-100">
-                                                        {documentTypeLabel(doc.documentType)}
+                                                        {requirementLabel(doc)}
                                                     </h3>
-                                                    {doc.fileName && (
-                                                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">
-                                                            {doc.fileName}
-                                                        </p>
-                                                    )}
                                                 </div>
                                             </div>
                                             <span className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 text-[10px] font-bold px-2 py-1 rounded-full">

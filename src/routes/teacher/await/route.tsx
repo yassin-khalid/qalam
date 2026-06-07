@@ -7,8 +7,7 @@ import { upsertSession } from "@/lib/utils/sessionHelpers";
 import ThemeToggleButton from "@/lib/components/ThemeToggleButton";
 import QalamLogo from "@/lib/components/QalamLogo";
 import { Loader2, RefreshCcw } from "lucide-react";
-import { getTeacherDocumentsStatus, TeacherDocumentReview } from "../register/-api/teacherDocuments";
-import { DocumentVerificationStatus } from "../register/-types/IdentityData";
+import { getTeacherDocumentsStatus, TeacherDocumentsStatus } from "../register/-api/teacherDocuments";
 import { showToast } from "@/lib/utils/toast";
 import { nextStepToNavigateOptions, NextStepName } from "@/lib/utils/teacherAuthRouting";
 
@@ -25,12 +24,16 @@ export const Route = createFileRoute("/teacher/await")({
 
 const POLL_INTERVAL_MS = 15_000;
 
-function deriveNextDestinationFromDocuments(docs: TeacherDocumentReview[]) {
-    if (docs.length === 0) return null;
-    const hasRejected = docs.some((d) => d.status === DocumentVerificationStatus.REJECTED);
+function deriveNextDestinationFromStatus(status: TeacherDocumentsStatus) {
+    const requirements = status.requirements;
+    if (requirements.length === 0) return null;
+    const hasRejected = requirements.some((r) => r.verificationStatus === "Rejected");
     if (hasRejected) return NextStepName.ReuploadRejectedDocuments;
-    const allApproved = docs.every((d) => d.status === DocumentVerificationStatus.APPROVED);
-    if (allApproved) return NextStepName.AddTeachingSubjects;
+    const requiredItems = requirements.filter((r) => r.isRequired);
+    const allRequiredApproved =
+        requiredItems.length > 0 &&
+        requiredItems.every((r) => r.verificationStatus === "Approved");
+    if (allRequiredApproved) return NextStepName.AddTeachingSubjects;
     return null;
 }
 
@@ -46,8 +49,8 @@ function AwaitRoute() {
         if (!token) return;
         setIsChecking(true);
         try {
-            const docs = await getTeacherDocumentsStatus(token);
-            const next = deriveNextDestinationFromDocuments(docs);
+            const status = await getTeacherDocumentsStatus(token);
+            const next = deriveNextDestinationFromStatus(status);
             if (next === NextStepName.ReuploadRejectedDocuments) {
                 upsertSession({
                     registrationStep: {

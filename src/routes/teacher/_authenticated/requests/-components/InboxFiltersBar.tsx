@@ -41,6 +41,15 @@ export const InboxFiltersBar: React.FC<InboxFiltersBarProps> = ({ filters, subje
                     ))}
                 </select>
                 <select
+                    value={filters.requestKind}
+                    onChange={(e) => update('requestKind', e.target.value as InboxFilters['requestKind'])}
+                    className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                >
+                    <option value="all">{t('requests.inbox.filters.kindAll')}</option>
+                    <option value="Directed">{t('requests.inbox.filters.kindDirected')}</option>
+                    <option value="Published">{t('requests.inbox.filters.kindPublished')}</option>
+                </select>
+                <select
                     value={filters.teachingMode}
                     onChange={(e) => update('teachingMode', e.target.value as InboxFilters['teachingMode'])}
                     className="px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20"
@@ -77,9 +86,9 @@ export const InboxFiltersBar: React.FC<InboxFiltersBarProps> = ({ filters, subje
                         onChange={(e) => update('sort', e.target.value as InboxFilters['sort'])}
                         className="bg-transparent text-slate-700 dark:text-slate-200 text-sm font-medium focus:outline-none"
                     >
-                        <option value="newest">{t('requests.inbox.filters.sortNewest')}</option>
-                        <option value="urgent">{t('requests.inbox.filters.sortUrgent')}</option>
-                        <option value="fewest-offers">{t('requests.inbox.filters.sortFewestOffers')}</option>
+                        <option value="Newest">{t('requests.inbox.filters.sortNewest')}</option>
+                        <option value="ExpiringSoon">{t('requests.inbox.filters.sortUrgent')}</option>
+                        <option value="MostOffers">{t('requests.inbox.filters.sortMostOffers')}</option>
                     </select>
                 </div>
             </div>

@@ -38,7 +38,7 @@ const COUNTRIES: CountryCode[] = [
 ];
 
 interface StepPhoneProps {
-    onSuccess: (phone: string, data: SendOtpResponseData) => void;
+    onSuccess: (phone: string, countryCode: string, data: SendOtpResponseData) => void;
     onPhoneChanges: (phone: string) => void;
     phoneNumber?: string;
 }
@@ -101,7 +101,7 @@ const StepPhone: React.FC<StepPhoneProps> = ({ onSuccess, onPhoneChanges, phoneN
                     countryCode: selectedCountry.code,
                     ...(teacherConfig.showEmailField && value.email ? { email: value.email } : {}),
                 });
-                onSuccess(value.phoneNumber, response.data);
+                onSuccess(value.phoneNumber, selectedCountry.code, response.data);
                 showToast({ type: 'success', message: response.message ?? t('auth.register.phone.toasts.otpSent') })
             } catch (error) {
                 if (error instanceof SendOtpError) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -6,12 +6,11 @@ import {
     X,
     SaudiRiyal,
     Loader2,
-    Check,
-    Pencil,
     Calendar as CalendarIcon,
     Clock,
-    Info,
+    Check,
     AlertTriangle,
+    CalendarOff,
 } from 'lucide-react'
 
 import { LOCALE_DIRECTION } from '@/lib/i18n'
@@ -19,12 +18,12 @@ import { useLocale } from '@/lib/hooks/useLocale'
 import { showToast } from '@/lib/utils/toast'
 
 import {
-    scheduleConflictsQueryOptions,
+    availabilityMatchQueryOptions,
     submitOffer,
-    type SubmitOfferInput,
+    updateOffer,
 } from '../../-queries/sessionRequestsQueries'
 import type {
-    PerSessionOfferResponse,
+    AvailabilityStatus,
     SessionOffer,
     SessionRequestDetail,
 } from '../../-types/types'
@@ -36,20 +35,14 @@ interface SubmitOfferModalProps {
     existingOffer: SessionOffer | null
 }
 
-type PricingMode = 'total' | 'perSession'
-
 const VALIDITY_OPTIONS = [24, 48, 72, 168] as const
 
-interface RowState extends PerSessionOfferResponse {
-    // local-only ergonomics
-    open: boolean
-}
-
-const formatDateInput = (iso: string) => {
-    const d = new Date(iso)
-    if (Number.isNaN(d.getTime())) return ''
-    return d.toISOString().slice(0, 10)
-}
+const formatDate = (iso: string, isAr: boolean) =>
+    new Date(iso).toLocaleDateString(isAr ? 'ar-EG' : 'en-US', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+    })
 
 export const SubmitOfferModal: React.FC<SubmitOfferModalProps> = ({
     open,
@@ -59,68 +52,55 @@ export const SubmitOfferModal: React.FC<SubmitOfferModalProps> = ({
 }) => {
     const { t } = useTranslation('teacher')
     const locale = useLocale()
+    const isAr = locale === 'ar'
     const queryClient = useQueryClient()
-    const timeSlots = t('common.timeSlots', { returnObjects: true }) as string[]
 
     const isUpdate = !!existingOffer
 
-    const [pricingMode, setPricingMode] = useState<PricingMode>(
-        existingOffer?.pricePerSession ? 'perSession' : 'total',
-    )
-    const [totalPrice, setTotalPrice] = useState<string>(
-        existingOffer ? String(existingOffer.totalPrice) : '',
-    )
-    const [perSessionPrice, setPerSessionPrice] = useState<string>(
-        existingOffer?.pricePerSession ? String(existingOffer.pricePerSession) : '',
-    )
-    const [generalNotes, setGeneralNotes] = useState<string>(existingOffer?.generalNotes ?? '')
-    const [validityHours, setValidityHours] = useState<number>(existingOffer?.validityHours ?? 48)
-    const [rows, setRows] = useState<RowState[]>([])
+    const [price, setPrice] = useState<string>(existingOffer ? String(existingOffer.price) : '')
+    const [teacherNotes, setTeacherNotes] = useState<string>(existingOffer?.teacherNotes ?? '')
+    const [validityHours, setValidityHours] = useState<number>(48)
+    const [commitmentConfirmed, setCommitmentConfirmed] = useState<boolean>(false)
 
     // Re-seed when opening or when the existing offer changes.
     useEffect(() => {
         if (!open) return
-        const seed = request.sessions.map<RowState>((s) => {
-            const prior = existingOffer?.perSessionResponses.find(
-                (r) => r.sessionNumber === s.sessionNumber,
-            )
-            return {
-                sessionNumber: s.sessionNumber,
-                accept: prior ? prior.accept : true,
-                alternativeDate: prior?.alternativeDate,
-                alternativeTimeSlotLabel: prior?.alternativeTimeSlotLabel,
-                teacherNotes: prior?.teacherNotes,
-                open: prior ? !prior.accept : false,
-            }
-        })
-        setRows(seed)
-    }, [open, request, existingOffer])
+        setPrice(existingOffer ? String(existingOffer.price) : '')
+        setTeacherNotes(existingOffer?.teacherNotes ?? '')
+        setValidityHours(48)
+        setCommitmentConfirmed(false)
+    }, [open, existingOffer])
 
-    const calculatedTotal = useMemo(() => {
-        if (pricingMode === 'perSession') {
-            const p = Number(perSessionPrice)
-            return Number.isFinite(p) ? p * request.sessionsCount : 0
-        }
-        const t = Number(totalPrice)
-        return Number.isFinite(t) ? t : 0
-    }, [pricingMode, totalPrice, perSessionPrice, request.sessionsCount])
-
-    // Schedule conflicts (BRD §7 Screen 4) — preferred sessions that clash with
-    // the teacher's already-committed slots. Only fetched while the modal is open.
-    const conflictsQuery = useQuery({ ...scheduleConflictsQueryOptions(request.id), enabled: open })
-    const conflictSessionNumbers = useMemo(
-        () => new Set((conflictsQuery.data ?? []).map((c) => c.sessionNumber)),
-        [conflictsQuery.data],
+    // Per-session availability against the teacher's schedule — informational
+    // only (it never blocks submitting; the student's timing is accepted as-is).
+    const availabilityQuery = useQuery({
+        ...availabilityMatchQueryOptions(request.id),
+        enabled: open,
+    })
+    const availabilityBySession = new Map(
+        (availabilityQuery.data ?? []).map((a) => [a.sequenceNumber, a]),
     )
-    // A blocking conflict is one on a session the teacher has agreed to keep as-is.
-    const hasBlockingConflict = rows.some((r) => r.accept && conflictSessionNumbers.has(r.sessionNumber))
 
-    const priceRange = request.priceRange ?? null
-    const priceOutOfRange =
-        !!priceRange && calculatedTotal > 0 && (calculatedTotal < priceRange.min || calculatedTotal > priceRange.max)
+    const numericPrice = Number(price)
+    const priceValid = Number.isFinite(numericPrice) && numericPrice > 0
+    const canSubmit = priceValid && (isUpdate || commitmentConfirmed)
 
     const mutation = useMutation({
-        mutationFn: (input: SubmitOfferInput) => submitOffer(input),
+        mutationFn: () =>
+            isUpdate && existingOffer
+                ? updateOffer({
+                    id: existingOffer.id,
+                    price: numericPrice,
+                    teacherNotes: teacherNotes.trim() || null,
+                    validityHours,
+                })
+                : submitOffer({
+                    sessionRequestId: request.id,
+                    price: numericPrice,
+                    teacherNotes: teacherNotes.trim() || null,
+                    validityHours,
+                    commitmentConfirmed,
+                }),
         onSuccess: () => {
             showToast({
                 type: 'success',
@@ -139,55 +119,15 @@ export const SubmitOfferModal: React.FC<SubmitOfferModalProps> = ({
     })
 
     const handleSubmit = () => {
-        const finalTotal = calculatedTotal
-        if (finalTotal <= 0) {
+        if (!priceValid) {
             showToast({ type: 'validation', message: t('requests.submitOffer.errors.positivePrice') })
             return
         }
-        if (priceOutOfRange && priceRange) {
-            showToast({
-                type: 'validation',
-                message: t('requests.submitOffer.errors.priceOutOfRange', {
-                    min: priceRange.min,
-                    max: priceRange.max,
-                }),
-            })
+        if (!isUpdate && !commitmentConfirmed) {
+            showToast({ type: 'validation', message: t('requests.submitOffer.errors.commitmentRequired') })
             return
         }
-        const missingAlternative = rows.some(
-            (r) => !r.accept && (!r.alternativeDate || !r.alternativeTimeSlotLabel),
-        )
-        if (missingAlternative) {
-            showToast({ type: 'validation', message: t('requests.submitOffer.errors.missingAlternative') })
-            return
-        }
-        if (hasBlockingConflict) {
-            showToast({ type: 'validation', message: t('requests.submitOffer.errors.scheduleConflict') })
-            return
-        }
-        const perSessionResponses: PerSessionOfferResponse[] = rows.map((r) => ({
-            sessionNumber: r.sessionNumber,
-            accept: r.accept,
-            ...(r.accept
-                ? {}
-                : {
-                    alternativeDate: r.alternativeDate,
-                    alternativeTimeSlotLabel: r.alternativeTimeSlotLabel,
-                }),
-            ...(r.teacherNotes ? { teacherNotes: r.teacherNotes } : {}),
-        }))
-        mutation.mutate({
-            requestId: request.id,
-            totalPrice: finalTotal,
-            pricePerSession: pricingMode === 'perSession' ? Number(perSessionPrice) : null,
-            generalNotes: generalNotes.trim() || null,
-            perSessionResponses,
-            validityHours,
-        })
-    }
-
-    const patchRow = (sessionNumber: number, patch: Partial<RowState>) => {
-        setRows((prev) => prev.map((r) => (r.sessionNumber === sessionNumber ? { ...r, ...patch } : r)))
+        mutation.mutate()
     }
 
     return (
@@ -208,7 +148,7 @@ export const SubmitOfferModal: React.FC<SubmitOfferModalProps> = ({
                         transition={{ duration: 0.22 }}
                         dir={LOCALE_DIRECTION[locale]}
                         onClick={(e) => e.stopPropagation()}
-                        className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
+                        className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
                     >
                         {/* Header */}
                         <header className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/30">
@@ -217,7 +157,7 @@ export const SubmitOfferModal: React.FC<SubmitOfferModalProps> = ({
                                     {t(isUpdate ? 'requests.submitOffer.updateTitle' : 'requests.submitOffer.title')}
                                 </h2>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
-                                    {locale === 'ar' ? request.subjectNameAr : request.subjectNameEn} • {request.sessionsCount} {t('requests.card.sessionsLabel')}
+                                    {isAr ? request.subjectNameAr : request.subjectNameEn} • {request.sessionsCount} {t('requests.card.sessionsLabel')}
                                 </p>
                             </div>
                             <button
@@ -232,56 +172,73 @@ export const SubmitOfferModal: React.FC<SubmitOfferModalProps> = ({
 
                         {/* Body */}
                         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                            {/* Pricing */}
-                            <div className="space-y-3">
-                                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                                    {t('requests.submitOffer.pricingMode')}
-                                </label>
-                                <div className="flex p-1 bg-slate-100 dark:bg-slate-950 rounded-xl w-full max-w-md">
-                                    <ToggleBtn active={pricingMode === 'total'} onClick={() => setPricingMode('total')}>
-                                        {t('requests.submitOffer.pricingModeTotal')}
-                                    </ToggleBtn>
-                                    <ToggleBtn active={pricingMode === 'perSession'} onClick={() => setPricingMode('perSession')}>
-                                        {t('requests.submitOffer.pricingModePerSession')}
-                                    </ToggleBtn>
+                            {isUpdate && (
+                                <div className="flex items-start gap-2 text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 rounded-lg px-3 py-2.5">
+                                    <AlertTriangle size={14} className="shrink-0 mt-px" />
+                                    <span>{t('requests.submitOffer.updateNotice')}</span>
                                 </div>
+                            )}
 
-                                {pricingMode === 'total' ? (
-                                    <PriceInput
-                                        label={t('requests.submitOffer.totalPriceLabel')}
-                                        value={totalPrice}
-                                        onChange={setTotalPrice}
+                            {/* Price */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                                    {t('requests.submitOffer.totalPriceLabel')}
+                                </label>
+                                <div className="relative max-w-xs">
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        value={price}
+                                        onChange={(e) => setPrice(e.target.value)}
+                                        placeholder="0"
+                                        className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-end text-sm"
                                     />
-                                ) : (
-                                    <div className="space-y-2">
-                                        <PriceInput
-                                            label={t('requests.submitOffer.perSessionPriceLabel')}
-                                            value={perSessionPrice}
-                                            onChange={setPerSessionPrice}
-                                        />
-                                        <div className="text-xs font-bold text-primary dark:text-secondary bg-primary/5 dark:bg-secondary/10 rounded-lg px-3 py-2 inline-flex items-center gap-1.5">
-                                            <SaudiRiyal size={12} />
-                                            {t('requests.submitOffer.calculatedTotal', { total: calculatedTotal })}
-                                        </div>
-                                    </div>
-                                )}
+                                    <span className="absolute end-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                                        <SaudiRiyal size={16} />
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                    {t('requests.submitOffer.priceHint')}
+                                </p>
+                            </div>
 
-                                {priceRange && (
-                                    <p
-                                        className={`text-xs font-medium flex items-center gap-1.5 ${priceOutOfRange
-                                            ? 'text-rose-600 dark:text-rose-400'
-                                            : 'text-slate-500 dark:text-slate-400'
-                                            }`}
-                                    >
-                                        {priceOutOfRange && <AlertTriangle size={12} />}
-                                        {t(
-                                            priceOutOfRange
-                                                ? 'requests.submitOffer.priceOutOfRangeHint'
-                                                : 'requests.submitOffer.priceRangeHint',
-                                            { min: priceRange.min, max: priceRange.max },
-                                        )}
-                                    </p>
-                                )}
+                            {/* Session dates + availability (read-only) */}
+                            <div className="space-y-2.5">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                                        {t('requests.submitOffer.sessionDatesLabel')}
+                                    </label>
+                                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                                        {t('requests.submitOffer.sessionDatesHint')}
+                                    </span>
+                                </div>
+                                <ul className="space-y-2">
+                                    {request.sessions.map((s) => {
+                                        const match = availabilityBySession.get(s.sequenceNumber)
+                                        return (
+                                            <li
+                                                key={s.id}
+                                                className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 px-3 py-2.5"
+                                            >
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-bold text-slate-800 dark:text-white truncate">
+                                                        {t('requests.detail.sessions.sessionLabel', { number: s.sequenceNumber })}
+                                                    </p>
+                                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                                        <CalendarIcon size={11} />
+                                                        {formatDate(s.preferredDate, isAr)}
+                                                        <Clock size={11} className="ms-1.5" />
+                                                        {s.preferredTimeSlotLabel}
+                                                    </p>
+                                                </div>
+                                                <AvailabilityBadge
+                                                    status={match?.status}
+                                                    loading={availabilityQuery.isLoading}
+                                                />
+                                            </li>
+                                        )
+                                    })}
+                                </ul>
                             </div>
 
                             {/* Validity */}
@@ -312,139 +269,7 @@ export const SubmitOfferModal: React.FC<SubmitOfferModalProps> = ({
                                 </p>
                             </div>
 
-                            {/* Per-session agreement */}
-                            <div className="space-y-2.5">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                                        {t('requests.submitOffer.perSessionAgreement')}
-                                    </label>
-                                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
-                                        <Info size={12} />
-                                        {t('requests.submitOffer.perSessionHint')}
-                                    </span>
-                                </div>
-                                <ul className="space-y-2.5">
-                                    {rows.map((row) => {
-                                        const session = request.sessions.find((s) => s.sessionNumber === row.sessionNumber)!
-                                        return (
-                                            <li
-                                                key={row.sessionNumber}
-                                                className={`rounded-xl border ${row.accept
-                                                    ? 'bg-emerald-50/40 dark:bg-emerald-950/10 border-emerald-200/60 dark:border-emerald-900/40'
-                                                    : 'bg-amber-50/40 dark:bg-amber-950/10 border-amber-200/60 dark:border-amber-900/40'
-                                                    } p-3 space-y-2`}
-                                            >
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div className="min-w-0 flex-1">
-                                                        <h4 className="text-sm font-bold text-slate-800 dark:text-white truncate">
-                                                            {t('requests.detail.sessions.sessionLabel', { number: row.sessionNumber })} — {session.title}
-                                                        </h4>
-                                                        <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
-                                                            <CalendarIcon size={11} />
-                                                            {formatDateInput(session.preferredDate)}
-                                                            <Clock size={11} className="ms-2" />
-                                                            {session.preferredTimeSlotLabel}
-                                                            <span className="ms-2">• {session.durationMinutes} {t('requests.detail.sessions.duration', { count: session.durationMinutes }).replace(/\d+\s*/, '')}</span>
-                                                        </p>
-                                                    </div>
-                                                    <div className="flex gap-1.5">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => patchRow(row.sessionNumber, { accept: true, open: false })}
-                                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border flex items-center gap-1 ${row.accept
-                                                                ? 'bg-emerald-600 text-white border-transparent'
-                                                                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
-                                                                }`}
-                                                        >
-                                                            <Check size={12} />
-                                                            {t('requests.submitOffer.agreeBtn')}
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => patchRow(row.sessionNumber, { accept: false, open: true })}
-                                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border flex items-center gap-1 ${!row.accept
-                                                                ? 'bg-amber-600 text-white border-transparent'
-                                                                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-400'
-                                                                }`}
-                                                        >
-                                                            <Pencil size={12} />
-                                                            {t('requests.submitOffer.proposeBtn')}
-                                                        </button>
-                                                    </div>
-                                                </div>
-
-                                                {conflictSessionNumbers.has(row.sessionNumber) && (
-                                                    <div className="flex items-start gap-1.5 text-[11px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/20 rounded-lg px-2.5 py-1.5">
-                                                        <AlertTriangle size={13} className="shrink-0 mt-px" />
-                                                        <span>
-                                                            {t(
-                                                                row.accept
-                                                                    ? 'requests.submitOffer.conflictBlocking'
-                                                                    : 'requests.submitOffer.conflictResolved',
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                )}
-
-                                                {!row.accept && (
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-2 border-t border-amber-200/40 dark:border-amber-900/30">
-                                                        <div>
-                                                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1 block">
-                                                                {t('requests.submitOffer.alternativeDateLabel')} *
-                                                            </label>
-                                                            <input
-                                                                type="date"
-                                                                value={row.alternativeDate ? row.alternativeDate.slice(0, 10) : ''}
-                                                                onChange={(e) =>
-                                                                    patchRow(row.sessionNumber, {
-                                                                        alternativeDate: e.target.value
-                                                                            ? new Date(e.target.value).toISOString()
-                                                                            : undefined,
-                                                                    })
-                                                                }
-                                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1 block">
-                                                                {t('requests.submitOffer.alternativeSlotLabel')} *
-                                                            </label>
-                                                            <select
-                                                                value={row.alternativeTimeSlotLabel ?? ''}
-                                                                onChange={(e) =>
-                                                                    patchRow(row.sessionNumber, {
-                                                                        alternativeTimeSlotLabel: e.target.value || undefined,
-                                                                    })
-                                                                }
-                                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-                                                            >
-                                                                <option value="">—</option>
-                                                                {timeSlots.map((s) => (
-                                                                    <option key={s} value={s}>{s}</option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                        <div className="md:col-span-2">
-                                                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1 block">
-                                                                {t('requests.submitOffer.teacherSessionNotes')}
-                                                            </label>
-                                                            <input
-                                                                type="text"
-                                                                value={row.teacherNotes ?? ''}
-                                                                onChange={(e) => patchRow(row.sessionNumber, { teacherNotes: e.target.value })}
-                                                                maxLength={250}
-                                                                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </li>
-                                        )
-                                    })}
-                                </ul>
-                            </div>
-
-                            {/* General notes */}
+                            {/* Teacher notes */}
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-slate-700 dark:text-slate-300">
                                     {t('requests.submitOffer.generalNotesLabel')}
@@ -452,13 +277,28 @@ export const SubmitOfferModal: React.FC<SubmitOfferModalProps> = ({
                                 <textarea
                                     rows={3}
                                     maxLength={1000}
-                                    value={generalNotes}
-                                    onChange={(e) => setGeneralNotes(e.target.value)}
+                                    value={teacherNotes}
+                                    onChange={(e) => setTeacherNotes(e.target.value)}
                                     placeholder={t('requests.submitOffer.generalNotesPlaceholder')}
                                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-sm resize-none"
                                 />
-                                <div className="text-end text-xs text-slate-500 dark:text-slate-400">{generalNotes.length} / 1000</div>
+                                <div className="text-end text-xs text-slate-500 dark:text-slate-400">{teacherNotes.length} / 1000</div>
                             </div>
+
+                            {/* Commitment (create only) */}
+                            {!isUpdate && (
+                                <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 px-3.5 py-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={commitmentConfirmed}
+                                        onChange={(e) => setCommitmentConfirmed(e.target.checked)}
+                                        className="mt-0.5 w-4 h-4 accent-primary dark:accent-secondary"
+                                    />
+                                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                        {t('requests.submitOffer.commitmentLabel')}
+                                    </span>
+                                </label>
+                            )}
                         </div>
 
                         {/* Footer */}
@@ -474,7 +314,7 @@ export const SubmitOfferModal: React.FC<SubmitOfferModalProps> = ({
                             <button
                                 type="button"
                                 onClick={handleSubmit}
-                                disabled={mutation.isPending || hasBlockingConflict || priceOutOfRange}
+                                disabled={mutation.isPending || !canSubmit}
                                 className="px-5 py-2.5 rounded-lg bg-secondary text-white text-sm font-bold hover:bg-primary transition shadow-md shadow-secondary/20 flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                             >
                                 {mutation.isPending && <Loader2 size={14} className="animate-spin" />}
@@ -488,31 +328,30 @@ export const SubmitOfferModal: React.FC<SubmitOfferModalProps> = ({
     )
 }
 
-const ToggleBtn: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode }> = ({ active, onClick, children }) => (
-    <button
-        type="button"
-        onClick={onClick}
-        className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${active ? 'bg-white dark:bg-slate-800 text-teal-600 dark:text-secondary shadow-sm' : 'text-slate-500'
-            }`}
-    >
-        {children}
-    </button>
-)
-
-const PriceInput: React.FC<{ label: string; value: string; onChange: (v: string) => void }> = ({ label, value, onChange }) => (
-    <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-500 dark:text-slate-400">{label}</label>
-        <div className="relative">
-            <input
-                type="number"
-                min={0}
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-end text-sm"
-            />
-            <span className="absolute end-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                <SaudiRiyal size={16} />
-            </span>
-        </div>
-    </div>
-)
+const AvailabilityBadge: React.FC<{ status?: AvailabilityStatus; loading: boolean }> = ({ status, loading }) => {
+    const { t } = useTranslation('teacher')
+    if (loading || !status) {
+        return <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 animate-pulse shrink-0" />
+    }
+    const map = {
+        Available: {
+            icon: <Check size={12} />,
+            cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/40',
+        },
+        Conflict: {
+            icon: <AlertTriangle size={12} />,
+            cls: 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300 border-amber-200 dark:border-amber-900/40',
+        },
+        OutsideAvailability: {
+            icon: <CalendarOff size={12} />,
+            cls: 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300 border-rose-200 dark:border-rose-900/40',
+        },
+    } as const
+    const v = map[status]
+    return (
+        <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold border whitespace-nowrap ${v.cls}`}>
+            {v.icon}
+            {t(`requests.submitOffer.availability.${status}`)}
+        </span>
+    )
+}

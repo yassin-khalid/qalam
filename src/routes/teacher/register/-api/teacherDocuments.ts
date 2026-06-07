@@ -1,19 +1,33 @@
-export interface TeacherDocumentReview {
-    documentId: number;
-    documentType: number;
-    status: number;
-    rejectionReason: string | null;
-    fileName?: string | null;
-    fileUrl?: string | null;
-    uploadedAt?: string | null;
-    reviewedAt?: string | null;
+import { RequirementType } from "../-types/RegistrationRequirement";
+
+export type VerificationStatus = "Pending" | "Approved" | "Rejected";
+
+/** Per-requirement review status returned by the Status endpoint (step 6). */
+export interface RequirementStatus {
+    code: string;
+    nameAr?: string | null;
+    nameEn?: string | null;
+    requirementType: RequirementType;
+    isRequired: boolean;
+    isSubmitted: boolean;
+    verificationStatus: VerificationStatus;
+    rejectionReason?: string | null;
+    teacherDocumentId?: number | null;
+    textValue?: string | null;
+    boolValue?: boolean | null;
+}
+
+export interface TeacherDocumentsStatus {
+    requirements: RequirementStatus[];
+    /** Legacy document DTOs kept for backward compatibility; unused by the app. */
+    legacyDocuments: unknown[];
 }
 
 interface DocumentsStatusResponse {
     statusCode: number | string;
     succeeded: true;
     message: string;
-    data: TeacherDocumentReview[];
+    data: TeacherDocumentsStatus;
     errors: null;
     meta: null;
 }
@@ -31,55 +45,62 @@ export class TeacherDocumentsError extends Error {
     statusCode: number | string;
     errors: string[] | null;
     constructor(error: ApiErrorResponse) {
-        super(error.message ?? 'حدث خطأ ما');
-        this.name = 'TeacherDocumentsError';
+        super(error.message ?? "حدث خطأ ما");
+        this.name = "TeacherDocumentsError";
         this.statusCode = error.statusCode;
         this.errors = error.errors;
     }
 }
 
-export async function getTeacherDocumentsStatus(token: string): Promise<TeacherDocumentReview[]> {
+export async function getTeacherDocumentsStatus(
+    token: string,
+): Promise<TeacherDocumentsStatus> {
     const response = await fetch(
         `${import.meta.env.VITE_API_URL}/Api/V1/Teacher/TeacherDocuments/Status`,
         {
-            method: 'GET',
+            method: "GET",
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
             },
         },
     );
     if (!response.ok) {
-        const error = await response.json() as ApiErrorResponse;
+        const error = (await response.json()) as ApiErrorResponse;
         throw new TeacherDocumentsError(error);
     }
-    const json = await response.json() as DocumentsStatusResponse;
-    return json.data;
+    const json = (await response.json()) as DocumentsStatusResponse;
+    return {
+        requirements: json.data?.requirements ?? [],
+        legacyDocuments: json.data?.legacyDocuments ?? [],
+    };
 }
 
 interface ReuploadDocumentParams {
-    documentId: number;
+    teacherDocumentId: number;
     file: File;
     token: string;
 }
 
-export async function reuploadDocument(params: ReuploadDocumentParams): Promise<{ message: string }> {
-    const { documentId, file, token } = params;
+export async function reuploadDocument(
+    params: ReuploadDocumentParams,
+): Promise<{ message: string }> {
+    const { teacherDocumentId, file, token } = params;
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
     const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/Api/V1/Teacher/TeacherDocuments/${documentId}/Reupload`,
+        `${import.meta.env.VITE_API_URL}/Api/V1/Teacher/TeacherDocuments/${teacherDocumentId}/Reupload`,
         {
-            method: 'PUT',
+            method: "PUT",
             headers: {
-                'Authorization': `Bearer ${token}`,
+                Authorization: `Bearer ${token}`,
             },
             body: formData,
         },
     );
     if (!response.ok) {
-        const error = await response.json() as ApiErrorResponse;
+        const error = (await response.json()) as ApiErrorResponse;
         throw new TeacherDocumentsError(error);
     }
     return await response.json();

@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/contexts/auth";
 interface StepOTPProps {
   onSuccess: (data: VerifyOtpSuccessResponseData) => void;
   onBack: () => void;
+  countryCode: string;
   phoneNumber: string;
   maskedDestination?: string;
 }
@@ -15,6 +16,7 @@ interface StepOTPProps {
 const StepOTP: React.FC<StepOTPProps> = ({
   onSuccess,
   onBack,
+  countryCode,
   phoneNumber,
   maskedDestination,
 }) => {
@@ -73,7 +75,7 @@ const StepOTP: React.FC<StepOTPProps> = ({
 
     setLoading(true);
     try {
-      const result = await verifyOtp({ otpCode: otp.join(""), phoneNumber });
+      const result = await verifyOtp({ otpCode: otp.join(""), countryCode, phoneNumber });
       onSuccess(result.data);
       showToast({
         type: "success",

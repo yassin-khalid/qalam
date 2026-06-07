@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -7,7 +7,6 @@ import {
     Send,
     Paperclip,
     Loader2,
-    CheckCheck,
     Sparkles,
     Bell,
     User as UserIcon,
@@ -18,15 +17,15 @@ import { useLocale } from '@/lib/hooks/useLocale'
 import { showToast } from '@/lib/utils/toast'
 
 import {
-    chatThreadQueryOptions,
+    conversationQueryOptions,
+    markConversationRead,
+    messagesQueryOptions,
     sendChatMessage,
-    subscribeToThread,
 } from '../../-queries/sessionRequestsQueries'
-import type {
-    ChatMessage,
-    ChatThreadMeta,
-    SessionOffer,
-} from '../../-types/types'
+import type { ChatMessage, SessionOffer } from '../../-types/types'
+
+// v1 has no SignalR — the panel polls for new messages on an interval.
+const POLL_INTERVAL_MS = 4000
 
 interface ChatPanelProps {
     open: boolean
@@ -74,11 +73,11 @@ const groupByDay = (
 ): DaySection[] => {
     const sections: Map<string, DaySection> = new Map()
     for (const m of msgs) {
-        const d = new Date(m.createdAt)
+        const d = new Date(m.sentAt)
         const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
         let section = sections.get(key)
         if (!section) {
-            section = { dayKey: key, label: formatDayLabel(m.createdAt, locale, t), messages: [] }
+            section = { dayKey: key, label: formatDayLabel(m.sentAt, locale, t), messages: [] }
             sections.set(key, section)
         }
         section.messages.push(m)
@@ -96,52 +95,45 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     const { t } = useTranslation('teacher')
     const locale = useLocale()
     const queryClient = useQueryClient()
-
-    const threadQuery = useQuery({
-        ...chatThreadQueryOptions(requestId),
-        enabled: open,
-    })
-
-    // Local message buffer kept in sync with the query cache. Live updates
-    // arrive through the subscription and are appended here so the component
-    // doesn't need to refetch.
-    const [liveMessages, setLiveMessages] = useState<ChatMessage[]>([])
-    const [typing, setTyping] = useState(false)
-    const [draft, setDraft] = useState('')
+    const [draft, setDraft] = React.useState('')
     const scrollRef = useRef<HTMLDivElement>(null)
 
-    useEffect(() => {
-        if (!open) return
-        // Reset when (re)opening
-        setLiveMessages(threadQuery.data?.messages ?? [])
-        setTyping(threadQuery.data?.meta.studentIsTyping ?? false)
-    }, [open, threadQuery.data])
+    // GET /Conversations/by-request/{requestId}/teacher/{teacherId}
+    const conversationQuery = useQuery({ ...conversationQueryOptions(requestId), enabled: open })
+    const conversationId = conversationQuery.data?.conversationId
+    // offerId === 0 => preliminary chat (no offer yet).
+    const hasOffer = !!offer || (conversationQuery.data?.offerId ?? 0) > 0
 
-    useEffect(() => {
-        if (!open) return
-        const unsubscribe = subscribeToThread(
-            requestId,
-            (msg) => {
-                setLiveMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]))
-                // Refresh the request's offer status because the mock flips Pending→InDiscussion.
-                queryClient.invalidateQueries({ queryKey: ['session-offers'] })
-            },
-            (meta: ChatThreadMeta) => setTyping(meta.studentIsTyping),
-        )
-        return unsubscribe
-    }, [open, requestId, queryClient])
+    // GET /Conversations/{id}/messages — polled while the panel is open.
+    const messagesQuery = useQuery({
+        ...messagesQueryOptions(conversationId ?? 0, { direction: 'older', take: 200 }),
+        enabled: open && !!conversationId,
+        refetchInterval: open ? POLL_INTERVAL_MS : false,
+    })
+    const messages = messagesQuery.data?.messages ?? []
 
-    // Auto-scroll to bottom whenever messages or typing state change.
+    // Mark the conversation read whenever it opens / new messages arrive.
+    useEffect(() => {
+        if (!open || !conversationId) return
+        markConversationRead(conversationId)
+            .then(() => queryClient.invalidateQueries({ queryKey: ['session-offers'] }))
+            .catch(() => { })
+    }, [open, conversationId, messages.length, queryClient])
+
+    // Auto-scroll to bottom when messages change.
     useEffect(() => {
         if (!scrollRef.current) return
         scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }, [liveMessages, typing, open])
+    }, [messages.length, open])
 
     const sendMutation = useMutation({
-        mutationFn: (body: string) => sendChatMessage(requestId, body),
-        onSuccess: (msg) => {
-            setLiveMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]))
+        mutationFn: (body: string) => {
+            if (!conversationId) throw new Error('requests.chat.sendError')
+            return sendChatMessage(conversationId, body)
+        },
+        onSuccess: () => {
             setDraft('')
+            messagesQuery.refetch()
         },
         onError: (err: Error) => {
             showToast({
@@ -157,10 +149,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         sendMutation.mutate(body)
     }
 
-    const grouped = useMemo(
-        () => groupByDay(liveMessages, locale, t),
-        [liveMessages, locale, t],
-    )
+    const grouped = useMemo(() => groupByDay(messages, locale, t), [messages, locale, t])
 
     return (
         <AnimatePresence>
@@ -196,7 +185,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                                         {studentDisplayName}
                                     </h2>
                                     <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                                        {t('requests.chat.panelTitle')}
+                                        {hasOffer && offer ? offer.offerNumber : t('requests.chat.panelTitle')}
                                     </p>
                                 </div>
                             </div>
@@ -225,11 +214,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                             ref={scrollRef}
                             className="flex-1 overflow-y-auto px-5 py-4 space-y-4 bg-slate-50/40 dark:bg-slate-950/40"
                         >
-                            {threadQuery.isLoading ? (
+                            {(conversationQuery.isLoading || messagesQuery.isLoading) ? (
                                 <div className="flex items-center justify-center py-10 text-slate-400">
                                     <Loader2 size={24} className="animate-spin" />
                                 </div>
-                            ) : threadQuery.isError ? (
+                            ) : (conversationQuery.isError || messagesQuery.isError) ? (
                                 <p className="text-center text-sm text-rose-600 dark:text-rose-400 py-10">
                                     {t('requests.chat.loadError')}
                                 </p>
@@ -246,17 +235,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                                             </span>
                                         </div>
                                         {section.messages.map((m) => (
-                                            <MessageRow key={m.id} message={m} locale={locale} t={t} />
+                                            <MessageRow key={m.id} message={m} locale={locale} />
                                         ))}
                                     </div>
                                 ))
-                            )}
-
-                            {typing && (
-                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 italic px-1">
-                                    <TypingDots />
-                                    {t('requests.chat.typingIndicator')}
-                                </div>
                             )}
                         </div>
 
@@ -280,6 +262,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                                         }
                                     }}
                                     rows={1}
+                                    maxLength={4000}
                                     placeholder={t('requests.chat.messagePlaceholder')}
                                     className="flex-1 resize-none px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 text-sm max-h-32"
                                     style={{ minHeight: 40 }}
@@ -287,7 +270,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                                 <button
                                     type="button"
                                     onClick={handleSend}
-                                    disabled={!draft.trim() || sendMutation.isPending}
+                                    disabled={!draft.trim() || sendMutation.isPending || !conversationId}
                                     className="px-3.5 py-2.5 rounded-lg bg-secondary hover:bg-primary disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold transition flex items-center gap-1.5 shrink-0"
                                 >
                                     {sendMutation.isPending ? (
@@ -317,8 +300,6 @@ const OfferStatusStrip: React.FC<{ offer: SessionOffer }> = ({ offer }) => {
             case 'Withdrawn':
             case 'Expired':
                 return 'bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900/40'
-            case 'InDiscussion':
-                return 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900/40'
             default:
                 return 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
         }
@@ -339,20 +320,17 @@ const OfferStatusStrip: React.FC<{ offer: SessionOffer }> = ({ offer }) => {
 const MessageRow: React.FC<{
     message: ChatMessage
     locale: string
-    t: (k: string, opts?: any) => string
-}> = ({ message, locale, t }) => {
-    if (message.author === 'system') {
-        const key = message.systemEvent ?? 'OfferSubmitted'
+}> = ({ message, locale }) => {
+    if (message.type === 'System') {
         return (
             <div className="flex items-center justify-center">
-                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1 rounded-full inline-flex items-center gap-1.5">
-                    <CheckCheck size={11} className="text-primary dark:text-secondary" />
-                    {t(`requests.chat.systemEvents.${key}`, { version: message.relatedOfferVersion ?? 1 })}
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1 rounded-full inline-flex items-center gap-1.5 text-center max-w-[90%]">
+                    {message.content}
                 </span>
             </div>
         )
     }
-    const isMine = message.author === 'teacher'
+    const isMine = message.senderRole === 'Teacher'
     return (
         <div className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
             <div
@@ -361,19 +339,11 @@ const MessageRow: React.FC<{
                     : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-100 dark:border-slate-700 rounded-es-sm'
                     }`}
             >
-                <p className="text-sm whitespace-pre-wrap break-words">{message.body}</p>
+                <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                 <p className={`text-[10px] mt-1 ${isMine ? 'text-white/70' : 'text-slate-500 dark:text-slate-400'}`}>
-                    {formatTime(message.createdAt, locale)}
+                    {formatTime(message.sentAt, locale)}
                 </p>
             </div>
         </div>
     )
 }
-
-const TypingDots: React.FC = () => (
-    <span className="inline-flex items-end gap-0.5">
-        <span className="inline-block w-1.5 h-1.5 bg-slate-400 dark:bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-        <span className="inline-block w-1.5 h-1.5 bg-slate-400 dark:bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '120ms' }} />
-        <span className="inline-block w-1.5 h-1.5 bg-slate-400 dark:bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '240ms' }} />
-    </span>
-)

@@ -1,7 +1,8 @@
 interface PersonalInfoParams {
     firstName: string;
     lastName: string;
-    email: string;
+    /** Omit when the email was already collected at the OTP step. */
+    email?: string;
     password: string;
     token: string;
 }

@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { Inbox, Send, MessagesSquare, CheckCircle2, XCircle } from 'lucide-react'
+import { LayoutGrid, Sparkles, Eye, Send } from 'lucide-react'
 import type { InboxCounts, RequestInboxTab } from '../-types/types'
 
 interface InboxTabsProps {
@@ -10,11 +10,10 @@ interface InboxTabsProps {
 }
 
 const TAB_ORDER: { id: RequestInboxTab; icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
-    { id: 'new', icon: Inbox },
-    { id: 'active', icon: Send },
-    { id: 'negotiating', icon: MessagesSquare },
-    { id: 'accepted', icon: CheckCircle2 },
-    { id: 'rejected', icon: XCircle },
+    { id: 'all', icon: LayoutGrid },
+    { id: 'Notified', icon: Sparkles },
+    { id: 'Viewed', icon: Eye },
+    { id: 'OfferSubmitted', icon: Send },
 ]
 
 export const InboxTabs: React.FC<InboxTabsProps> = ({ value, counts, onChange }) => {

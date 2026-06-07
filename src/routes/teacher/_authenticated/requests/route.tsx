@@ -18,13 +18,16 @@ import type { InboxFilters, RequestInboxTab } from './-types/types'
 // this reason). Do not narrow these enums to new values that a child route
 // might want to set independently.
 const searchParams = {
-    tab: parseAsStringLiteral(['new', 'active', 'negotiating', 'accepted', 'rejected'] as const).withDefault('new'),
+    // Tab maps 1:1 to the `?status=` query on GET /AvailableRequests.
+    // 'all' omits the parameter (and excludes dismissed/Skipped requests).
+    tab: parseAsStringLiteral(['all', 'Notified', 'Viewed', 'OfferSubmitted'] as const).withDefault('all'),
     search: parseAsString.withDefault(''),
     mode: parseAsStringLiteral(['all', 'Online', 'InPerson'] as const).withDefault('all'),
     type: parseAsStringLiteral(['all', 'Individual', 'Group'] as const).withDefault('all'),
     subject: parseAsString.withDefault('all'),
+    kind: parseAsStringLiteral(['all', 'Published', 'Directed'] as const).withDefault('all'),
     date: parseAsStringLiteral(['all', 'next7', 'next30'] as const).withDefault('all'),
-    sort: parseAsStringLiteral(['newest', 'urgent', 'fewest-offers'] as const).withDefault('newest'),
+    sort: parseAsStringLiteral(['Newest', 'ExpiringSoon', 'MostOffers'] as const).withDefault('Newest'),
 }
 
 export const Route = createFileRoute('/teacher/_authenticated/requests')({
@@ -46,10 +49,11 @@ function RouteComponent() {
         teachingMode: (params.mode ?? 'all') as InboxFilters['teachingMode'],
         sessionType: (params.type ?? 'all') as InboxFilters['sessionType'],
         subject: params.subject ?? 'all',
+        requestKind: (params.kind ?? 'all') as InboxFilters['requestKind'],
         dateWindow: (params.date ?? 'all') as InboxFilters['dateWindow'],
-        sort: (params.sort ?? 'newest') as InboxFilters['sort'],
+        sort: (params.sort ?? 'Newest') as InboxFilters['sort'],
     }
-    const tab = (params.tab ?? 'new') as RequestInboxTab
+    const tab = (params.tab ?? 'all') as RequestInboxTab
 
     const inboxQuery = useQuery(inboxQueryOptions(tab, filters))
 
@@ -90,6 +94,7 @@ function RouteComponent() {
                             mode: next.teachingMode as any,
                             type: next.sessionType as any,
                             subject: next.subject as any,
+                            kind: next.requestKind,
                             date: next.dateWindow,
                             sort: next.sort,
                         })
@@ -112,7 +117,7 @@ function RouteComponent() {
                         <EmptyInbox tab={tab} />
                     ) : (
                         inboxQuery.data?.items.map((request, idx) => (
-                            <RequestCard key={request.id} request={request} index={idx} tab={tab} />
+                            <RequestCard key={request.id} request={request} index={idx} />
                         ))
                     )}
                 </div>

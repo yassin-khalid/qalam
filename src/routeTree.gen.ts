@@ -21,6 +21,7 @@ import { Route as LandingContactRouteRouteImport } from './routes/_landing/conta
 import { Route as LandingIndexRouteRouteImport } from './routes/_landing/index/route'
 import { Route as TeacherAuthenticatedSessionsRouteRouteImport } from './routes/teacher/_authenticated/sessions/route'
 import { Route as TeacherAuthenticatedRequestsRouteRouteImport } from './routes/teacher/_authenticated/requests/route'
+import { Route as TeacherAuthenticatedProfileRouteRouteImport } from './routes/teacher/_authenticated/profile/route'
 import { Route as TeacherAuthenticatedNotificationsRouteRouteImport } from './routes/teacher/_authenticated/notifications/route'
 import { Route as TeacherAuthenticatedFinanceRouteRouteImport } from './routes/teacher/_authenticated/finance/route'
 import { Route as TeacherAuthenticatedDashboardRouteRouteImport } from './routes/teacher/_authenticated/dashboard/route'
@@ -93,6 +94,12 @@ const TeacherAuthenticatedRequestsRouteRoute =
   TeacherAuthenticatedRequestsRouteRouteImport.update({
     id: '/requests',
     path: '/requests',
+    getParentRoute: () => TeacherAuthenticatedRouteRoute,
+  } as any)
+const TeacherAuthenticatedProfileRouteRoute =
+  TeacherAuthenticatedProfileRouteRouteImport.update({
+    id: '/profile',
+    path: '/profile',
     getParentRoute: () => TeacherAuthenticatedRouteRoute,
   } as any)
 const TeacherAuthenticatedNotificationsRouteRoute =
@@ -177,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/teacher/dashboard': typeof TeacherAuthenticatedDashboardRouteRoute
   '/teacher/finance': typeof TeacherAuthenticatedFinanceRouteRoute
   '/teacher/notifications': typeof TeacherAuthenticatedNotificationsRouteRoute
+  '/teacher/profile': typeof TeacherAuthenticatedProfileRouteRoute
   '/teacher/requests': typeof TeacherAuthenticatedRequestsRouteRouteWithChildren
   '/teacher/sessions': typeof TeacherAuthenticatedSessionsRouteRouteWithChildren
   '/teacher/courses/$courseId': typeof TeacherAuthenticatedCoursesCourseIdRouteRoute
@@ -199,6 +207,7 @@ export interface FileRoutesByTo {
   '/teacher/dashboard': typeof TeacherAuthenticatedDashboardRouteRoute
   '/teacher/finance': typeof TeacherAuthenticatedFinanceRouteRoute
   '/teacher/notifications': typeof TeacherAuthenticatedNotificationsRouteRoute
+  '/teacher/profile': typeof TeacherAuthenticatedProfileRouteRoute
   '/teacher/requests': typeof TeacherAuthenticatedRequestsRouteRouteWithChildren
   '/teacher/sessions': typeof TeacherAuthenticatedSessionsRouteRouteWithChildren
   '/teacher/courses/$courseId': typeof TeacherAuthenticatedCoursesCourseIdRouteRoute
@@ -225,6 +234,7 @@ export interface FileRoutesById {
   '/teacher/_authenticated/dashboard': typeof TeacherAuthenticatedDashboardRouteRoute
   '/teacher/_authenticated/finance': typeof TeacherAuthenticatedFinanceRouteRoute
   '/teacher/_authenticated/notifications': typeof TeacherAuthenticatedNotificationsRouteRoute
+  '/teacher/_authenticated/profile': typeof TeacherAuthenticatedProfileRouteRoute
   '/teacher/_authenticated/requests': typeof TeacherAuthenticatedRequestsRouteRouteWithChildren
   '/teacher/_authenticated/sessions': typeof TeacherAuthenticatedSessionsRouteRouteWithChildren
   '/teacher/_authenticated/courses/$courseId': typeof TeacherAuthenticatedCoursesCourseIdRouteRoute
@@ -249,6 +259,7 @@ export interface FileRouteTypes {
     | '/teacher/dashboard'
     | '/teacher/finance'
     | '/teacher/notifications'
+    | '/teacher/profile'
     | '/teacher/requests'
     | '/teacher/sessions'
     | '/teacher/courses/$courseId'
@@ -271,6 +282,7 @@ export interface FileRouteTypes {
     | '/teacher/dashboard'
     | '/teacher/finance'
     | '/teacher/notifications'
+    | '/teacher/profile'
     | '/teacher/requests'
     | '/teacher/sessions'
     | '/teacher/courses/$courseId'
@@ -296,6 +308,7 @@ export interface FileRouteTypes {
     | '/teacher/_authenticated/dashboard'
     | '/teacher/_authenticated/finance'
     | '/teacher/_authenticated/notifications'
+    | '/teacher/_authenticated/profile'
     | '/teacher/_authenticated/requests'
     | '/teacher/_authenticated/sessions'
     | '/teacher/_authenticated/courses/$courseId'
@@ -399,6 +412,13 @@ declare module '@tanstack/react-router' {
       path: '/requests'
       fullPath: '/teacher/requests'
       preLoaderRoute: typeof TeacherAuthenticatedRequestsRouteRouteImport
+      parentRoute: typeof TeacherAuthenticatedRouteRoute
+    }
+    '/teacher/_authenticated/profile': {
+      id: '/teacher/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/teacher/profile'
+      preLoaderRoute: typeof TeacherAuthenticatedProfileRouteRouteImport
       parentRoute: typeof TeacherAuthenticatedRouteRoute
     }
     '/teacher/_authenticated/notifications': {
@@ -551,6 +571,7 @@ interface TeacherAuthenticatedRouteRouteChildren {
   TeacherAuthenticatedDashboardRouteRoute: typeof TeacherAuthenticatedDashboardRouteRoute
   TeacherAuthenticatedFinanceRouteRoute: typeof TeacherAuthenticatedFinanceRouteRoute
   TeacherAuthenticatedNotificationsRouteRoute: typeof TeacherAuthenticatedNotificationsRouteRoute
+  TeacherAuthenticatedProfileRouteRoute: typeof TeacherAuthenticatedProfileRouteRoute
   TeacherAuthenticatedRequestsRouteRoute: typeof TeacherAuthenticatedRequestsRouteRouteWithChildren
   TeacherAuthenticatedSessionsRouteRoute: typeof TeacherAuthenticatedSessionsRouteRouteWithChildren
 }
@@ -570,6 +591,8 @@ const TeacherAuthenticatedRouteRouteChildren: TeacherAuthenticatedRouteRouteChil
       TeacherAuthenticatedFinanceRouteRoute,
     TeacherAuthenticatedNotificationsRouteRoute:
       TeacherAuthenticatedNotificationsRouteRoute,
+    TeacherAuthenticatedProfileRouteRoute:
+      TeacherAuthenticatedProfileRouteRoute,
     TeacherAuthenticatedRequestsRouteRoute:
       TeacherAuthenticatedRequestsRouteRouteWithChildren,
     TeacherAuthenticatedSessionsRouteRoute:

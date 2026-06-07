@@ -2,7 +2,7 @@
 import React from 'react';
 import { getRouter } from '@/router';
 import { Link, LinkProps } from '@tanstack/react-router';
-import { Bell, Box, Calendar, CalendarClock, ChevronLeft, ChevronRight, Grid, Inbox, Library, LucideIcon, Wallet } from 'lucide-react';
+import { Bell, Box, Calendar, CalendarClock, ChevronLeft, ChevronRight, Grid, Inbox, Library, LucideIcon, UserRound, Wallet } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '@/lib/hooks/useLocale';
 
@@ -99,6 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, onTitle
 
                     <div className="my-6 border-t border-white/10 mx-6"></div>
 
+                    <NavItem isCollapsed={isCollapsed} icon={UserRound} label={t('dashboard.sidebar.profile')} linkProps={{ to: '/teacher/profile', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} onClick={() => handleNavClick(t('dashboard.sidebar.profile'))} />
                     <NavItem isCollapsed={isCollapsed} icon={Bell} label={t('dashboard.sidebar.notifications')} linkProps={{ to: '/teacher/notifications', activeProps: { className: 'bg-white/20 dark:bg-white dark:text-secondary rounded-2xl text-white' } }} hasDot onClick={() => handleNavClick(t('dashboard.sidebar.notifications'))} />
                 </nav>
 

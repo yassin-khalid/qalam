@@ -13,6 +13,8 @@ import {
     Eye,
     Sparkles,
     Inbox as InboxIcon,
+    UserRoundCheck,
+    Megaphone,
 } from 'lucide-react'
 import type {
     RequestInboxTab,
@@ -23,7 +25,6 @@ import { useLocale } from '@/lib/hooks/useLocale'
 interface RequestCardProps {
     request: SessionRequestListItem
     index: number
-    tab: RequestInboxTab
 }
 
 const formatRelative = (
@@ -49,7 +50,7 @@ const Stat: React.FC<{ icon: React.ReactNode; children: React.ReactNode }> = ({ 
     </div>
 )
 
-export const RequestCard: React.FC<RequestCardProps> = ({ request, index, tab }) => {
+export const RequestCard: React.FC<RequestCardProps> = ({ request, index }) => {
     const { t } = useTranslation('teacher')
     const locale = useLocale()
     const isAr = locale === 'ar'
@@ -59,12 +60,13 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request, index, tab })
             : request.offersCount === 1 ? 'requests.card.offersCount_one'
                 : 'requests.card.offersCount_other'
 
+    // Badge reflects the teacher's target status on the request (Notified /
+    // Viewed / OfferSubmitted), independent of which tab is active.
     const statusBadge: { label: string; tone: 'amber' | 'teal' | 'rose' | 'slate' } | null = (() => {
-        switch (tab) {
-            case 'active': return { label: t('requests.card.myOfferBadge'), tone: 'teal' }
-            case 'negotiating': return { label: t('requests.card.negotiatingBadge'), tone: 'amber' }
-            case 'accepted': return { label: t('requests.card.acceptedBadge'), tone: 'teal' }
-            case 'rejected': return { label: t('requests.card.rejectedBadge'), tone: 'rose' }
+        switch (request.targetStatus) {
+            case 'Notified': return { label: t('requests.card.statusNotified'), tone: 'amber' }
+            case 'Viewed': return { label: t('requests.card.statusViewed'), tone: 'slate' }
+            case 'OfferSubmitted': return { label: t('requests.card.statusOfferSubmitted'), tone: 'teal' }
             default: return null
         }
     })()
@@ -76,13 +78,29 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request, index, tab })
         slate: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
     }
 
+    const isDirected = request.requestKind === 'Directed'
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.04 }}
-            className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col h-full shadow-sm hover:shadow-md transition-shadow"
+            className={`bg-white dark:bg-slate-900 rounded-2xl border overflow-hidden flex flex-col h-full shadow-sm hover:shadow-md transition-shadow ${isDirected
+                ? 'border-primary/40 dark:border-secondary/40 ring-1 ring-primary/15 dark:ring-secondary/20'
+                : 'border-slate-100 dark:border-slate-800'
+                }`}
         >
+            {/* Request-kind banner: Directed requests are visually prioritised. */}
+            <div
+                className={`flex items-center gap-1.5 px-5 py-1.5 text-[11px] font-bold border-b ${isDirected
+                    ? 'bg-primary/10 dark:bg-secondary/15 text-primary dark:text-secondary border-primary/15 dark:border-secondary/20'
+                    : 'bg-slate-50 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800'
+                    }`}
+            >
+                {isDirected ? <UserRoundCheck size={13} /> : <Megaphone size={13} />}
+                {t(isDirected ? 'requests.card.kindDirected' : 'requests.card.kindPublished')}
+            </div>
+
             <div className="p-5 flex-1 flex flex-col gap-4">
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3">

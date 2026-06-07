@@ -1,6 +1,7 @@
 import { VerifyOtpSuccessResponseData } from "../-types/VerifyOtpSuccessResponseData";
 
 interface VerifyOtpParams {
+    countryCode: string;
     phoneNumber: string;
     otpCode: string;
 }

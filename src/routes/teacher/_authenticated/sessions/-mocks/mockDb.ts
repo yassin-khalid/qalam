@@ -16,7 +16,9 @@ import type {
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
-const NOW = new Date('2026-05-22T10:00:00Z').getTime()
+// Anchor offsets to the real current time so positive-offset sessions are
+// genuinely "upcoming" relative to the Date.now() used in `list()` below.
+const NOW = Date.now()
 const at = (offsetHours: number) => new Date(NOW + offsetHours * 3_600_000).toISOString()
 
 const SESSIONS: SessionDetail[] = [

@@ -38,7 +38,7 @@ function RouteComponent() {
     const financeQuery = useQuery(financeSummaryQueryOptions())
     const upcomingQuery = useQuery(sessionsListQueryOptions('upcoming'))
     const newRequestsQuery = useQuery(
-        inboxQueryOptions('new', { search: '', teachingMode: 'all', sessionType: 'all', subject: 'all', dateWindow: 'all', sort: 'newest' }),
+        inboxQueryOptions('Notified', { search: '', teachingMode: 'all', sessionType: 'all', subject: 'all', requestKind: 'all', dateWindow: 'all', sort: 'Newest' }),
     )
     const unreadNotificationsQuery = useQuery(notificationsListQueryOptions('unread'))
 
@@ -122,7 +122,7 @@ function RouteComponent() {
                     icon={<Inbox size={18} />}
                     tone="amber"
                     label={t('dashboardPage.kpi.newRequests')}
-                    value={newRequestsQuery.data?.counts.new ?? 0}
+                    value={newRequestsQuery.data?.counts.Notified ?? 0}
                     loading={newRequestsQuery.isLoading}
                     actionHref="/teacher/requests"
                 />

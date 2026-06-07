@@ -19,6 +19,7 @@ import { PASSWORD_RULES } from "./password/constanst";
 import ValidationItem from "./password/components/PasswordValidationItem";
 import { showToast } from "@/lib/utils/toast";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "@/lib/contexts/auth";
 
 // type StepOneData = z.infer<typeof stepOneFormSchema>;
 
@@ -40,6 +41,10 @@ const StepOne: React.FC<StepOneProps> = ({
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { t } = useTranslation('teacher');
+    const { config } = useAuth();
+    // Email is collected at the OTP step when the persona shows the email field;
+    // in that case step 3 omits it (per backend guide).
+    const emailCollectedAtStep1 = config?.teacher?.showEmailField ?? false;
 
     const stepOneFormSchema = useMemo(() => z
         .object({
@@ -51,7 +56,7 @@ const StepOne: React.FC<StepOneProps> = ({
                 .string()
                 .min(1, { error: t('auth.register.stepOne.validation.lastNameMin') })
                 .max(50, { error: t('auth.register.stepOne.validation.lastNameMax') }),
-            email: z.email({ error: t('auth.register.stepOne.validation.emailInvalid') }),
+            email: z.string(),
             password: z
                 .string()
                 .min(8, { error: t('auth.register.stepOne.validation.passwordMin') })
@@ -64,7 +69,19 @@ const StepOne: React.FC<StepOneProps> = ({
         .refine((data) => data.password === data.confirmPassword, {
             path: ["confirmPassword"],
             message: t('auth.register.stepOne.validation.passwordsMismatch'),
-        }), [t]);
+        })
+        // Email is only validated here when it wasn't collected at the OTP step.
+        .superRefine((data, ctx) => {
+            if (emailCollectedAtStep1) return;
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(data.email)) {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["email"],
+                    message: t('auth.register.stepOne.validation.emailInvalid'),
+                });
+            }
+        }), [t, emailCollectedAtStep1]);
 
     // const [data, setData] = useState<StepOneData>({
     //     userId: 0,
@@ -99,8 +116,13 @@ const StepOne: React.FC<StepOneProps> = ({
 
         onSubmit: async ({ value }) => {
             try {
-                const { confirmPassword, ...payload } = value;
-                const response = await personalInfo({ ...payload, token });
+                const { confirmPassword, email, ...payload } = value;
+                // Only send email from step 3 when it wasn't already collected at the OTP step.
+                const response = await personalInfo({
+                    ...payload,
+                    ...(emailCollectedAtStep1 || !email ? {} : { email }),
+                    token,
+                });
                 onSuccess(response.data);
             } catch (error) {
                 if (error instanceof PersonalInfoError) {
@@ -250,7 +272,8 @@ const StepOne: React.FC<StepOneProps> = ({
                 </div>
             </div>
 
-            {/* Email Field */}
+            {/* Email Field — only when not already collected at the OTP step */}
+            {!emailCollectedAtStep1 && (
             <div className="space-y-2">
                 <label className="block text-start text-sm font-bold text-[#003049] dark:text-slate-200">
                     {t('auth.register.stepOne.email')}
@@ -283,6 +306,7 @@ const StepOne: React.FC<StepOneProps> = ({
                     }}
                 />
             </div>
+            )}
 
             {/* Password Field */}
             <div className="space-y-2">

@@ -16,8 +16,9 @@ import { useAuth } from "@/lib/contexts/auth";
 interface RegisterFormProps {
     step: number;
     authSubStep: 'phone' | 'otp' | 'none';
-    onPhoneRegistered: (phone: string, data: SendOtpResponseData) => void;
+    onPhoneRegistered: (phone: string, countryCode: string, data: SendOtpResponseData) => void;
     phoneNumber?: string;
+    countryCode?: string;
     maskedDestination?: string;
     onBackToPhoneStep: () => void;
     onOtpSuccess: (data: VerifyOtpSuccessResponseData) => void;
@@ -25,18 +26,17 @@ interface RegisterFormProps {
     onStepOneDataChanges: (stepOneData: StepOneDataOmitPassword) => void;
     stepOneData: StepOneDataOmitPassword;
     stepTwoData: Omit<StepTwoData, 'issuingCountryCode' | 'identityDocumentFile' | 'certificates'>;
-    onStepTwoDataChanges: (stepTwoData: Omit<StepTwoData, 'issuingCountryCode' | 'identityDocumentFile' | 'certificates'>) => void;
-    onStepTwoSuccess: (data: StepTwoData) => void;
+    onStepTwoSuccess: () => void;
     onNoTokenFound: () => void;
     onPersonalInfoSuccess: (data: PersonalInfoSuccessResponseData) => void;
 }
 
-const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneRegistered, phoneNumber, maskedDestination, onBackToPhoneStep, onOtpSuccess, onPhoneChanges, onStepOneDataChanges, stepOneData, onNoTokenFound, onPersonalInfoSuccess, stepTwoData, onStepTwoDataChanges, onStepTwoSuccess }) => {
+const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneRegistered, phoneNumber, countryCode, maskedDestination, onBackToPhoneStep, onOtpSuccess, onPhoneChanges, onStepOneDataChanges, stepOneData, onNoTokenFound, onPersonalInfoSuccess, stepTwoData, onStepTwoSuccess }) => {
     const { t } = useTranslation('teacher');
     const auth = useAuth();
 
-    const handlePhoneSuccess = (phone: string, data: SendOtpResponseData) => {
-        onPhoneRegistered(phone, data)
+    const handlePhoneSuccess = (phone: string, countryCode: string, data: SendOtpResponseData) => {
+        onPhoneRegistered(phone, countryCode, data)
     };
 
     const handleOTPSuccess = (data: VerifyOtpSuccessResponseData) => {
@@ -49,8 +49,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneR
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const handleStepTwoSuccess = (data: StepTwoData) => {
-        onStepTwoSuccess(data)
+    const handleStepTwoSuccess = () => {
+        onStepTwoSuccess()
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -100,7 +100,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneR
                     ) : authSubStep === 'phone' ? (
                         <StepPhone onSuccess={handlePhoneSuccess} onPhoneChanges={onPhoneChanges} phoneNumber={phoneNumber} />
                     ) : (
-                        <StepOTP phoneNumber={`${phoneNumber}`} maskedDestination={maskedDestination} onSuccess={handleOTPSuccess} onBack={handleBack} />
+                        <StepOTP countryCode={`${countryCode ?? '+966'}`} phoneNumber={`${phoneNumber}`} maskedDestination={maskedDestination} onSuccess={handleOTPSuccess} onBack={handleBack} />
                     )
                 )}
                 {step === 1 && (
@@ -109,7 +109,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ step, authSubStep, onPhoneR
                 {step === 2 && (
                     <StepTwo
                         stepTwoData={stepTwoData}
-                        onDataChanges={onStepTwoDataChanges}
                         onSuccess={handleStepTwoSuccess}
                     />
                 )}

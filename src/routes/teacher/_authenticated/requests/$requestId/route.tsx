@@ -16,13 +16,17 @@ import {
     Pencil,
     MessageSquare,
     XCircle,
-    Star,
     Video,
     MapPin,
     Clock,
     FileText,
     Image as ImageIcon,
     SaudiRiyal,
+    UserRoundCheck,
+    Megaphone,
+    CheckCircle2,
+    Ban,
+    TimerOff,
 } from 'lucide-react'
 
 import { LOCALE_DIRECTION } from '@/lib/i18n'
@@ -37,6 +41,7 @@ import {
     requestDetailQueryOptions,
     withdrawOffer,
 } from '../-queries/sessionRequestsQueries'
+import { MAX_OFFER_ATTEMPTS } from '../-types/types'
 
 export const Route = createFileRoute('/teacher/_authenticated/requests/$requestId')({
     component: RouteComponent,
@@ -51,24 +56,33 @@ function RouteComponent() {
     const isAr = locale === 'ar'
     const queryClient = useQueryClient()
     const [offerOpen, setOfferOpen] = useState(false)
+    // 'create' = fresh offer (incl. re-offer after expiry); 'update' = edit the
+    // pending offer in place. Drives whether the modal submits or updates.
+    const [offerMode, setOfferMode] = useState<'create' | 'update'>('create')
     const [withdrawOpen, setWithdrawOpen] = useState(false)
+    const [withdrawReason, setWithdrawReason] = useState('')
     const [chatOpen, setChatOpen] = useState(false)
 
     const detailQuery = useQuery(requestDetailQueryOptions(requestId))
     const offerQuery = useQuery(myOfferForRequestQueryOptions(requestId))
 
     const withdrawMutation = useMutation({
-        mutationFn: (id: number) => withdrawOffer(id),
+        mutationFn: ({ id, reason }: { id: number; reason: string }) => withdrawOffer(id, reason),
         onSuccess: () => {
             showToast({ type: 'success', message: t('requests.submitOffer.toasts.withdrawn') })
             queryClient.invalidateQueries({ queryKey: ['session-requests'] })
             queryClient.invalidateQueries({ queryKey: ['session-offers'] })
+            queryClient.invalidateQueries({ queryKey: ['conversation'] })
             setWithdrawOpen(false)
+            setWithdrawReason('')
         },
         onError: (err: Error) => {
             showToast({ type: 'server', message: t(err.message, { defaultValue: err.message }) })
         },
     })
+
+    const openCreateOffer = () => { setOfferMode('create'); setOfferOpen(true) }
+    const openUpdateOffer = () => { setOfferMode('update'); setOfferOpen(true) }
 
     if (detailQuery.isLoading || offerQuery.isLoading) {
         return (
@@ -88,6 +102,18 @@ function RouteComponent() {
 
     const request = detailQuery.data
     const offer = offerQuery.data ?? null
+    const isDirected = request.requestKind === 'Directed'
+
+    // Per-state action gating — mirrors the Design-Notes §4 matrix.
+    const status = offer?.status ?? null
+    const canUpdate = status === 'Pending'
+    const canWithdraw = status === 'Pending'
+    const atResubmitLimit = request.myOfferAttempts >= MAX_OFFER_ATTEMPTS
+    // A fresh offer is available with no live offer or after an expiry, unless
+    // the resubmission cap is reached.
+    const canSendNew = (offer === null || status === 'Expired') && !atResubmitLimit
+    // Whether the next submission would be a re-offer (changes the button label).
+    const isReoffer = request.myOfferAttempts > 0
 
     return (
         <div dir={LOCALE_DIRECTION[locale]} className="min-h-screen">
@@ -103,6 +129,15 @@ function RouteComponent() {
 
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                     <div>
+                        <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold mb-2 ${isDirected
+                                ? 'bg-primary/10 dark:bg-secondary/15 text-primary dark:text-secondary'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                                }`}
+                        >
+                            {isDirected ? <UserRoundCheck size={12} /> : <Megaphone size={12} />}
+                            {t(isDirected ? 'requests.detail.kindDirected' : 'requests.detail.kindPublished')}
+                        </span>
                         <h1 className="text-2xl md:text-3xl font-black text-primary dark:text-secondary">
                             {isAr ? request.subjectNameAr : request.subjectNameEn}
                         </h1>
@@ -128,45 +163,52 @@ function RouteComponent() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 shrink-0">
-                        {offer ? (
-                            <>
-                                <button
-                                    type="button"
-                                    onClick={() => setOfferOpen(true)}
-                                    className="px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-bold flex items-center gap-2 hover:bg-primary/90 transition shadow-md shadow-primary/20"
-                                >
-                                    <Pencil size={14} />
-                                    {t('requests.detail.updateOffer')}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setChatOpen(true)}
-                                    className="relative px-4 py-2.5 rounded-lg bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-sm font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-2"
-                                >
-                                    <MessageSquare size={14} />
-                                    {t('requests.detail.openChat')}
-                                    {offer.hasUnreadStudentMessages && (
-                                        <span className="absolute -top-1 -end-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900" />
-                                    )}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setWithdrawOpen(true)}
-                                    disabled={offer.status === 'Accepted'}
-                                    className="px-4 py-2.5 rounded-lg bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 text-sm font-bold border border-rose-200 dark:border-rose-900/40 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <XCircle size={14} />
-                                    {t('requests.detail.withdrawOffer')}
-                                </button>
-                            </>
-                        ) : (
+                        {/* Update — only while the offer is pending. */}
+                        {canUpdate && (
                             <button
                                 type="button"
-                                onClick={() => setOfferOpen(true)}
+                                onClick={openUpdateOffer}
+                                className="px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-bold flex items-center gap-2 hover:bg-primary/90 transition shadow-md shadow-primary/20"
+                            >
+                                <Pencil size={14} />
+                                {t('requests.detail.updateOffer')}
+                            </button>
+                        )}
+
+                        {/* Send / re-send — when no live offer or after expiry. */}
+                        {canSendNew && (
+                            <button
+                                type="button"
+                                onClick={openCreateOffer}
                                 className="px-5 py-2.5 rounded-lg bg-secondary text-white text-sm font-bold flex items-center gap-2 hover:bg-primary transition shadow-md shadow-secondary/20"
                             >
                                 <Send size={14} />
-                                {t('requests.detail.submitOffer')}
+                                {t(isReoffer ? 'requests.detail.submitNewOffer' : 'requests.detail.submitOffer')}
+                            </button>
+                        )}
+
+                        {/* Chat — always available, even before any offer. */}
+                        <button
+                            type="button"
+                            onClick={() => setChatOpen(true)}
+                            className="relative px-4 py-2.5 rounded-lg bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-sm font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-2"
+                        >
+                            <MessageSquare size={14} />
+                            {t('requests.detail.openChat')}
+                            {offer && offer.unreadMessagesCount > 0 && (
+                                <span className="absolute -top-1 -end-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900" />
+                            )}
+                        </button>
+
+                        {/* Withdraw — only while the offer is pending. */}
+                        {canWithdraw && (
+                            <button
+                                type="button"
+                                onClick={() => setWithdrawOpen(true)}
+                                className="px-4 py-2.5 rounded-lg bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 text-sm font-bold border border-rose-200 dark:border-rose-900/40 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition flex items-center gap-2"
+                            >
+                                <XCircle size={14} />
+                                {t('requests.detail.withdrawOffer')}
                             </button>
                         )}
                     </div>
@@ -181,11 +223,6 @@ function RouteComponent() {
                         icon={<UserIcon size={18} />}
                         title={t('requests.detail.sections.student')}
                     >
-                        {request.isStudentAnonymised && !offer && (
-                            <div className="mb-3 text-xs bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-amber-700 dark:text-amber-300 px-3 py-2 rounded-lg font-medium">
-                                {t('requests.detail.student.anonymisedNotice')}
-                            </div>
-                        )}
                         <div className="flex items-center gap-3">
                             <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
                                 <UserIcon size={24} />
@@ -199,10 +236,6 @@ function RouteComponent() {
                                         {t('requests.detail.student.gradeLabel')}: {request.studentGradeLabel}
                                     </p>
                                 )}
-                                <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
-                                    <Star size={11} className={request.studentRating ? 'text-amber-500 fill-amber-500' : 'text-slate-300'} />
-                                    {request.studentRating ?? t('requests.detail.student.noRating')}
-                                </p>
                             </div>
                         </div>
                     </DetailSection>
@@ -263,13 +296,13 @@ function RouteComponent() {
                         <ul className="space-y-2.5">
                             {request.sessions.map((s) => (
                                 <li
-                                    key={s.sessionNumber}
+                                    key={s.id}
                                     className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800"
                                 >
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0 flex-1">
                                             <h4 className="text-sm font-bold text-slate-800 dark:text-white">
-                                                {t('requests.detail.sessions.sessionLabel', { number: s.sessionNumber })} — {s.title}
+                                                {t('requests.detail.sessions.sessionLabel', { number: s.sequenceNumber })} — {s.title}
                                             </h4>
                                             {s.description && (
                                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{s.description}</p>
@@ -313,12 +346,12 @@ function RouteComponent() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {request.sessions.map((s) => (
                                 <div
-                                    key={s.sessionNumber}
+                                    key={s.id}
                                     className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/40 rounded-lg px-3 py-2 border border-slate-100 dark:border-slate-800"
                                 >
                                     <div className="min-w-0">
                                         <p className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
-                                            {t('requests.detail.sessions.sessionLabel', { number: s.sessionNumber })}
+                                            {t('requests.detail.sessions.sessionLabel', { number: s.sequenceNumber })}
                                         </p>
                                         <p className="text-[11px] text-slate-500 dark:text-slate-400">
                                             {new Date(s.preferredDate).toLocaleDateString(isAr ? 'ar-EG' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short' })}
@@ -421,6 +454,18 @@ function RouteComponent() {
                 {/* Right rail — my offer summary */}
                 <aside className="lg:col-span-4">
                     <div className="lg:sticky lg:top-4 space-y-3">
+                        {/* State / context panel for non-pending outcomes. */}
+                        {offer && offer.status !== 'Pending' && (
+                            <OfferStatePanel offer={offer} isAr={isAr} />
+                        )}
+                        {atResubmitLimit && !canWithdraw && (
+                            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl p-4 flex items-start gap-2.5">
+                                <Ban size={16} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                                <p className="text-xs font-bold text-amber-700 dark:text-amber-300">
+                                    {t('requests.detail.offerState.resubmitLimit', { max: MAX_OFFER_ATTEMPTS })}
+                                </p>
+                            </div>
+                        )}
                         {offer ? (
                             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-emerald-200 dark:border-emerald-900/40 p-5 space-y-3">
                                 <div className="flex items-center justify-between">
@@ -435,17 +480,15 @@ function RouteComponent() {
                                     label={t('requests.detail.myOfferSummary.totalPrice')}
                                     value={
                                         <span className="font-black text-primary dark:text-secondary inline-flex items-center gap-1">
-                                            {offer.totalPrice}
+                                            {offer.price}
                                             <SaudiRiyal size={14} />
                                         </span>
                                     }
                                 />
-                                {offer.pricePerSession != null && (
-                                    <SummaryRow
-                                        label={t('requests.detail.myOfferSummary.pricePerSession')}
-                                        value={`${offer.pricePerSession}`}
-                                    />
-                                )}
+                                <SummaryRow
+                                    label={t('requests.detail.myOfferSummary.offerNumber')}
+                                    value={offer.offerNumber}
+                                />
                                 <SummaryRow
                                     label=""
                                     value={
@@ -459,32 +502,32 @@ function RouteComponent() {
                                         </span>
                                     }
                                 />
-                                {offer.generalNotes && (
+                                {offer.teacherNotes && (
                                     <div>
                                         <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
                                             {t('requests.detail.myOfferSummary.notes')}
                                         </p>
                                         <p className="text-xs text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/40 rounded-lg p-2.5 whitespace-pre-wrap">
-                                            {offer.generalNotes}
+                                            {offer.teacherNotes}
                                         </p>
                                     </div>
                                 )}
                             </div>
-                        ) : (
+                        ) : canSendNew ? (
                             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-5 text-center">
                                 <Send size={28} className="mx-auto text-slate-300 dark:text-slate-700 mb-2" />
                                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">
-                                    {t('requests.detail.submitOffer')}
+                                    {t(isReoffer ? 'requests.detail.submitNewOffer' : 'requests.detail.submitOffer')}
                                 </p>
                                 <button
                                     type="button"
-                                    onClick={() => setOfferOpen(true)}
+                                    onClick={openCreateOffer}
                                     className="w-full px-4 py-2.5 rounded-lg bg-secondary text-white text-sm font-bold hover:bg-primary transition"
                                 >
-                                    {t('requests.detail.submitOffer')}
+                                    {t(isReoffer ? 'requests.detail.submitNewOffer' : 'requests.detail.submitOffer')}
                                 </button>
                             </div>
-                        )}
+                        ) : null}
                     </div>
                 </aside>
             </div>
@@ -493,7 +536,7 @@ function RouteComponent() {
                 open={offerOpen}
                 onClose={() => setOfferOpen(false)}
                 request={request}
-                existingOffer={offer}
+                existingOffer={offerMode === 'update' ? offer : null}
             />
 
             <ChatPanel
@@ -529,11 +572,22 @@ function RouteComponent() {
                             <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
                                 {t('requests.submitOffer.withdrawConfirm.message')}
                             </p>
+                            <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">
+                                {t('requests.submitOffer.withdrawConfirm.reasonLabel')}
+                            </label>
+                            <textarea
+                                rows={2}
+                                maxLength={500}
+                                value={withdrawReason}
+                                onChange={(e) => setWithdrawReason(e.target.value)}
+                                placeholder={t('requests.submitOffer.withdrawConfirm.reasonPlaceholder')}
+                                className="w-full mb-4 px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-sm resize-none"
+                            />
                             <div className="flex gap-2">
                                 <button
                                     type="button"
                                     disabled={withdrawMutation.isPending}
-                                    onClick={() => offer && withdrawMutation.mutate(offer.id)}
+                                    onClick={() => offer && withdrawMutation.mutate({ id: offer.id, reason: withdrawReason })}
                                     className="flex-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition"
                                 >
                                     {withdrawMutation.isPending && <Loader2 size={14} className="animate-spin" />}
@@ -567,5 +621,77 @@ const SummaryRow: React.FC<{ label: string; value: React.ReactNode }> = ({ label
     <div className="flex items-center justify-between text-sm">
         {label ? <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{label}</span> : <span />}
         <span className="text-slate-700 dark:text-slate-200">{value}</span>
+    </div>
+)
+
+// Context for a non-pending outcome (Design-Notes §4): rejection reason,
+// auto-rejection price (no competitor identity), expiry and acceptance notes.
+const OfferStatePanel: React.FC<{
+    offer: { status: string; rejectionReason: string | null; competitorAcceptedPrice: number | null }
+    isAr: boolean
+}> = ({ offer }) => {
+    const { t } = useTranslation('teacher')
+
+    if (offer.status === 'Rejected') {
+        return (
+            <StatePanelShell tone="rose" icon={<Ban size={16} />} title={t('requests.detail.offerState.rejectedTitle')}>
+                <p className="text-xs text-rose-700/90 dark:text-rose-300/90">
+                    {offer.rejectionReason
+                        ? t('requests.detail.offerState.rejectedReason', { reason: offer.rejectionReason })
+                        : t('requests.detail.offerState.rejectedNoReason')}
+                </p>
+            </StatePanelShell>
+        )
+    }
+    if (offer.status === 'AutoRejected') {
+        return (
+            <StatePanelShell tone="rose" icon={<Ban size={16} />} title={t('requests.detail.offerState.autoRejectedTitle')}>
+                <p className="text-xs text-rose-700/90 dark:text-rose-300/90">
+                    {offer.competitorAcceptedPrice != null
+                        ? t('requests.detail.offerState.autoRejectedContext', { price: offer.competitorAcceptedPrice })
+                        : t('requests.detail.offerState.autoRejectedGeneric')}
+                </p>
+            </StatePanelShell>
+        )
+    }
+    if (offer.status === 'Expired') {
+        return (
+            <StatePanelShell tone="amber" icon={<TimerOff size={16} />} title={t('requests.detail.offerState.expiredTitle')}>
+                <p className="text-xs text-amber-700/90 dark:text-amber-300/90">
+                    {t('requests.detail.offerState.expiredNote')}
+                </p>
+            </StatePanelShell>
+        )
+    }
+    if (offer.status === 'Accepted') {
+        return (
+            <StatePanelShell tone="emerald" icon={<CheckCircle2 size={16} />} title={t('requests.detail.offerState.acceptedTitle')}>
+                <p className="text-xs text-emerald-700/90 dark:text-emerald-300/90">
+                    {t('requests.detail.offerState.acceptedNote')}
+                </p>
+            </StatePanelShell>
+        )
+    }
+    return null
+}
+
+const STATE_TONE: Record<string, string> = {
+    rose: 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40 text-rose-700 dark:text-rose-300',
+    amber: 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 text-amber-700 dark:text-amber-300',
+    emerald: 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-300',
+}
+
+const StatePanelShell: React.FC<{
+    tone: 'rose' | 'amber' | 'emerald'
+    icon: React.ReactNode
+    title: string
+    children: React.ReactNode
+}> = ({ tone, icon, title, children }) => (
+    <div className={`rounded-2xl border p-4 ${STATE_TONE[tone]}`}>
+        <div className="flex items-center gap-2 mb-1.5">
+            <span className="shrink-0">{icon}</span>
+            <h3 className="text-sm font-black">{title}</h3>
+        </div>
+        {children}
     </div>
 )

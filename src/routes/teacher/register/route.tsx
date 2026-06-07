@@ -12,7 +12,6 @@ import RegisterForm from "./-components/RegisterForm";
 import z from "zod";
 import { StepOneDataOmitPassword } from "./-types/StepOneData";
 import { upsertSession } from "@/lib/utils/sessionHelpers";
-import { StepTwoData, StepTwoDataOmitIssuingCountryCodeAndIdentityDocumentFileAndCertificates } from "./-types/StepTwoData";
 import { RegistrationStep, VerifyOtpSuccessResponseData } from "./-types/VerifyOtpSuccessResponseData";
 import { PersonalInfoSuccessResponseData } from "./-api/personalInfo";
 import { SendOtpResponseData } from "./-api/sendOtp";
@@ -38,6 +37,7 @@ const searchParams = {
     "none",
   ] as const).withDefault("none"),
   phoneNumber: parseAsString.withDefault(""),
+  countryCode: parseAsString.withDefault("+966"),
   maskedDestination: parseAsString.withDefault(""),
   stepOneData: parseAsJson(stepOneDataSchema).withDefault({
     firstName: "",
@@ -72,7 +72,7 @@ function persistRegistrationStep(step: RegistrationStep) {
 
 function RouteComponent() {
   const navigate = useNavigate();
-  const [{ step, authSubStep, phoneNumber, maskedDestination, stepOneData, stepTwoData }, setSearchParams] =
+  const [{ step, authSubStep, phoneNumber, countryCode, maskedDestination, stepOneData, stepTwoData }, setSearchParams] =
     useQueryStates(searchParams);
 
   const handlePhoneChanges = (phone: string) => {
@@ -81,21 +81,18 @@ function RouteComponent() {
   const handleStepOneDataChanges = (stepOneData: StepOneDataOmitPassword) => {
     setSearchParams((prev) => ({ ...prev, stepOneData }));
   };
-  const handleStepTwoDataChanges = (stepTwoData: StepTwoDataOmitIssuingCountryCodeAndIdentityDocumentFileAndCertificates) => {
-    setSearchParams((prev) => ({ ...prev, stepTwoData }));
-  };
-  const handleStepTwoSuccess = (_stepTwoData: StepTwoData) => {
-    // After upload, server moves teacher to PendingVerification → go to await screen
+  const handleStepTwoSuccess = () => {
+    // After submit, server moves teacher to PendingVerification → go to await screen
     navigate({ to: '/teacher/await' });
   }
   const handleNoTokenFound = () => {
     navigate({ to: '/teacher/register', search: { step: 0, authSubStep: 'phone' } })
   }
-  const handlePhoneRegistered = (phoneNumber: string, data: SendOtpResponseData) => {
+  const handlePhoneRegistered = (phoneNumber: string, countryCode: string, data: SendOtpResponseData) => {
     upsertSession({ phoneNumber });
     navigate({
       to: "/teacher/register",
-      search: { step: 0, authSubStep: "otp", phoneNumber, maskedDestination: data.maskedDestination },
+      search: { step: 0, authSubStep: "otp", phoneNumber, countryCode, maskedDestination: data.maskedDestination },
     });
   }
   const handleBackToPhoneStep = () => navigate({
@@ -134,6 +131,7 @@ function RouteComponent() {
               step={step}
               authSubStep={authSubStep}
               phoneNumber={phoneNumber ?? undefined}
+              countryCode={countryCode ?? undefined}
               maskedDestination={maskedDestination ?? undefined}
               onPhoneRegistered={handlePhoneRegistered}
               onBackToPhoneStep={handleBackToPhoneStep}
@@ -142,7 +140,6 @@ function RouteComponent() {
               onStepOneDataChanges={handleStepOneDataChanges}
               stepOneData={stepOneData}
               stepTwoData={stepTwoData}
-              onStepTwoDataChanges={handleStepTwoDataChanges}
               onPersonalInfoSuccess={handlePersonalInfoSuccess}
               onNoTokenFound={handleNoTokenFound}
               onStepTwoSuccess={handleStepTwoSuccess}
