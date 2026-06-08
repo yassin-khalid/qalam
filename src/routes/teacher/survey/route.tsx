@@ -1,6 +1,8 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react';
 import { AppStep, DayAvailability, Exception, Group, SurveyQuestion } from './types/types';
+import { upsertSession } from '@/lib/utils/sessionHelpers';
+import { NextStepName } from '@/lib/utils/teacherAuthRouting';
 import DomainSelection from './-components/DomainSelection';
 import SubjectSelection from './-components/SubjectSelection';
 import AvailabilitySelection from './-components/AvailabilitySelection';
@@ -16,6 +18,7 @@ export const Route = createFileRoute('/teacher/survey')({
 })
 
 function RouteComponent() {
+    const navigate = useNavigate();
     const [step, setStep] = useState<AppStep>(AppStep.DOMAIN_SELECTION);
     const [selectedDomainId, setSelectedDomainId] = useState<number | null>(null);
     const [selectedDomainCode, setSelectedDomainCode] = useState<string | null>(null);
@@ -27,6 +30,21 @@ function RouteComponent() {
     const handleSelectDomain = (id: number, code: string) => {
         setSelectedDomainId(id);
         setSelectedDomainCode(code);
+    };
+
+    // Final survey step done → registration is complete; persist the step and
+    // send the teacher to the dashboard (there is no SURVEY_GENERATION screen).
+    const handleSurveyComplete = () => {
+        upsertSession({
+            registrationStep: {
+                currentStep: 5,
+                nextStep: 5,
+                nextStepName: NextStepName.RegistrationComplete,
+                isRegistrationComplete: true,
+                message: null,
+            },
+        });
+        navigate({ to: '/teacher/dashboard' });
     };
 
 
@@ -70,7 +88,7 @@ function RouteComponent() {
                     <ExceptionsSelection
                         exceptions={exceptions}
                         onSetExceptions={setExceptions}
-                        onContinue={() => setStep(AppStep.SURVEY_GENERATION)}
+                        onContinue={handleSurveyComplete}
                     />
                 )}
 

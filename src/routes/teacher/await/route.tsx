@@ -7,7 +7,7 @@ import { upsertSession } from "@/lib/utils/sessionHelpers";
 import ThemeToggleButton from "@/lib/components/ThemeToggleButton";
 import QalamLogo from "@/lib/components/QalamLogo";
 import { Loader2, RefreshCcw } from "lucide-react";
-import { getTeacherDocumentsStatus, TeacherDocumentsStatus } from "../register/-api/teacherDocuments";
+import { getTeacherDocumentsStatus, resolveRejectedDocuments, TeacherDocumentsStatus } from "../register/-api/teacherDocuments";
 import { showToast } from "@/lib/utils/toast";
 import { nextStepToNavigateOptions, NextStepName } from "@/lib/utils/teacherAuthRouting";
 
@@ -27,8 +27,14 @@ const POLL_INTERVAL_MS = 15_000;
 function deriveNextDestinationFromStatus(status: TeacherDocumentsStatus) {
     const requirements = status.requirements;
     if (requirements.length === 0) return null;
-    const hasRejected = requirements.some((r) => r.verificationStatus === "Rejected");
-    if (hasRejected) return NextStepName.ReuploadRejectedDocuments;
+    // Use the legacy-doc-aware resolver: a requirement whose document has been
+    // re-uploaded is now "Pending" even though its requirement-level status is
+    // still "Rejected". Relying on the raw requirement status here would bounce
+    // the teacher back to /reupload (which now correctly clears it), producing
+    // an infinite await ↔ reupload redirect loop.
+    const needsReupload =
+        resolveRejectedDocuments(requirements, status.legacyDocuments).length > 0;
+    if (needsReupload) return NextStepName.ReuploadRejectedDocuments;
     const requiredItems = requirements.filter((r) => r.isRequired);
     const allRequiredApproved =
         requiredItems.length > 0 &&
