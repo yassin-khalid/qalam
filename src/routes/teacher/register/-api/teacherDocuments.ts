@@ -17,10 +17,25 @@ export interface RequirementStatus {
     boolValue?: boolean | null;
 }
 
+/**
+ * Legacy `TeacherDocument` DTO returned alongside `requirements`. Normally
+ * empty, but it still carries the real document `id` for File requirements —
+ * needed to recover a `teacherDocumentId` the backend left null on a rejected
+ * requirement (see the reupload route's `rejectedDocuments` resolver).
+ */
+export interface LegacyDocument {
+    id: number;
+    documentType: string;
+    filePath?: string | null;
+    verificationStatus: VerificationStatus;
+    rejectionReason?: string | null;
+    certificateTitle?: string | null;
+    documentNumber?: string | null;
+}
+
 export interface TeacherDocumentsStatus {
     requirements: RequirementStatus[];
-    /** Legacy document DTOs kept for backward compatibility; unused by the app. */
-    legacyDocuments: unknown[];
+    legacyDocuments: LegacyDocument[];
 }
 
 interface DocumentsStatusResponse {

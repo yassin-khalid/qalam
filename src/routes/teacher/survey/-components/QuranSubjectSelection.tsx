@@ -51,7 +51,7 @@ const QuranSubjectSelection: React.FC<QuranSubjectSelectionProps> = ({ domainId,
             pageNumber: String(pageNumber),
             pageSize: String(PAGE_SIZE),
         });
-        const url = `${import.meta.env.VITE_API_URL}/Api/V1/Education/filter-options?${params.toString()}`;
+        const url = `${import.meta.env.VITE_API_URL}/filter-options?${params.toString()}`;
         setLoading(true);
         setLoadError(null);
         fetch(url, {

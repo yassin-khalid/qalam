@@ -28,7 +28,7 @@ const fetchFilterOptions = async (params: Record<string, any>, token: string) =>
         }
     }
 
-    const url = `${import.meta.env.VITE_API_URL}/Api/V1/Education/filter-options?${query.toString()}`;
+    const url = `${import.meta.env.VITE_API_URL}/filter-options?${query.toString()}`;
     try {
         const response = await fetch(url, {
             headers: {

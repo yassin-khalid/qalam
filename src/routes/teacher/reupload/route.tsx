@@ -14,6 +14,7 @@ import {
 import {
     getTeacherDocumentsStatus,
     reuploadDocument,
+    LegacyDocument,
     RequirementStatus,
     TeacherDocumentsError,
 } from "../register/-api/teacherDocuments";
@@ -44,6 +45,7 @@ function ReuploadRoute() {
     const token = sessionData?.[0]?.token ?? "";
 
     const [documents, setDocuments] = useState<RequirementStatus[]>([]);
+    const [legacyDocuments, setLegacyDocuments] = useState<LegacyDocument[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploadingId, setUploadingId] = useState<number | null>(null);
 
@@ -53,6 +55,7 @@ function ReuploadRoute() {
         try {
             const status = await getTeacherDocumentsStatus(token);
             setDocuments(status.requirements);
+            setLegacyDocuments(status.legacyDocuments);
             const stillRejected = status.requirements.some(
                 (r) => r.verificationStatus === "Rejected"
             );
@@ -77,14 +80,35 @@ function ReuploadRoute() {
         fetchStatus();
     }, [token]);
 
+    // System File requirement codes → the `documentType` they surface as in
+    // `legacyDocuments`. Used to recover a `teacherDocumentId` the backend
+    // leaves null on a rejected requirement (the document id lives only on the
+    // matching legacy document — e.g. a rejected `certificate` ↔ legacy doc
+    // with documentType "Certificate").
+    const codeToLegacyType: Record<string, string> = {
+        identity_document: "IdentityDocument",
+        certificate: "Certificate",
+    };
+
     const rejectedDocuments = useMemo(
         () =>
-            documents.filter(
-                (r) =>
-                    r.verificationStatus === "Rejected" &&
-                    r.teacherDocumentId != null
-            ),
-        [documents]
+            documents
+                .filter((r) => r.verificationStatus === "Rejected")
+                .map((r) => {
+                    if (r.teacherDocumentId != null) return r;
+                    const legacyType = codeToLegacyType[r.code];
+                    if (!legacyType) return r;
+                    const match = legacyDocuments.find(
+                        (d) =>
+                            d.documentType === legacyType &&
+                            d.verificationStatus === "Rejected"
+                    );
+                    return match
+                        ? { ...r, teacherDocumentId: match.id }
+                        : r;
+                })
+                .filter((r) => r.teacherDocumentId != null),
+        [documents, legacyDocuments]
     );
 
     const handleReupload = async (doc: RequirementStatus, file: File) => {
